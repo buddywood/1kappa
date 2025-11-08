@@ -10,10 +10,14 @@
   "scripts": {
     "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "dev:frontend": "cd frontend && npm start",
+    "dev:frontend": "cd frontend && npm run dev",
     "dev:backend": "cd backend && npm run dev",
     "build": "cd frontend && npm run build",
-    "start:backend": "cd backend && npm start"
+    "start:backend": "cd backend && npm start",
+    "db:up": "docker-compose up -d",
+    "db:down": "docker-compose down",
+    "db:logs": "docker-compose logs -f postgres",
+    "db:reset": "docker-compose down -v && docker-compose up -d"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
