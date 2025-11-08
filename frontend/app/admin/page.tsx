@@ -117,8 +117,8 @@ export default function AdminDashboard() {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">Loading...</div>
+      <div className="min-h-screen bg-cream flex items-center justify-center">
+        <div className="text-xl text-midnight-navy">Loading...</div>
       </div>
     );
   }
@@ -128,16 +128,16 @@ export default function AdminDashboard() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm">
+    <main className="min-h-screen bg-cream">
+      <nav className="bg-white shadow-sm border-b border-frost-gray">
         <div className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
-            <Link href="/" className="text-2xl font-bold text-blue-900">
-              North Star Nupes - Admin
+            <Link href="/" className="text-2xl font-display font-extrabold text-crimson">
+              NorthStar Nupes - Admin
             </Link>
             <Link
               href="/api/auth/signout"
-              className="text-gray-700 hover:text-blue-900"
+              className="text-midnight-navy hover:text-crimson transition font-medium"
             >
               Logout
             </Link>
@@ -146,15 +146,15 @@ export default function AdminDashboard() {
       </nav>
 
       <div className="container mx-auto px-4 py-8">
-        <div className="bg-white rounded-lg shadow-lg">
-          <div className="border-b">
+        <div className="bg-white rounded-lg shadow-lg border border-frost-gray">
+          <div className="border-b border-frost-gray">
             <div className="flex">
               <button
                 onClick={() => setActiveTab('sellers')}
                 className={`px-6 py-4 font-semibold ${
                   activeTab === 'sellers'
-                    ? 'border-b-2 border-blue-900 text-blue-900'
-                    : 'text-gray-600'
+                    ? 'border-b-2 border-crimson text-crimson'
+                    : 'text-midnight-navy/70 hover:text-crimson'
                 }`}
               >
                 Pending Sellers
@@ -163,8 +163,8 @@ export default function AdminDashboard() {
                 onClick={() => setActiveTab('orders')}
                 className={`px-6 py-4 font-semibold ${
                   activeTab === 'orders'
-                    ? 'border-b-2 border-blue-900 text-blue-900'
-                    : 'text-gray-600'
+                    ? 'border-b-2 border-crimson text-crimson'
+                    : 'text-midnight-navy/70 hover:text-crimson'
                 }`}
               >
                 Orders
@@ -173,8 +173,8 @@ export default function AdminDashboard() {
                 onClick={() => setActiveTab('donations')}
                 className={`px-6 py-4 font-semibold ${
                   activeTab === 'donations'
-                    ? 'border-b-2 border-blue-900 text-blue-900'
-                    : 'text-gray-600'
+                    ? 'border-b-2 border-crimson text-crimson'
+                    : 'text-midnight-navy/70 hover:text-crimson'
                 }`}
               >
                 Donations
@@ -184,16 +184,16 @@ export default function AdminDashboard() {
 
           <div className="p-6">
             {loading ? (
-              <div className="text-center py-8">Loading...</div>
+              <div className="text-center py-8 text-midnight-navy">Loading...</div>
             ) : activeTab === 'sellers' ? (
               <div className="space-y-4">
                 {sellers.length === 0 ? (
-                  <p className="text-center py-8 text-gray-600">No pending sellers</p>
+                  <p className="text-center py-8 text-midnight-navy/70">No pending sellers</p>
                 ) : (
                   sellers.map((seller) => (
                     <div
                       key={seller.id}
-                      className="border rounded-lg p-4 flex items-center justify-between"
+                      className="border border-frost-gray rounded-lg p-4 flex items-center justify-between"
                     >
                       <div className="flex items-center space-x-4">
                         {seller.headshot_url && (
@@ -276,7 +276,7 @@ export default function AdminDashboard() {
                   <h2 className="text-xl font-semibold">Chapter Donations</h2>
                   <button
                     onClick={exportCSV}
-                    className="bg-blue-900 text-white px-4 py-2 rounded hover:bg-blue-800"
+                    className="bg-crimson text-white px-4 py-2 rounded hover:bg-crimson/90 transition shadow-md"
                   >
                     Export CSV
                   </button>

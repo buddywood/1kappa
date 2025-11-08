@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { fetchChapters, submitSellerApplication } from '@/lib/api';
 import type { Chapter } from '@/lib/api';
 import Link from 'next/link';
+import Logo from '../components/Logo';
 
 export default function ApplyPage() {
   const router = useRouter();
@@ -31,12 +32,12 @@ export default function ApplyPage() {
   const [headshot, setHeadshot] = useState<File | null>(null);
   const [headshotPreview, setHeadshotPreview] = useState<string | null>(null);
 
-  useState(() => {
+  useEffect(() => {
     fetchChapters()
       .then(setChapters)
       .catch(console.error)
       .finally(() => setLoading(false));
-  });
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -80,16 +81,16 @@ export default function ApplyPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-lg shadow-lg text-center max-w-md">
-          <h1 className="text-2xl font-bold mb-4 text-green-600">Application Submitted!</h1>
-          <p className="text-gray-600 mb-6">
+      <div className="min-h-screen bg-cream flex items-center justify-center">
+        <div className="bg-white p-8 rounded-lg shadow-lg text-center max-w-md border border-frost-gray">
+          <h1 className="text-2xl font-display font-extrabold mb-4 text-green-600">Application Submitted!</h1>
+          <p className="text-midnight-navy/70 mb-6">
             Your application has been submitted and is pending admin approval.
             You will be notified once your application is reviewed.
           </p>
           <Link
             href="/"
-            className="inline-block bg-blue-900 text-white px-6 py-2 rounded-lg hover:bg-blue-800"
+            className="inline-block bg-crimson text-white px-6 py-2 rounded-lg hover:bg-crimson/90 transition shadow-md"
           >
             Return to Homepage
           </Link>
@@ -99,59 +100,57 @@ export default function ApplyPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm">
+    <main className="min-h-screen bg-cream">
+      <nav className="bg-white shadow-sm border-b border-frost-gray">
         <div className="container mx-auto px-4 py-4">
-          <Link href="/" className="text-2xl font-bold text-blue-900">
-            North Star Nupes
-          </Link>
+          <Logo />
         </div>
       </nav>
 
       <div className="container mx-auto px-4 py-8 max-w-2xl">
-        <h1 className="text-3xl font-bold mb-8">Become a Seller</h1>
+        <h1 className="text-3xl font-display font-extrabold text-midnight-navy mb-8">Become a Seller</h1>
 
-        <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg shadow-lg space-y-6">
+        <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg shadow-lg space-y-6 border border-frost-gray">
           <div>
-            <label className="block text-sm font-medium mb-2">Full Name *</label>
+            <label className="block text-sm font-medium mb-2 text-midnight-navy">Full Name *</label>
             <input
               type="text"
               required
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-900"
+              className="w-full px-4 py-2 border border-frost-gray rounded-lg focus:ring-2 focus:ring-crimson focus:border-transparent text-midnight-navy"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Email *</label>
+            <label className="block text-sm font-medium mb-2 text-midnight-navy">Email *</label>
             <input
               type="email"
               required
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-900"
+              className="w-full px-4 py-2 border border-frost-gray rounded-lg focus:ring-2 focus:ring-crimson focus:border-transparent text-midnight-navy"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Membership Number *</label>
+            <label className="block text-sm font-medium mb-2 text-midnight-navy">Membership Number *</label>
             <input
               type="text"
               required
               value={formData.membership_number}
               onChange={(e) => setFormData({ ...formData, membership_number: e.target.value })}
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-900"
+              className="w-full px-4 py-2 border border-frost-gray rounded-lg focus:ring-2 focus:ring-crimson focus:border-transparent text-midnight-navy"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Initiated Chapter *</label>
+            <label className="block text-sm font-medium mb-2 text-midnight-navy">Initiated Chapter *</label>
             <select
               required
               value={formData.initiated_chapter_id}
               onChange={(e) => setFormData({ ...formData, initiated_chapter_id: e.target.value })}
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-900"
+              className="w-full px-4 py-2 border border-frost-gray rounded-lg focus:ring-2 focus:ring-crimson focus:border-transparent text-midnight-navy"
             >
               <option value="">Select a chapter</option>
               {chapters.map((chapter) => (
@@ -163,11 +162,11 @@ export default function ApplyPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Sponsoring Chapter (Optional)</label>
+            <label className="block text-sm font-medium mb-2 text-midnight-navy">Sponsoring Chapter (Optional)</label>
             <select
               value={formData.sponsoring_chapter_id}
               onChange={(e) => setFormData({ ...formData, sponsoring_chapter_id: e.target.value })}
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-900"
+              className="w-full px-4 py-2 border border-frost-gray rounded-lg focus:ring-2 focus:ring-crimson focus:border-transparent text-midnight-navy"
             >
               <option value="">Select a chapter</option>
               {chapters.map((chapter) => (
@@ -179,25 +178,25 @@ export default function ApplyPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Headshot *</label>
+            <label className="block text-sm font-medium mb-2 text-midnight-navy">Headshot *</label>
             <input
               type="file"
               accept="image/*"
               required
               onChange={handleFileChange}
-              className="w-full px-4 py-2 border rounded-lg"
+              className="w-full px-4 py-2 border border-frost-gray rounded-lg text-midnight-navy"
             />
             {headshotPreview && (
               <img
                 src={headshotPreview}
                 alt="Headshot preview"
-                className="mt-4 w-32 h-32 object-cover rounded-lg"
+                className="mt-4 w-32 h-32 object-cover rounded-lg border border-frost-gray"
               />
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Social Links</label>
+            <label className="block text-sm font-medium mb-2 text-midnight-navy">Social Links</label>
             <div className="space-y-2">
               <input
                 type="url"
@@ -209,7 +208,7 @@ export default function ApplyPage() {
                     social_links: { ...formData.social_links, instagram: e.target.value },
                   })
                 }
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-900"
+                className="w-full px-4 py-2 border border-frost-gray rounded-lg focus:ring-2 focus:ring-crimson focus:border-transparent text-midnight-navy"
               />
               <input
                 type="url"
@@ -221,7 +220,7 @@ export default function ApplyPage() {
                     social_links: { ...formData.social_links, twitter: e.target.value },
                   })
                 }
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-900"
+                className="w-full px-4 py-2 border border-frost-gray rounded-lg focus:ring-2 focus:ring-crimson focus:border-transparent text-midnight-navy"
               />
               <input
                 type="url"
@@ -233,7 +232,7 @@ export default function ApplyPage() {
                     social_links: { ...formData.social_links, linkedin: e.target.value },
                   })
                 }
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-900"
+                className="w-full px-4 py-2 border border-frost-gray rounded-lg focus:ring-2 focus:ring-crimson focus:border-transparent text-midnight-navy"
               />
               <input
                 type="url"
@@ -245,10 +244,10 @@ export default function ApplyPage() {
                     social_links: { ...formData.social_links, website: e.target.value },
                   })
                 }
-                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-900"
+                className="w-full px-4 py-2 border border-frost-gray rounded-lg focus:ring-2 focus:ring-crimson focus:border-transparent text-midnight-navy"
               />
             </div>
-            <p className="text-sm text-gray-500 mt-2">
+            <p className="text-sm text-midnight-navy/60 mt-2">
               At least one social link is required
             </p>
           </div>
@@ -258,7 +257,7 @@ export default function ApplyPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full bg-blue-900 text-white py-3 rounded-lg font-semibold hover:bg-blue-800 transition disabled:opacity-50"
+            className="w-full bg-crimson text-white py-3 rounded-lg font-semibold hover:bg-crimson/90 transition disabled:opacity-50 shadow-md hover:shadow-lg"
           >
             {submitting ? 'Submitting...' : 'Submit Application'}
           </button>

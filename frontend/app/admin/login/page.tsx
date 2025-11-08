@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Logo from '../../components/Logo';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -34,12 +35,15 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full">
-        <h1 className="text-2xl font-bold mb-6 text-center">Admin Login</h1>
+    <main className="min-h-screen bg-cream flex items-center justify-center">
+      <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full border border-frost-gray">
+        <div className="mb-6 text-center">
+          <Logo />
+        </div>
+        <h1 className="text-2xl font-display font-extrabold mb-6 text-center text-midnight-navy">Admin Login</h1>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="adminKey" className="block text-sm font-medium mb-2">
+            <label htmlFor="adminKey" className="block text-sm font-medium mb-2 text-midnight-navy">
               Admin Key
             </label>
             <input
@@ -48,7 +52,7 @@ export default function AdminLoginPage() {
               value={adminKey}
               onChange={(e) => setAdminKey(e.target.value)}
               required
-              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-900"
+              className="w-full px-4 py-2 border border-frost-gray rounded-lg focus:ring-2 focus:ring-crimson focus:border-transparent text-midnight-navy"
               placeholder="Enter admin key"
             />
           </div>
@@ -56,13 +60,13 @@ export default function AdminLoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-900 text-white py-2 rounded-lg font-semibold hover:bg-blue-800 transition disabled:opacity-50"
+            className="w-full bg-crimson text-white py-2 rounded-lg font-semibold hover:bg-crimson/90 transition disabled:opacity-50 shadow-md hover:shadow-lg"
           >
             {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
         <div className="mt-4 text-center">
-          <Link href="/" className="text-sm text-gray-600 hover:text-blue-900">
+          <Link href="/" className="text-sm text-midnight-navy/70 hover:text-crimson transition">
             Return to homepage
           </Link>
         </div>
