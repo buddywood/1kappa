@@ -12,21 +12,37 @@ export interface Chapter {
   updated_at: Date;
 }
 
-export interface Seller {
+// Base Brother interface - shared attributes for all brothers (sellers, promoters, etc.)
+export interface Brother {
   id: number;
-  email: string;
   name: string;
-  membership_number: string;
+  email: string;
+  membership_number: string; // member number (same for sellers/promoters)
+  headshot_url: string | null; // photo/headshot
+  location: string | null; // city, state, or general location
   initiated_chapter_id: number;
+  initiated_season: string | null; // e.g., "Fall", "Spring"
+  initiated_year: number | null;
+  ship_name: string | null; // fraternity ship/line name
+  line_name: string | null; // line name
+  address: string | null; // can be private
+  address_is_private: boolean;
+  phone_number: string | null; // can be private
+  phone_is_private: boolean;
+  social_links: Record<string, string>;
+  industry: string | null;
+  job_title: string | null;
+  bio: string | null; // biography/about section
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface Seller extends Brother {
   sponsoring_chapter_id: number;
   business_name: string | null;
   vendor_license_number: string;
-  headshot_url: string | null;
-  social_links: Record<string, string>;
   stripe_account_id: string | null;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
-  created_at: Date;
-  updated_at: Date;
 }
 
 export interface Product {
@@ -63,19 +79,10 @@ export interface SellerApplication {
   social_links: Record<string, string>;
 }
 
-export interface Promoter {
-  id: number;
-  email: string;
-  name: string;
-  membership_number: string;
-  initiated_chapter_id: number;
+export interface Promoter extends Brother {
   sponsoring_chapter_id: number | null;
-  headshot_url: string | null;
-  social_links: Record<string, string>;
   stripe_account_id: string | null;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
-  created_at: Date;
-  updated_at: Date;
 }
 
 export interface Event {
@@ -103,5 +110,19 @@ export interface PromoterApplication {
   sponsoring_chapter_id?: number;
   headshot_url: string;
   social_links: Record<string, string>;
+}
+
+export interface User {
+  id: number;
+  cognito_sub: string;
+  email: string;
+  role: 'ADMIN' | 'SELLER' | 'PROMOTER' | 'CONSUMER';
+  onboarding_status: 'PRE_COGNITO' | 'COGNITO_CONFIRMED' | 'ONBOARDING_STARTED' | 'ONBOARDING_FINISHED';
+  member_id: number | null;
+  seller_id: number | null;
+  promoter_id: number | null;
+  features: Record<string, any>;
+  created_at: Date;
+  updated_at: Date;
 }
 

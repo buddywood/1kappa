@@ -28,22 +28,27 @@
    ```env
    PORT=3001
    FRONTEND_URL=http://localhost:3000
-   DATABASE_URL=postgresql://northstar:northstar123@localhost:5432/northstar_nupes
+   DATABASE_URL=postgresql://1kappa:1kappa123@localhost:5434/one_kappa
    STRIPE_SECRET_KEY=sk_test_your_key_here
    STRIPE_WEBHOOK_SECRET=whsec_your_secret_here
    AWS_ACCESS_KEY_ID=your-key
    AWS_SECRET_ACCESS_KEY=your-secret
    AWS_S3_BUCKET_NAME=your-bucket
    AWS_REGION=us-east-1
-   ADMIN_KEY=dev-admin-key-123
+   COGNITO_USER_POOL_ID=us-east-1_xxxxxxxxx
+   COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
+   COGNITO_CLIENT_SECRET=your-client-secret-if-using-secret
+   COGNITO_REGION=us-east-1
    ```
 
    **Frontend** (`frontend/.env.local`):
    ```env
-   NEXT_PUBLIC_API_URL=http://localhost:3000
+   NEXT_PUBLIC_API_URL=http://localhost:3001
+   NEXT_PUBLIC_COGNITO_USER_POOL_ID=us-east-1_xxxxxxxxx
+   NEXT_PUBLIC_COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
+   NEXT_PUBLIC_COGNITO_REGION=us-east-1
    NEXTAUTH_SECRET=dev-secret-key
    NEXTAUTH_URL=http://localhost:3000
-   ADMIN_KEY=dev-admin-key-123
    ```
 
 4. **Start development servers:**
@@ -65,10 +70,10 @@
 ## Database Connection Details
 
 - Host: `localhost`
-- Port: `5432`
-- Database: `northstar_nupes`
-- User: `northstar`
-- Password: `northstar123`
+- Port: `5434`
+- Database: `one_kappa`
+- User: `1kappa`
+- Password: `1kappa123`
 
 ## First Run
 

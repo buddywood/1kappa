@@ -11,14 +11,15 @@ const config: Config = {
       colors: {
         background: 'var(--background)',
         foreground: 'var(--foreground)',
-        crimson: '#9B111E',
+        crimson: '#8A0C13',
         cream: '#F7F4E9',
-        'midnight-navy': '#1E2A38',
+        'midnight-navy': '#121212',
         'frost-gray': '#D9DBE0',
         'aurora-gold': '#C6A664',
+        white: '#FFFFFF',
       },
       fontFamily: {
-        display: ['var(--font-montserrat)', 'sans-serif'],
+        display: ['var(--font-oswald)', 'sans-serif'],
         body: ['var(--font-inter)', 'sans-serif'],
         accent: ['var(--font-playfair)', 'serif'],
       },

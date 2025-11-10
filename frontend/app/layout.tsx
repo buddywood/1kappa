@@ -1,11 +1,12 @@
 import type { Metadata } from 'next'
-import { Montserrat, Inter, Playfair_Display } from 'next/font/google'
+import { Oswald, Inter, Playfair_Display } from 'next/font/google'
+import Providers from './components/Providers'
 import './globals.css'
 
-const montserrat = Montserrat({
+const oswald = Oswald({
   subsets: ['latin'],
-  weight: ['800'],
-  variable: '--font-montserrat',
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-oswald',
   display: 'swap',
 })
 
@@ -25,8 +26,8 @@ const playfair = Playfair_Display({
 })
 
 export const metadata: Metadata = {
-  title: 'NorthStar Nupes - Where Brotherhood Meets the North Star',
-  description: 'A Minnesota-rooted hub of Kappa creativity and excellence. Shop authentic merchandise from verified fraternity members.',
+  title: '1Kappa | One Brotherhood. Infinite Impact',
+  description: 'A digital home for Kappa brothers worldwide. Community, Commerce, Culture, and Contribution. Shop authentic merchandise from verified fraternity members.',
 }
 
 export default function RootLayout({
@@ -35,8 +36,12 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${montserrat.variable} ${inter.variable} ${playfair.variable}`}>
-      <body>{children}</body>
+    <html lang="en" className={`${oswald.variable} ${inter.variable} ${playfair.variable}`}>
+      <body>
+        <Providers>
+          {children}
+        </Providers>
+      </body>
     </html>
   )
 }

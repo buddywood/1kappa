@@ -1,7 +1,7 @@
 {
-  "name": "northstar-nupes-backend",
+  "name": "1kappa-backend",
   "version": "1.0.0",
-  "description": "Express.js backend for NorthStar Nupes",
+  "description": "Express.js backend for 1Kappa",
   "main": "dist/server.js",
   "scripts": {
     "start": "npm run build && node dist/server.js",
@@ -9,38 +9,45 @@
     "build": "tsc",
     "type-check": "tsc --noEmit",
     "migrate": "tsx src/db/migrations.ts",
+    "seed": "tsx src/db/seed.ts",
     "seed:chapters": "tsx src/scripts/seed-chapters.ts",
     "seed:alumni": "tsx src/scripts/seed-alumni-chapters.ts",
     "seed:products": "tsx src/scripts/seed-products.ts",
-    "update:provinces": "tsx src/scripts/update-provinces.ts"
+    "update:provinces": "tsx src/scripts/update-provinces.ts",
+    "seed:test": "tsx src/db/seed-test.ts",
+    "seed:test:clear": "tsx src/db/seed-test.ts --clear"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.18.2",
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
-    "pg": "^8.11.3",
-    "stripe": "^14.9.0",
+    "@aws-sdk/client-cognito-identity-provider": "^3.490.0",
     "@aws-sdk/client-s3": "^3.490.0",
     "@aws-sdk/s3-request-presigner": "^3.490.0",
-    "multer": "^1.4.5-lts.1",
-    "zod": "^3.22.4",
-    "uuid": "^9.0.1",
+    "@types/jsonwebtoken": "^9.0.10",
+    "axios": "^1.6.0",
     "cheerio": "^1.0.0",
-    "axios": "^1.6.0"
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "jwks-rsa": "^3.2.0",
+    "multer": "^1.4.5-lts.1",
+    "pg": "^8.11.3",
+    "stripe": "^14.9.0",
+    "uuid": "^9.0.1",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
-    "@types/express": "^4.17.21",
+    "@types/cheerio": "^0.22.31",
     "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/multer": "^1.4.11",
     "@types/node": "^20.11.0",
     "@types/pg": "^8.10.9",
-    "@types/multer": "^1.4.11",
     "@types/uuid": "^9.0.7",
-    "@types/cheerio": "^0.22.31",
-    "typescript": "^5.3.3",
-    "tsx": "^4.7.0"
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
   },
   "engines": {
     "node": "18.x"

@@ -9,7 +9,7 @@ export default function SuccessPage() {
           <Logo />
         </div>
         <div className="text-green-600 text-6xl mb-4">✓</div>
-        <h1 className="text-2xl font-display font-extrabold text-midnight-navy mb-4">Payment Successful!</h1>
+        <h1 className="text-2xl font-display font-bold text-midnight-navy mb-4">Payment Successful!</h1>
         <p className="text-midnight-navy/70 mb-6">
           Thank you for your purchase. You will receive a confirmation email shortly.
         </p>

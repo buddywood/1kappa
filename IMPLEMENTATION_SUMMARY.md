@@ -53,7 +53,7 @@ All core features have been implemented according to the build plan.
 ## File Structure
 
 ```
-northstarnupes/
+1kappa/
 ├── frontend/
 │   ├── app/                    # Next.js App Router
 │   │   ├── page.tsx            # Homepage

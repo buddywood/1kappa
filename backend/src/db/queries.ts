@@ -1,5 +1,5 @@
 import pool from './connection';
-import { Chapter, Seller, Product, Order, Promoter, Event } from '../types';
+import { Chapter, Seller, Product, Order, Promoter, Event, User } from '../types';
 
 // Chapter queries
 export async function getAllChapters(): Promise<Chapter[]> {
@@ -184,6 +184,56 @@ export async function getProductsBySeller(sellerId: number): Promise<Product[]> 
   return result.rows;
 }
 
+export async function updateProduct(
+  id: number,
+  updates: {
+    name?: string;
+    description?: string;
+    price_cents?: number;
+    image_url?: string;
+    sponsored_chapter_id?: number;
+  }
+): Promise<Product | null> {
+  const fields: string[] = [];
+  const values: any[] = [id];
+  let paramIndex = 2;
+
+  if (updates.name !== undefined) {
+    fields.push(`name = $${paramIndex++}`);
+    values.push(updates.name);
+  }
+  if (updates.description !== undefined) {
+    fields.push(`description = $${paramIndex++}`);
+    values.push(updates.description);
+  }
+  if (updates.price_cents !== undefined) {
+    fields.push(`price_cents = $${paramIndex++}`);
+    values.push(updates.price_cents);
+  }
+  if (updates.image_url !== undefined) {
+    fields.push(`image_url = $${paramIndex++}`);
+    values.push(updates.image_url);
+  }
+  if (updates.sponsored_chapter_id !== undefined) {
+    fields.push(`sponsored_chapter_id = $${paramIndex++}`);
+    values.push(updates.sponsored_chapter_id);
+  }
+
+  if (fields.length === 0) {
+    return getProductById(id);
+  }
+
+  const query = `
+    UPDATE products
+    SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP
+    WHERE id = $1
+    RETURNING *
+  `;
+
+  const result = await pool.query(query, values);
+  return result.rows[0] || null;
+}
+
 // Order queries
 export async function createOrder(order: {
   product_id: number;
@@ -251,6 +301,15 @@ export async function getChapterDonations(): Promise<Array<{ chapter_id: number;
      ORDER BY total_donations_cents DESC`
   );
   return result.rows;
+}
+
+export async function getTotalDonations(): Promise<number> {
+  const result = await pool.query(
+    `SELECT SUM(o.amount_cents * 0.03) as total_donations_cents
+     FROM orders o
+     WHERE o.status = 'PAID' AND o.chapter_id IS NOT NULL`
+  );
+  return result.rows[0]?.total_donations_cents || 0;
 }
 
 // Promoter queries
@@ -398,5 +457,188 @@ export async function getEventsByPromoter(promoterId: number): Promise<Event[]> 
     [promoterId]
   );
   return result.rows;
+}
+
+// User queries
+export async function createUser(user: {
+  cognito_sub: string;
+  email: string;
+  role: 'ADMIN' | 'SELLER' | 'PROMOTER' | 'CONSUMER';
+  onboarding_status?: 'PRE_COGNITO' | 'COGNITO_CONFIRMED' | 'ONBOARDING_STARTED' | 'ONBOARDING_FINISHED';
+  member_id?: number | null;
+  seller_id?: number | null;
+  promoter_id?: number | null;
+  features?: Record<string, any>;
+}): Promise<User> {
+  const result = await pool.query(
+    `INSERT INTO users (cognito_sub, email, role, onboarding_status, member_id, seller_id, promoter_id, features)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     RETURNING *`,
+    [
+      user.cognito_sub,
+      user.email,
+      user.role,
+      user.onboarding_status || 'COGNITO_CONFIRMED',
+      user.member_id || null,
+      user.seller_id || null,
+      user.promoter_id || null,
+      JSON.stringify(user.features || {}),
+    ]
+  );
+  const row = result.rows[0];
+  if (row.features && typeof row.features === 'string') {
+    row.features = JSON.parse(row.features);
+  }
+  return row;
+}
+
+export async function getUserByCognitoSub(cognitoSub: string): Promise<User | null> {
+  const result = await pool.query('SELECT * FROM users WHERE cognito_sub = $1', [cognitoSub]);
+  if (result.rows[0]) {
+    const row = result.rows[0];
+    if (row.features && typeof row.features === 'string') {
+      row.features = JSON.parse(row.features);
+    }
+    return row;
+  }
+  return null;
+}
+
+export async function getUserByEmail(email: string): Promise<User | null> {
+  const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+  if (result.rows[0]) {
+    const row = result.rows[0];
+    if (row.features && typeof row.features === 'string') {
+      row.features = JSON.parse(row.features);
+    }
+    return row;
+  }
+  return null;
+}
+
+export async function getUserById(id: number): Promise<User | null> {
+  const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+  if (result.rows[0]) {
+    const row = result.rows[0];
+    if (row.features && typeof row.features === 'string') {
+      row.features = JSON.parse(row.features);
+    }
+    return row;
+  }
+  return null;
+}
+
+export async function updateUserRole(
+  id: number,
+  role: 'ADMIN' | 'SELLER' | 'PROMOTER' | 'CONSUMER'
+): Promise<User> {
+  const result = await pool.query(
+    'UPDATE users SET role = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
+    [id, role]
+  );
+  const row = result.rows[0];
+  if (row.features && typeof row.features === 'string') {
+    row.features = JSON.parse(row.features);
+  }
+  return row;
+}
+
+export async function linkUserToMember(userId: number, memberId: number): Promise<User> {
+  const result = await pool.query(
+    `UPDATE users 
+     SET member_id = $2, seller_id = NULL, promoter_id = NULL, role = 'CONSUMER', updated_at = CURRENT_TIMESTAMP 
+     WHERE id = $1 
+     RETURNING *`,
+    [userId, memberId]
+  );
+  const row = result.rows[0];
+  if (row.features && typeof row.features === 'string') {
+    row.features = JSON.parse(row.features);
+  }
+  return row;
+}
+
+export async function linkUserToSeller(userId: number, sellerId: number): Promise<User> {
+  const result = await pool.query(
+    `UPDATE users 
+     SET seller_id = $2, member_id = NULL, promoter_id = NULL, role = 'SELLER', updated_at = CURRENT_TIMESTAMP 
+     WHERE id = $1 
+     RETURNING *`,
+    [userId, sellerId]
+  );
+  const row = result.rows[0];
+  if (row.features && typeof row.features === 'string') {
+    row.features = JSON.parse(row.features);
+  }
+  return row;
+}
+
+export async function linkUserToPromoter(userId: number, promoterId: number): Promise<User> {
+  const result = await pool.query(
+    `UPDATE users 
+     SET promoter_id = $2, member_id = NULL, seller_id = NULL, role = 'PROMOTER', updated_at = CURRENT_TIMESTAMP 
+     WHERE id = $1 
+     RETURNING *`,
+    [userId, promoterId]
+  );
+  const row = result.rows[0];
+  if (row.features && typeof row.features === 'string') {
+    row.features = JSON.parse(row.features);
+  }
+  return row;
+}
+
+export async function updateUserOnboardingStatus(
+  id: number,
+  onboarding_status: 'PRE_COGNITO' | 'COGNITO_CONFIRMED' | 'ONBOARDING_STARTED' | 'ONBOARDING_FINISHED'
+): Promise<User> {
+  const result = await pool.query(
+    `UPDATE users 
+     SET onboarding_status = $2, updated_at = CURRENT_TIMESTAMP 
+     WHERE id = $1 
+     RETURNING *`,
+    [id, onboarding_status]
+  );
+  const row = result.rows[0];
+  if (row.features && typeof row.features === 'string') {
+    row.features = JSON.parse(row.features);
+  }
+  return row;
+}
+
+export async function updateUserOnboardingStatusByCognitoSub(
+  cognito_sub: string,
+  onboarding_status: 'PRE_COGNITO' | 'COGNITO_CONFIRMED' | 'ONBOARDING_STARTED' | 'ONBOARDING_FINISHED'
+): Promise<User | null> {
+  const result = await pool.query(
+    `UPDATE users 
+     SET onboarding_status = $2, updated_at = CURRENT_TIMESTAMP 
+     WHERE cognito_sub = $1 
+     RETURNING *`,
+    [cognito_sub, onboarding_status]
+  );
+  if (result.rows.length === 0) {
+    return null;
+  }
+  const row = result.rows[0];
+  if (row.features && typeof row.features === 'string') {
+    row.features = JSON.parse(row.features);
+  }
+  return row;
+}
+
+export async function updateUserFeatures(
+  id: number,
+  features: Record<string, any>
+): Promise<User> {
+  const result = await pool.query(
+    'UPDATE users SET features = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
+    [id, JSON.stringify(features)]
+  );
+  const row = result.rows[0];
+  if (row.features && typeof row.features === 'string') {
+    row.features = JSON.parse(row.features);
+  }
+  return row;
 }
 

@@ -1,17 +1,17 @@
 services:
   postgres:
     image: postgres:15-alpine
-    container_name: northstar-nupes-db
+    container_name: 1kappa-db
     environment:
-      POSTGRES_USER: northstar
-      POSTGRES_PASSWORD: northstar123
-      POSTGRES_DB: northstar_nupes
+      POSTGRES_USER: 1kappa
+      POSTGRES_PASSWORD: 1kappa123
+      POSTGRES_DB: one_kappa
     ports:
-      - "5432:5432"
+      - "5434:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U northstar"]
+      test: ["CMD-SHELL", "pg_isready -U 1kappa"]
       interval: 10s
       timeout: 5s
       retries: 5

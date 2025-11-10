@@ -2,19 +2,13 @@ import { Router, Request, Response } from 'express';
 import { getPendingSellers, updateSellerStatus, getAllOrders, getChapterDonations, getSellerById, getPendingPromoters, updatePromoterStatus, getPromoterById } from '../db/queries';
 import { createConnectAccount } from '../services/stripe';
 import { z } from 'zod';
+import { authenticate, requireAdmin } from '../middleware/auth';
 
 const router = Router();
 
-// Middleware to check admin authentication
-const authenticateAdmin = (req: Request, res: Response, next: Function) => {
-  const adminKey = req.headers['x-admin-key'];
-  if (adminKey !== process.env.ADMIN_KEY) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-  next();
-};
-
-router.use(authenticateAdmin);
+// Use Cognito authentication middleware
+router.use(authenticate);
+router.use(requireAdmin);
 
 const approveSellerSchema = z.object({
   status: z.enum(['APPROVED', 'REJECTED']),

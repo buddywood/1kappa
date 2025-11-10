@@ -1,7 +1,7 @@
 {
-  "name": "northstar-nupes",
+  "name": "1kappa",
   "version": "1.0.0",
-  "description": "NorthStar Nupes monorepo with React frontend and Express backend",
+  "description": "1Kappa monorepo with React frontend and Express backend",
   "private": true,
   "workspaces": [
     "frontend",
@@ -14,10 +14,12 @@
     "dev:backend": "cd backend && npm run dev",
     "build": "cd frontend && npm run build",
     "start:backend": "cd backend && npm start",
-    "db:up": "docker-compose up -d",
-    "db:down": "docker-compose down",
-    "db:logs": "docker-compose logs -f postgres",
-    "db:reset": "docker-compose down -v && docker-compose up -d"
+    "restart:all": "npm run stop:all && sleep 2 && npm run dev",
+    "stop:all": "lsof -ti:3000 | xargs kill -9 2>/dev/null || true && lsof -ti:3001 | xargs kill -9 2>/dev/null || true",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:logs": "docker compose logs -f postgres",
+    "db:reset": "docker compose down -v && docker compose up -d"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

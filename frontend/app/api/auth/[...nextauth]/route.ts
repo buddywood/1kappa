@@ -1,40 +1,158 @@
-import NextAuth from 'next-auth';
+import NextAuth, { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import { signIn } from '@/lib/cognito';
 
-const handler = NextAuth({
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
-      name: 'Admin',
+      name: 'Cognito',
       credentials: {
-        adminKey: { label: 'Admin Key', type: 'password' },
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        if (credentials?.adminKey === process.env.ADMIN_KEY) {
-          return { id: 'admin', name: 'Admin' };
+        if (!credentials?.email || !credentials?.password) {
+          return null;
         }
-        return null;
+
+        try {
+          // Authenticate with Cognito
+          const cognitoResult = await signIn(credentials.email, credentials.password);
+
+          // Get user info from backend
+          const userResponse = await fetch(`${API_URL}/api/users/me`, {
+            headers: {
+              Authorization: `Bearer ${cognitoResult.idToken}`,
+            },
+          });
+
+          if (!userResponse.ok) {
+            // If user doesn't exist in backend, create a basic user object
+            return {
+              id: cognitoResult.userSub,
+              email: cognitoResult.email,
+              cognitoSub: cognitoResult.userSub,
+              accessToken: cognitoResult.accessToken,
+              idToken: cognitoResult.idToken,
+              refreshToken: cognitoResult.refreshToken,
+              role: 'CONSUMER', // Default role
+              onboarding_status: 'PRE_COGNITO',
+            };
+          }
+
+          const userData = await userResponse.json();
+
+          return {
+            id: userData.id.toString(),
+            email: userData.email,
+            cognitoSub: userData.cognito_sub,
+            accessToken: cognitoResult.accessToken,
+            idToken: cognitoResult.idToken,
+            refreshToken: cognitoResult.refreshToken,
+            role: userData.role,
+            memberId: userData.member_id,
+            sellerId: userData.seller_id,
+            promoterId: userData.promoter_id,
+            features: userData.features,
+            name: userData.name,
+            onboarding_status: userData.onboarding_status || 'PRE_COGNITO',
+          };
+        } catch (error: any) {
+          console.error('Authentication error:', error);
+          console.error('Error details:', {
+            code: error.code,
+            name: error.name,
+            message: error.message,
+            toString: error.toString(),
+            keys: Object.keys(error || {})
+          });
+          
+          // If password change is required, return a special object that NextAuth will treat as an error
+          // but we can check for it in the login page
+          if (error.message?.includes('NEW_PASSWORD_REQUIRED')) {
+            // Return null but we'll handle this differently
+            // Actually, we need to throw a specific error that NextAuth will pass through
+            const customError = new Error('NEW_PASSWORD_REQUIRED');
+            (customError as any).code = 'NEW_PASSWORD_REQUIRED';
+            throw customError;
+          }
+          
+          // If user is not confirmed, throw a specific error - check all possible ways
+          const errorMessage = error.message || error.toString() || '';
+          const errorCode = error.code || error.name || '';
+          const isUserNotConfirmed = 
+            errorCode === 'UserNotConfirmedException' ||
+            error.name === 'UserNotConfirmedException' ||
+            errorMessage.includes('UserNotConfirmedException') ||
+            errorMessage.includes('User is not confirmed') ||
+            errorMessage.includes('not confirmed');
+          
+          if (isUserNotConfirmed) {
+            console.log('✅ UserNotConfirmedException detected in NextAuth, throwing custom error');
+            // Throw error with a specific message that we can check in the frontend
+            // NextAuth will pass this through in result.error
+            const customError = new Error('UserNotConfirmedException');
+            (customError as any).code = 'UserNotConfirmedException';
+            (customError as any).type = 'UserNotConfirmedException';
+            throw customError;
+          }
+          
+          return null;
+        }
       },
     }),
   ],
   pages: {
-    signIn: '/admin/login',
+    signIn: '/login',
+    error: '/login', // Redirect errors to login page
   },
   callbacks: {
+    async signIn({ user, account, profile, email, credentials }) {
+      // This callback is called before the user is signed in
+      // We can use it to handle errors, but errors from authorize are already handled
+      return true;
+    },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.email = user.email;
+        token.cognitoSub = (user as any).cognitoSub;
+        token.accessToken = (user as any).accessToken;
+        token.idToken = (user as any).idToken;
+        token.refreshToken = (user as any).refreshToken;
+        token.role = (user as any).role || 'CONSUMER';
+        token.memberId = (user as any).memberId;
+        token.sellerId = (user as any).sellerId;
+        token.promoterId = (user as any).promoterId;
+        token.features = (user as any).features || {};
+        token.name = (user as any).name;
+        token.onboarding_status = (user as any).onboarding_status;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id as string;
+        (session.user as any).id = token.id as string;
+        (session.user as any).cognitoSub = token.cognitoSub as string;
+        (session.user as any).role = token.role as string;
+        (session.user as any).memberId = token.memberId as number | null;
+        (session.user as any).sellerId = token.sellerId as number | null;
+        (session.user as any).promoterId = token.promoterId as number | null;
+        (session.user as any).features = token.features as Record<string, any>;
+        (session.user as any).name = token.name as string | null;
+        (session.user as any).onboarding_status = token.onboarding_status as string;
+        (session as any).accessToken = token.accessToken as string;
+        (session as any).idToken = token.idToken as string;
       }
       return session;
     },
   },
   secret: process.env.NEXTAUTH_SECRET,
-});
+};
+
+const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };
 

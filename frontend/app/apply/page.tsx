@@ -89,7 +89,7 @@ export default function ApplyPage() {
     return (
       <div className="min-h-screen bg-cream flex items-center justify-center">
         <div className="bg-white p-8 rounded-lg shadow-lg text-center max-w-md border border-frost-gray">
-          <h1 className="text-2xl font-display font-extrabold mb-4 text-green-600">Application Submitted!</h1>
+          <h1 className="text-2xl font-display font-bold mb-4 text-green-600">Application Submitted!</h1>
           <p className="text-midnight-navy/70 mb-6">
             Your application has been submitted and is pending admin approval.
             You will be notified once your application is reviewed.
@@ -114,7 +114,7 @@ export default function ApplyPage() {
       </nav>
 
       <div className="container mx-auto px-4 py-8 max-w-2xl">
-        <h1 className="text-3xl font-display font-extrabold text-midnight-navy mb-8">Become a Seller</h1>
+        <h1 className="text-3xl font-display font-bold text-midnight-navy mb-8">Become a Seller</h1>
 
         <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg shadow-lg space-y-6 border border-frost-gray">
           <div>

@@ -9,7 +9,7 @@ export default function CancelPage() {
           <Logo />
         </div>
         <div className="text-red-600 text-6xl mb-4">✗</div>
-        <h1 className="text-2xl font-display font-extrabold text-midnight-navy mb-4">Payment Cancelled</h1>
+        <h1 className="text-2xl font-display font-bold text-midnight-navy mb-4">Payment Cancelled</h1>
         <p className="text-midnight-navy/70 mb-6">
           Your payment was cancelled. No charges were made.
         </p>

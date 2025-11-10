@@ -1,0 +1,8 @@
+[
+  { "id": 1, "image_path": "../temp_photos/sample_merch1.png" },
+  { "id": 2, "image_path": "../temp_photos/sample_merch2.png" },
+  { "id": 3, "image_path": "../temp_photos/sample_merch3.png" },
+  { "id": 4, "image_path": "../temp_photos/sample_merch4.png" },
+  { "id": 5, "image_path": "../temp_photos/sample_merch5.png" }
+]
+

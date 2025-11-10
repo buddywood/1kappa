@@ -1,5 +1,5 @@
 {
-  "name": "northstar-nupes-frontend",
+  "name": "1kappa-frontend",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,23 +9,24 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "next": "^14.2.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "next-auth": "^4.24.5",
-    "@stripe/stripe-js": "^2.4.0",
     "@aws-sdk/client-s3": "^3.490.0",
-    "@aws-sdk/s3-request-presigner": "^3.490.0"
+    "@aws-sdk/s3-request-presigner": "^3.490.0",
+    "@stripe/stripe-js": "^2.4.0",
+    "amazon-cognito-identity-js": "^6.3.15",
+    "next": "^14.2.0",
+    "next-auth": "^4.24.5",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/react": "^18.2.48",
     "@types/react-dom": "^18.2.18",
-    "typescript": "^5.3.3",
-    "tailwindcss": "^3.4.1",
-    "postcss": "^8.4.35",
     "autoprefixer": "^10.4.17",
     "eslint": "^8.56.0",
-    "eslint-config-next": "^14.2.0"
+    "eslint-config-next": "^14.2.0",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.3.3"
   }
 }

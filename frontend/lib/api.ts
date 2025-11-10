@@ -134,9 +134,22 @@ export async function submitSellerApplication(formData: FormData): Promise<Selle
   return res.json();
 }
 
-export async function fetchPendingSellers(adminKey: string): Promise<Seller[]> {
+async function getAuthHeaders(): Promise<HeadersInit> {
+  const session = await fetch('/api/auth/session').then(res => res.json());
+  const idToken = (session as any)?.idToken;
+  if (!idToken) {
+    throw new Error('Not authenticated');
+  }
+  return {
+    'Authorization': `Bearer ${idToken}`,
+    'Content-Type': 'application/json',
+  };
+}
+
+export async function fetchPendingSellers(): Promise<Seller[]> {
+  const headers = await getAuthHeaders();
   const res = await fetch(`${API_URL}/api/admin/sellers/pending`, {
-    headers: { 'x-admin-key': adminKey },
+    headers,
   });
   if (!res.ok) throw new Error('Failed to fetch pending sellers');
   return res.json();
@@ -144,35 +157,43 @@ export async function fetchPendingSellers(adminKey: string): Promise<Seller[]> {
 
 export async function updateSellerStatus(
   sellerId: number,
-  status: 'APPROVED' | 'REJECTED',
-  adminKey: string
+  status: 'APPROVED' | 'REJECTED'
 ): Promise<Seller> {
+  const headers = await getAuthHeaders();
   const res = await fetch(`${API_URL}/api/admin/sellers/${sellerId}`, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-admin-key': adminKey,
-    },
+    headers,
     body: JSON.stringify({ status }),
   });
   if (!res.ok) throw new Error('Failed to update seller status');
   return res.json();
 }
 
-export async function fetchOrders(adminKey: string): Promise<Order[]> {
+export async function fetchOrders(): Promise<Order[]> {
+  const headers = await getAuthHeaders();
   const res = await fetch(`${API_URL}/api/admin/orders`, {
-    headers: { 'x-admin-key': adminKey },
+    headers,
   });
   if (!res.ok) throw new Error('Failed to fetch orders');
   return res.json();
 }
 
-export async function fetchDonations(adminKey: string) {
+export async function fetchDonations() {
+  const headers = await getAuthHeaders();
   const res = await fetch(`${API_URL}/api/admin/donations`, {
-    headers: { 'x-admin-key': adminKey },
+    headers,
   });
   if (!res.ok) throw new Error('Failed to fetch donations');
   return res.json();
+}
+
+export async function fetchTotalDonations(): Promise<number> {
+  const res = await fetch(`${API_URL}/api/donations/total`, {
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error('Failed to fetch total donations');
+  const data = await res.json();
+  return data.total_donations_cents || 0;
 }
 
 export async function submitPromoterApplication(formData: FormData): Promise<Promoter> {
@@ -187,9 +208,10 @@ export async function submitPromoterApplication(formData: FormData): Promise<Pro
   return res.json();
 }
 
-export async function fetchPendingPromoters(adminKey: string): Promise<Promoter[]> {
+export async function fetchPendingPromoters(): Promise<Promoter[]> {
+  const headers = await getAuthHeaders();
   const res = await fetch(`${API_URL}/api/admin/promoters/pending`, {
-    headers: { 'x-admin-key': adminKey },
+    headers,
   });
   if (!res.ok) throw new Error('Failed to fetch pending promoters');
   return res.json();
@@ -197,15 +219,12 @@ export async function fetchPendingPromoters(adminKey: string): Promise<Promoter[
 
 export async function updatePromoterStatus(
   promoterId: number,
-  status: 'APPROVED' | 'REJECTED',
-  adminKey: string
+  status: 'APPROVED' | 'REJECTED'
 ): Promise<Promoter> {
+  const headers = await getAuthHeaders();
   const res = await fetch(`${API_URL}/api/admin/promoters/${promoterId}`, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-admin-key': adminKey,
-    },
+    headers,
     body: JSON.stringify({ status }),
   });
   if (!res.ok) throw new Error('Failed to update promoter status');
@@ -215,6 +234,23 @@ export async function updatePromoterStatus(
 export async function fetchEvents(): Promise<Event[]> {
   const res = await fetch(`${API_URL}/api/events`);
   if (!res.ok) throw new Error('Failed to fetch events');
+  return res.json();
+}
+
+export async function fetchEvent(id: number): Promise<Event> {
+  const res = await fetch(`${API_URL}/api/events/${id}`);
+  if (!res.ok) throw new Error('Failed to fetch event');
+  return res.json();
+}
+
+export interface SellerWithProducts extends Seller {
+  product_count: number;
+  products: Product[];
+}
+
+export async function fetchSellersWithProducts(): Promise<SellerWithProducts[]> {
+  const res = await fetch(`${API_URL}/api/sellers/collections`);
+  if (!res.ok) throw new Error('Failed to fetch sellers');
   return res.json();
 }
 

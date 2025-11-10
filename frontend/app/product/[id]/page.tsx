@@ -2,16 +2,18 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { fetchProduct, createCheckoutSession } from '@/lib/api';
-import type { Product } from '@/lib/api';
+import { fetchProduct, createCheckoutSession, fetchChapters } from '@/lib/api';
+import type { Product, Chapter } from '@/lib/api';
 import Image from 'next/image';
 import Link from 'next/link';
-import Logo from '../components/Logo';
+import Logo from '../../components/Logo';
+import VerificationBadge from '../../components/VerificationBadge';
 
 export default function ProductPage() {
   const params = useParams();
   const router = useRouter();
   const [product, setProduct] = useState<Product | null>(null);
+  const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(true);
   const [checkingOut, setCheckingOut] = useState(false);
   const [email, setEmail] = useState('');
@@ -19,8 +21,14 @@ export default function ProductPage() {
 
   useEffect(() => {
     if (params.id) {
-      fetchProduct(Number(params.id))
-        .then(setProduct)
+      Promise.all([
+        fetchProduct(Number(params.id)),
+        fetchChapters().catch(() => [])
+      ])
+        .then(([productData, chaptersData]) => {
+          setProduct(productData);
+          setChapters(chaptersData);
+        })
         .catch((err) => {
           console.error(err);
           setError('Failed to load product');
@@ -28,6 +36,12 @@ export default function ProductPage() {
         .finally(() => setLoading(false));
     }
   }, [params.id]);
+
+  const getChapterName = (chapterId: number | null) => {
+    if (!chapterId) return null;
+    const chapter = chapters.find(c => c.id === chapterId);
+    return chapter?.name || null;
+  };
 
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,7 +71,7 @@ export default function ProductPage() {
     return (
       <div className="min-h-screen bg-cream flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-display font-extrabold text-midnight-navy mb-4">Product not found</h1>
+          <h1 className="text-2xl font-display font-bold text-midnight-navy mb-4">Product not found</h1>
           <Link href="/" className="text-crimson hover:underline">
             Return to homepage
           </Link>
@@ -85,11 +99,52 @@ export default function ProductPage() {
                   fill
                   className="object-cover"
                 />
+                {/* Verification badge overlays */}
+                {product.sponsored_chapter_id && (
+                  <div className="absolute top-3 left-3 z-10">
+                    <VerificationBadge 
+                      type="sponsored-chapter" 
+                      chapterName={getChapterName(product.sponsored_chapter_id)}
+                    />
+                  </div>
+                )}
+                {product.seller_name && (
+                  <div className="absolute top-3 right-3 z-10">
+                    <VerificationBadge type="brother" />
+                  </div>
+                )}
               </div>
             )}
             <div className="md:w-1/2 p-8">
-              <h1 className="text-3xl font-display font-extrabold text-midnight-navy mb-4">{product.name}</h1>
+              <div className="flex items-start justify-between mb-4">
+                <h1 className="text-3xl font-display font-bold text-midnight-navy">{product.name}</h1>
+                {product.seller_name && (
+                  <VerificationBadge type="brother" />
+                )}
+              </div>
+              {product.sponsored_chapter_id && (
+                <div className="mb-4">
+                  <VerificationBadge 
+                    type="sponsored-chapter" 
+                    chapterName={getChapterName(product.sponsored_chapter_id)}
+                  />
+                </div>
+              )}
               <p className="text-midnight-navy/70 mb-6">{product.description}</p>
+              {product.seller_name && (
+                <div className="mb-4">
+                  <p className="text-sm text-midnight-navy/60 mb-2">Sold by {product.seller_name}</p>
+                  <Link 
+                    href={`/collections?seller=${product.seller_id}`}
+                    className="text-sm text-crimson font-medium hover:underline inline-flex items-center gap-1"
+                  >
+                    Shop Collection
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </Link>
+                </div>
+              )}
               <p className="text-4xl font-bold text-crimson mb-8">
                 ${(product.price_cents / 100).toFixed(2)}
               </p>

@@ -1,0 +1,664 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import Logo from '../components/Logo';
+import VerificationCodeInput from '../components/VerificationCodeInput';
+
+export default function LoginPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [needsPasswordChange, setNeedsPasswordChange] = useState(false);
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [resendingVerification, setResendingVerification] = useState(false);
+
+  // Check for error in URL (from NextAuth redirect)
+  useEffect(() => {
+    const errorParam = searchParams.get('error');
+    if (errorParam) {
+      console.log('Error from URL:', errorParam);
+      // Check if it's a user not confirmed error
+      if (errorParam.includes('UserNotConfirmedException') || errorParam.includes('not confirmed')) {
+        setNeedsVerification(true);
+      }
+    }
+  }, [searchParams]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setNeedsPasswordChange(false); // Reset password change state
+
+    let passwordChangeRequired = false;
+
+    try {
+      // First, try to authenticate with Cognito directly to check for password change requirement
+      const { signIn: cognitoSignIn } = await import('@/lib/cognito');
+      
+      try {
+        // This will throw if password change is required or user is not confirmed
+        await cognitoSignIn(email, password);
+        console.log('Cognito signIn succeeded, proceeding to NextAuth');
+      } catch (cognitoError: any) {
+        console.log('🔴 Cognito signIn threw an error - caught in catch block');
+        // Check if it's a password change requirement - check multiple ways the error might be formatted
+        const errorMessage = cognitoError?.message || cognitoError?.toString() || '';
+        const errorCode = cognitoError?.code || cognitoError?.name || '';
+        const errorString = String(errorMessage);
+        
+        console.log('Cognito error caught in login page:', {
+          message: errorMessage,
+          code: errorCode,
+          name: cognitoError?.name,
+          error: cognitoError,
+          string: errorString,
+          type: typeof cognitoError,
+          keys: Object.keys(cognitoError || {}),
+          hasCode: 'code' in cognitoError,
+          codeValue: cognitoError?.code
+        }); // Debug log
+        
+        // Check multiple ways the error might indicate password change requirement
+        const isPasswordChangeRequired = 
+          errorString.includes('NEW_PASSWORD_REQUIRED') ||
+          errorCode === 'NEW_PASSWORD_REQUIRED' ||
+          cognitoError?.name === 'NEW_PASSWORD_REQUIRED' ||
+          errorString.includes('newPasswordRequired');
+        
+        // Check if user is not confirmed - check all possible ways this error might appear
+        // The error object from amazon-cognito-identity-js has a 'code' property
+        const isUserNotConfirmed = 
+          cognitoError?.code === 'UserNotConfirmedException' ||
+          errorCode === 'UserNotConfirmedException' ||
+          cognitoError?.name === 'UserNotConfirmedException' ||
+          errorString.includes('UserNotConfirmedException') ||
+          errorString.includes('User is not confirmed') ||
+          errorString.includes('not confirmed') ||
+          (errorCode === 'NotAuthorizedException' && errorString.includes('confirmed'));
+        
+        if (isPasswordChangeRequired) {
+          console.log('✅ Password change required detected, showing form and preventing NextAuth call');
+          passwordChangeRequired = true;
+          setNeedsPasswordChange(true);
+          setLoading(false);
+          return; // Exit early, don't call NextAuth
+        }
+        
+        if (isUserNotConfirmed) {
+          console.log('✅ User not confirmed detected in Cognito signIn, showing verification form');
+          console.log('Error object details:', {
+            code: cognitoError?.code,
+            name: cognitoError?.name,
+            message: cognitoError?.message,
+            fullError: cognitoError
+          });
+          setNeedsVerification(true);
+          setLoading(false);
+          return; // Exit early, don't call NextAuth
+        } else {
+          console.log('❌ UserNotConfirmedException NOT detected in Cognito signIn catch block');
+          console.log('Error check results:', {
+            codeCheck: cognitoError?.code === 'UserNotConfirmedException',
+            errorCodeCheck: errorCode === 'UserNotConfirmedException',
+            nameCheck: cognitoError?.name === 'UserNotConfirmedException',
+            stringCheck: errorString.includes('UserNotConfirmedException'),
+            actualCode: cognitoError?.code,
+            actualName: cognitoError?.name,
+            actualMessage: cognitoError?.message
+          });
+        }
+        
+        // If it's a different Cognito error, we'll try NextAuth anyway
+        // (it might be a different error that NextAuth can handle)
+        console.log('Not a password change or verification error, will try NextAuth. Error:', errorString);
+        // Don't re-throw - let NextAuth try to handle it
+        // The error will be caught by NextAuth and we'll check result.error
+      }
+      
+      // Only call NextAuth if password change is NOT required
+      if (!passwordChangeRequired) {
+        const { signIn } = await import('next-auth/react');
+        const result = await signIn('credentials', {
+          email,
+          password,
+          redirect: false,
+        });
+
+        if (result?.error) {
+          console.log('NextAuth error result FULL:', JSON.stringify(result, null, 2)); // Debug log - check full result object
+          console.log('NextAuth error string:', result.error); // Debug log
+          console.log('NextAuth error type:', typeof result.error); // Debug log
+          console.log('NextAuth result keys:', Object.keys(result || {})); // Debug log
+          
+          const errorString = String(result.error || '');
+          const errorLower = errorString.toLowerCase();
+          
+          console.log('Checking error string:', errorString);
+          console.log('Error includes UserNotConfirmedException?', errorString.includes('UserNotConfirmedException'));
+          console.log('Error includes "not confirmed"?', errorString.includes('not confirmed'));
+          
+          // Check if NextAuth also detected password change requirement
+          if (errorString.includes('NEW_PASSWORD_REQUIRED') || errorString === 'NEW_PASSWORD_REQUIRED') {
+            setNeedsPasswordChange(true);
+            setLoading(false);
+            return;
+          }
+          
+          // Check if user is not confirmed - check multiple ways
+          const isUserNotConfirmed = 
+            errorString.includes('UserNotConfirmedException') || 
+            errorString.includes('User is not confirmed') ||
+            errorString.includes('not confirmed') ||
+            errorLower.includes('user is not confirmed') ||
+            errorString.includes('Please verify your email') ||
+            errorString.includes('verify your email');
+          
+          console.log('isUserNotConfirmed check result:', isUserNotConfirmed);
+          
+          if (isUserNotConfirmed) {
+            console.log('✅ User not confirmed detected from NextAuth, showing verification form');
+            setNeedsVerification(true);
+            setLoading(false);
+            return;
+          }
+          
+          // If we get here, it's a generic error
+          console.log('Generic error, showing error message. Error was:', errorString);
+          setError('Invalid email or password');
+          setLoading(false);
+        } else {
+          router.push('/');
+        }
+      }
+    } catch (err: any) {
+      console.error('Unexpected error:', err); // Debug log
+      
+      // Check for UserNotConfirmedException in the catch block too
+      const errorMessage = err?.message || err?.toString() || '';
+      const errorCode = err?.code || err?.name || '';
+      const errorString = String(errorMessage);
+      
+      const isUserNotConfirmed = 
+        errorString.includes('UserNotConfirmedException') ||
+        errorCode === 'UserNotConfirmedException' ||
+        err?.name === 'UserNotConfirmedException' ||
+        errorString.includes('User is not confirmed') ||
+        errorString.includes('not confirmed');
+      
+      if (isUserNotConfirmed) {
+        console.log('✅ User not confirmed detected in catch block, showing verification form');
+        setNeedsVerification(true);
+        setLoading(false);
+        return;
+      }
+      
+      setError(err.message || 'Failed to login');
+      setLoading(false);
+    }
+  };
+
+  const handleVerification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    if (!verificationCode || verificationCode.length !== 6) {
+      setError('Please enter a valid 6-digit verification code');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${API_URL}/api/members/cognito/verify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          code: verificationCode,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Invalid verification code');
+      }
+
+      // After verification, try to login again
+      setNeedsVerification(false);
+      setVerificationCode('');
+      setError('');
+      
+      // Automatically try to login again
+      const { signIn } = await import('next-auth/react');
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setError('Please try logging in again');
+        setLoading(false);
+      } else {
+        router.push('/');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Invalid verification code. Please try again.');
+      setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    setResendingVerification(true);
+    setError('');
+
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${API_URL}/api/members/cognito/resend-verification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to resend verification code');
+      }
+
+      setError('');
+      alert('Verification code sent! Please check your email.');
+    } catch (err: any) {
+      setError(err.message || 'Failed to resend verification code');
+    } finally {
+      setResendingVerification(false);
+    }
+  };
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    // Validate passwords match
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match');
+      setLoading(false);
+      return;
+    }
+
+    // Validate password length
+    if (newPassword.length < 8) {
+      setError('Password must be at least 8 characters');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { completeNewPasswordChallenge } = await import('@/lib/cognito');
+      const result = await completeNewPasswordChallenge(newPassword);
+
+      // Now authenticate with NextAuth using the new password
+      const { signIn } = await import('next-auth/react');
+      const authResult = await signIn('credentials', {
+        email,
+        password: newPassword,
+        redirect: false,
+      });
+
+      if (authResult?.error) {
+        setError('Failed to complete login after password change');
+        setLoading(false);
+      } else {
+        router.push('/');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to change password');
+      setLoading(false);
+    }
+  };
+
+  return (
+    <main className="min-h-screen bg-cream flex items-center justify-center">
+      <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full border border-frost-gray">
+        <div className="mb-6 text-center">
+          <Logo />
+        </div>
+        <h1 className="text-2xl font-display font-bold mb-2 text-center text-midnight-navy">
+          {needsPasswordChange ? 'Change Your Password' : needsVerification ? 'Verify Your Email' : 'Member Login'}
+        </h1>
+        <p className="text-sm text-midnight-navy/70 text-center mb-6">
+          {needsPasswordChange
+            ? 'Please set a new password to continue.'
+            : needsVerification
+            ? 'Please verify your email address to continue. Check your email for a verification code.'
+            : 'Access your member account to shop, track orders, and connect with the brotherhood.'}
+        </p>
+        {needsVerification ? (
+          <form onSubmit={handleVerification} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2 text-midnight-navy">Verification Code *</label>
+              <VerificationCodeInput
+                length={6}
+                value={verificationCode}
+                onChange={(code) => setVerificationCode(code)}
+                disabled={loading}
+              />
+              <p className="text-xs text-midnight-navy/60 mt-2 text-center">
+                Enter the 6-digit code sent to {email}
+              </p>
+              <p className="text-xs text-midnight-navy/50 mt-1 text-center">
+                You can paste the code to fill all fields at once
+              </p>
+            </div>
+            <div className="flex items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={handleResendVerification}
+                disabled={resendingVerification}
+                className="text-sm transition text-crimson hover:underline disabled:opacity-50"
+              >
+                {resendingVerification ? 'Sending...' : 'Resend code'}
+              </button>
+            </div>
+            {error && <div className="text-red-600 text-sm">{error}</div>}
+            <button
+              type="submit"
+              disabled={loading || verificationCode.length !== 6}
+              className="w-full bg-crimson text-white py-2 rounded-lg font-semibold hover:bg-crimson/90 transition disabled:opacity-50 shadow-md hover:shadow-lg"
+            >
+              {loading ? 'Verifying...' : 'Verify Email'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setNeedsVerification(false);
+                setVerificationCode('');
+                setError('');
+              }}
+              className="w-full bg-gray-200 text-midnight-navy py-2 rounded-lg font-semibold hover:bg-gray-300 transition"
+            >
+              Back to Login
+            </button>
+          </form>
+        ) : !needsPasswordChange ? (
+          <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium mb-2 text-midnight-navy">
+              Email
+            </label>
+            <input
+              type="email"
+              id="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="w-full px-4 py-2 border border-frost-gray rounded-lg focus:ring-2 focus:ring-crimson focus:border-transparent text-midnight-navy"
+              placeholder="Enter your email"
+            />
+          </div>
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium mb-2 text-midnight-navy">
+              Password
+            </label>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                id="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full px-4 py-2 pr-10 border border-frost-gray rounded-lg focus:ring-2 focus:ring-crimson focus:border-transparent text-midnight-navy"
+                placeholder="Enter your password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-midnight-navy/60 hover:text-midnight-navy transition"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                )}
+              </button>
+            </div>
+          </div>
+          {error && <div className="text-red-600 text-sm">{error}</div>}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-crimson text-white py-2 rounded-lg font-semibold hover:bg-crimson/90 transition disabled:opacity-50 shadow-md hover:shadow-lg"
+          >
+            {loading ? 'Logging in...' : 'Login'}
+          </button>
+          <div className="text-center mt-4">
+            <Link
+              href="/forgot-password"
+              className="text-sm text-midnight-navy/70 hover:text-crimson transition"
+            >
+              Forgot your password?
+            </Link>
+          </div>
+        </form>
+        ) : (
+          <form onSubmit={handlePasswordChange} className="space-y-4">
+            <div>
+              <label htmlFor="newPassword" className="block text-sm font-medium mb-2 text-midnight-navy">
+                New Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showNewPassword ? 'text' : 'password'}
+                  id="newPassword"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  className="w-full px-4 py-2 pr-10 border border-frost-gray rounded-lg focus:ring-2 focus:ring-crimson focus:border-transparent text-midnight-navy"
+                  placeholder="Enter your new password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-midnight-navy/60 hover:text-midnight-navy transition"
+                  aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showNewPassword ? (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium mb-2 text-midnight-navy">
+                Confirm New Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  id="confirmPassword"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  className="w-full px-4 py-2 pr-10 border border-frost-gray rounded-lg focus:ring-2 focus:ring-crimson focus:border-transparent text-midnight-navy"
+                  placeholder="Confirm your new password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-midnight-navy/60 hover:text-midnight-navy transition"
+                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showConfirmPassword ? (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            </div>
+            {error && <div className="text-red-600 text-sm">{error}</div>}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-crimson text-white py-2 rounded-lg font-semibold hover:bg-crimson/90 transition disabled:opacity-50 shadow-md hover:shadow-lg"
+            >
+              {loading ? 'Changing Password...' : 'Change Password'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setNeedsPasswordChange(false);
+                setNewPassword('');
+                setConfirmPassword('');
+                setError('');
+              }}
+              className="w-full bg-gray-200 text-midnight-navy py-2 rounded-lg font-semibold hover:bg-gray-300 transition"
+            >
+              Back to Login
+            </button>
+          </form>
+        )}
+
+        {!needsPasswordChange && (
+          <>
+        {/* Social Login Separator */}
+        <div className="mt-6 mb-4">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-frost-gray"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-4 bg-white text-midnight-navy/60 font-medium">OR LOGIN WITH</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Social Login Buttons */}
+        <div className="grid grid-cols-4 gap-3 mb-10">
+          {/* Facebook */}
+          <button
+            type="button"
+            disabled
+            className="flex items-center justify-center p-3 border border-frost-gray rounded-lg opacity-50 cursor-not-allowed relative group"
+            aria-label="Login with Facebook (Coming Soon)"
+            title="Coming Soon"
+          >
+            <svg className="w-6 h-6 text-[#1877F2]" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+            </svg>
+            <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-midnight-navy/50 whitespace-nowrap">Coming Soon</span>
+          </button>
+
+          {/* Google */}
+          <button
+            type="button"
+            disabled
+            className="flex items-center justify-center p-3 border border-frost-gray rounded-lg opacity-50 cursor-not-allowed relative group"
+            aria-label="Login with Google (Coming Soon)"
+            title="Coming Soon"
+          >
+            <svg className="w-6 h-6" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+            <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-midnight-navy/50 whitespace-nowrap">Coming Soon</span>
+          </button>
+
+          {/* Apple */}
+          <button
+            type="button"
+            disabled
+            className="flex items-center justify-center p-3 border border-frost-gray rounded-lg opacity-50 cursor-not-allowed relative group"
+            aria-label="Login with Apple (Coming Soon)"
+            title="Coming Soon"
+          >
+            <svg className="w-6 h-6 text-black" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+            </svg>
+            <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-midnight-navy/50 whitespace-nowrap">Coming Soon</span>
+          </button>
+
+          {/* X (Twitter) */}
+          <button
+            type="button"
+            disabled
+            className="flex items-center justify-center p-3 border border-frost-gray rounded-lg opacity-50 cursor-not-allowed relative group"
+            aria-label="Login with X (Coming Soon)"
+            title="Coming Soon"
+          >
+            <svg className="w-6 h-6 text-black" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+            </svg>
+            <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-midnight-navy/50 whitespace-nowrap">Coming Soon</span>
+          </button>
+        </div>
+        </>
+        )}
+
+        {!needsPasswordChange && (
+        <div className="mt-6 text-center space-y-2">
+          <Link href="/" className="text-sm text-midnight-navy/70 hover:text-crimson transition block">
+            Return to homepage
+          </Link>
+          <p className="text-xs text-midnight-navy/60">
+            Don't have an account?{' '}
+            <Link href="/register" className="text-crimson hover:underline font-medium">
+              Become a Member
+            </Link>
+          </p>
+          <p className="text-xs text-midnight-navy/60 mt-1">
+            Want to sell or promote?{' '}
+            <Link href="/apply" className="text-crimson hover:underline">
+              Become a Seller
+            </Link>
+            {' or '}
+            <Link href="/promote" className="text-crimson hover:underline">
+              Become a Promoter
+            </Link>
+          </p>
+        </div>
+        )}
+      </div>
+    </main>
+  );
+}
+

@@ -10,7 +10,7 @@
 2. **Configure Environment Variables**
    - `NEXT_PUBLIC_API_URL` - Your backend API URL (e.g., `https://your-api.herokuapp.com`)
    - `NEXTAUTH_SECRET` - Generate with: `openssl rand -base64 32`
-   - `NEXTAUTH_URL` - Your frontend URL (e.g., `https://northstarnupes.com`)
+   - `NEXTAUTH_URL` - Your frontend URL (e.g., `https://1kappa.com`)
    - `ADMIN_KEY` - Your admin authentication key
 
 3. **Deploy**
@@ -39,7 +39,7 @@
    heroku config:set AWS_SECRET_ACCESS_KEY=...
    heroku config:set AWS_S3_BUCKET_NAME=...
    heroku config:set AWS_REGION=us-east-1
-   heroku config:set FRONTEND_URL=https://northstarnupes.com
+   heroku config:set FRONTEND_URL=https://1kappa.com
    heroku config:set ADMIN_KEY=...
    ```
 

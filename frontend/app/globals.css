@@ -4,12 +4,13 @@
 
 :root {
   --background: #F7F4E9;
-  --foreground: #1E2A38;
-  --crimson: #9B111E;
+  --foreground: #121212;
+  --crimson: #8A0C13;
   --cream: #F7F4E9;
-  --midnight-navy: #1E2A38;
+  --midnight-navy: #121212;
   --frost-gray: #D9DBE0;
   --aurora-gold: #C6A664;
+  --white: #FFFFFF;
 }
 
 body {
@@ -27,12 +28,39 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-montserrat), sans-serif;
-  font-weight: 800;
+  font-family: var(--font-oswald), sans-serif;
+  font-weight: 700;
 }
 
 .tagline {
   font-family: var(--font-playfair), serif;
   font-style: italic;
+}
+
+/* Logo animations - subtle star shimmer and rotation for unity symbolism */
+@keyframes star-rotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes shimmer {
+  0%, 100% {
+    opacity: 0.15;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.animate-star-rotate {
+  animation: star-rotate 20s linear infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 3s ease-in-out infinite;
 }
 

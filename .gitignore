@@ -32,3 +32,6 @@ Thumbs.db
 # Misc
 *.tsbuildinfo
 .cache/
+
+# Sensitive files
+1kappa_user_accessKeys.csv

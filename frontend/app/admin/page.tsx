@@ -40,8 +40,9 @@ export default function AdminDashboard() {
 
   const loadData = async () => {
     if (!session) return;
-    const adminKey = localStorage.getItem('adminKey') || '';
-    if (!adminKey) {
+    
+    // Check if user is admin
+    if ((session.user as any)?.role !== 'ADMIN') {
       router.push('/admin/login');
       return;
     }
@@ -49,23 +50,22 @@ export default function AdminDashboard() {
     setLoading(true);
     try {
       if (activeTab === 'sellers') {
-        const data = await fetchPendingSellers(adminKey);
+        const data = await fetchPendingSellers();
         setSellers(data);
       } else if (activeTab === 'promoters') {
-        const data = await fetchPendingPromoters(adminKey);
+        const data = await fetchPendingPromoters();
         setPromoters(data);
       } else if (activeTab === 'orders') {
-        const data = await fetchOrders(adminKey);
+        const data = await fetchOrders();
         setOrders(data);
       } else if (activeTab === 'donations') {
-        const data = await fetchDonations(adminKey);
+        const data = await fetchDonations();
         setDonations(data);
       }
     } catch (error: any) {
       console.error('Error loading data:', error);
-      if (error?.message?.includes('Unauthorized') || error?.message?.includes('401')) {
-        localStorage.removeItem('adminKey');
-        alert('Invalid admin key. Please login again.');
+      if (error?.message?.includes('Unauthorized') || error?.message?.includes('401') || error?.message?.includes('Not authenticated')) {
+        alert('Authentication failed. Please login again.');
         router.push('/admin/login');
       }
     } finally {
@@ -75,12 +75,11 @@ export default function AdminDashboard() {
 
   const handleApprove = async (sellerId: number) => {
     if (!session) return;
-    const adminKey = localStorage.getItem('adminKey') || '';
     
     setProcessing(sellerId);
     setProcessingType('seller');
     try {
-      await updateSellerStatus(sellerId, 'APPROVED', adminKey);
+      await updateSellerStatus(sellerId, 'APPROVED');
       await loadData();
     } catch (error) {
       console.error('Error approving seller:', error);
@@ -93,12 +92,11 @@ export default function AdminDashboard() {
 
   const handleReject = async (sellerId: number) => {
     if (!session) return;
-    const adminKey = localStorage.getItem('adminKey') || '';
     
     setProcessing(sellerId);
     setProcessingType('seller');
     try {
-      await updateSellerStatus(sellerId, 'REJECTED', adminKey);
+      await updateSellerStatus(sellerId, 'REJECTED');
       await loadData();
     } catch (error) {
       console.error('Error rejecting seller:', error);
@@ -111,12 +109,11 @@ export default function AdminDashboard() {
 
   const handleApprovePromoter = async (promoterId: number) => {
     if (!session) return;
-    const adminKey = localStorage.getItem('adminKey') || '';
     
     setProcessing(promoterId);
     setProcessingType('promoter');
     try {
-      await updatePromoterStatus(promoterId, 'APPROVED', adminKey);
+      await updatePromoterStatus(promoterId, 'APPROVED');
       await loadData();
     } catch (error) {
       console.error('Error approving promoter:', error);
@@ -129,12 +126,11 @@ export default function AdminDashboard() {
 
   const handleRejectPromoter = async (promoterId: number) => {
     if (!session) return;
-    const adminKey = localStorage.getItem('adminKey') || '';
     
     setProcessing(promoterId);
     setProcessingType('promoter');
     try {
-      await updatePromoterStatus(promoterId, 'REJECTED', adminKey);
+      await updatePromoterStatus(promoterId, 'REJECTED');
       await loadData();
     } catch (error) {
       console.error('Error rejecting promoter:', error);
@@ -179,8 +175,8 @@ export default function AdminDashboard() {
       <nav className="bg-white shadow-sm border-b border-frost-gray">
         <div className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
-            <Link href="/" className="text-2xl font-display font-extrabold text-crimson">
-              NorthStar Nupes - Admin
+            <Link href="/" className="text-2xl font-display font-bold text-crimson">
+              1Kappa - Admin
             </Link>
             <Link
               href="/api/auth/signout"

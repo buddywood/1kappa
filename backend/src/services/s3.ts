@@ -36,7 +36,6 @@ export async function uploadToS3(
     Key: key,
     Body: file,
     ContentType: contentType,
-    ACL: 'public-read',
   });
 
   await s3Client.send(command);
@@ -71,7 +70,6 @@ export async function getPresignedUploadUrl(
     Bucket: BUCKET_NAME,
     Key: key,
     ContentType: contentType,
-    ACL: 'public-read',
   });
 
   return await getSignedUrl(s3Client, command, { expiresIn });
