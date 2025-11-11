@@ -864,17 +864,49 @@ export async function searchMember(
     ];
 
     let resultsFound = false;
-    let resultElements: any[] = [];
+    let workingSelector: string | null = null;
+    let targetFrame: any = null; // Will be set if results are in an iframe
 
+    // First check main page
     for (const selector of resultSelectors) {
       try {
-        resultElements = await page.$$(selector);
-        if (resultElements.length > 0) {
+        const count = await page.$$eval(selector, (elements) => elements.length);
+        if (count > 0) {
           resultsFound = true;
+          workingSelector = selector;
+          targetFrame = page;
           break;
         }
       } catch (e) {
         // Continue
+      }
+    }
+
+    // If not found in main page, check iframes
+    if (!resultsFound) {
+      const iframes = await page.$$('iframe');
+      for (let i = 0; i < iframes.length; i++) {
+        try {
+          const frame = await iframes[i].contentFrame();
+          if (frame) {
+            for (const selector of resultSelectors) {
+              try {
+                const count = await frame.$$eval(selector, (elements) => elements.length);
+                if (count > 0) {
+                  resultsFound = true;
+                  workingSelector = selector;
+                  targetFrame = frame;
+                  break;
+                }
+              } catch (e) {
+                // Continue
+              }
+            }
+            if (resultsFound) break;
+          }
+        } catch (e) {
+          // Cross-origin iframe, continue
+        }
       }
     }
 
@@ -885,21 +917,84 @@ export async function searchMember(
       await page.keyboard.press('Enter');
       await delay(2000);
 
-      // Check for results again
+      // Check for results again (main page and iframes)
       for (const selector of resultSelectors) {
         try {
-          resultElements = await page.$$(selector);
-          if (resultElements.length > 0) {
+          const count = await page.$$eval(selector, (elements) => elements.length);
+          if (count > 0) {
             resultsFound = true;
+            workingSelector = selector;
+            targetFrame = page;
             break;
           }
         } catch (e) {
           // Continue
         }
       }
+      
+      // If still not found, check iframes again
+      if (!resultsFound) {
+        const iframes = await page.$$('iframe');
+        for (let i = 0; i < iframes.length; i++) {
+          try {
+            const frame = await iframes[i].contentFrame();
+            if (frame) {
+              for (const selector of resultSelectors) {
+                try {
+                  const count = await frame.$$eval(selector, (elements) => elements.length);
+                  if (count > 0) {
+                    resultsFound = true;
+                    workingSelector = selector;
+                    targetFrame = frame;
+                    break;
+                  }
+                } catch (e) {
+                  // Continue
+                }
+              }
+              if (resultsFound) break;
+            }
+          } catch (e) {
+            // Cross-origin iframe, continue
+          }
+        }
+      }
     }
 
-    if (!resultsFound || resultElements.length === 0) {
+    if (!resultsFound || !workingSelector) {
+      return {
+        found: false,
+        nameMatch: false,
+        membershipNumberMatch: false,
+        error: 'No search results found',
+      };
+    }
+
+    // Get all result texts using evaluate on the correct frame to avoid cross-frame issues
+    // This gets all the text content in one go, avoiding element handle issues
+    let resultTextsArray: Array<{ text: string; html: string }> = [];
+    
+    try {
+      // Use the frame where we found results (main page or iframe)
+      const evaluateTarget = targetFrame || page;
+      resultTextsArray = await evaluateTarget.evaluate((selector) => {
+        const elements = Array.from(document.querySelectorAll(selector));
+        return elements.map((el: any) => ({
+          text: (el.textContent || '').trim(),
+          html: (el.innerHTML || '').trim(),
+        }));
+      }, workingSelector);
+    } catch (e) {
+      console.error('Error getting result texts:', e);
+      return {
+        found: false,
+        nameMatch: false,
+        membershipNumberMatch: false,
+        error: `Error extracting search results: ${e}`,
+      };
+    }
+
+    if (resultTextsArray.length === 0) {
       return {
         found: false,
         nameMatch: false,
@@ -913,33 +1008,35 @@ export async function searchMember(
     let membershipNumberMatch = false;
     let matchedDetails: any = {};
 
-    for (const element of resultElements) {
+    for (const resultData of resultTextsArray) {
       try {
-        const text = await element.evaluate((el: any) => el.textContent || '');
-        const innerHTML = await element.evaluate((el: any) => el.innerHTML || '');
+        const text = resultData.text;
+        const innerHTML = resultData.html;
 
         // Check for name match (case-insensitive, partial match)
         const nameRegex = new RegExp(name.replace(/\s+/g, '\\s+'), 'i');
-        if (nameRegex.test(text) || nameRegex.test(innerHTML)) {
+        const currentNameMatch = nameRegex.test(text) || nameRegex.test(innerHTML);
+        if (currentNameMatch) {
           nameMatch = true;
         }
 
         // Check for membership number match (exact)
-        if (text.includes(membershipNumber) || innerHTML.includes(membershipNumber)) {
+        const currentMembershipMatch = text.includes(membershipNumber) || innerHTML.includes(membershipNumber);
+        if (currentMembershipMatch) {
           membershipNumberMatch = true;
         }
 
         // If both match, extract details
-        if (nameMatch && membershipNumberMatch) {
-          // Try to extract more details from the element
-          const nameElement = await element.$('td, .name, [class*="name" i]');
-          const membershipElement = await element.$('td, .membership, [class*="membership" i], [class*="number" i]');
-
-          if (nameElement) {
-            matchedDetails.name = await nameElement.evaluate((el: any) => el.textContent?.trim() || '');
+        if (currentNameMatch && currentMembershipMatch) {
+          // Extract name and membership number from text
+          const nameMatchResult = text.match(new RegExp(name.replace(/\s+/g, '\\s+'), 'i'));
+          if (nameMatchResult) {
+            matchedDetails.name = nameMatchResult[0].trim();
           }
-          if (membershipElement) {
-            matchedDetails.membershipNumber = await membershipElement.evaluate((el: any) => el.textContent?.trim() || '');
+          
+          const membershipMatchResult = text.match(new RegExp(membershipNumber, 'i'));
+          if (membershipMatchResult) {
+            matchedDetails.membershipNumber = membershipMatchResult[0].trim();
           }
 
           break; // Found match, no need to check other results

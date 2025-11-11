@@ -59,21 +59,16 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-frost-gray">
-      <div className="max-w-7xl mx-auto flex items-center justify-between p-4">
-        <Logo href="/" />
-        <nav className="hidden md:flex gap-6 text-sm font-medium items-center">
+      <div className="flex items-center justify-between p-4">
+        <div style={{ marginLeft: '20px' }}>
+          <Logo href="/" />
+        </div>
+        <nav className="hidden md:flex gap-6 text-sm font-medium items-center absolute left-1/2 transform -translate-x-1/2">
           <a href="#shop" className="hover:text-crimson transition">Shop</a>
           <Link href="/collections" className="hover:text-crimson transition">Collections</Link>
-          <Link href="/apply" className="hover:text-crimson transition">Sell</Link>
-          <Link href="/promote" className="hover:text-crimson transition">Promote</Link>
+          <Link href="/apply" className="hover:text-crimson transition">Connect</Link>
           <a href="#events" className="hover:text-crimson transition">Events</a>
-          {isAuthenticated && (
-            <Link href="/admin" className="hover:text-crimson transition">Dashboard</Link>
-          )}
-        </nav>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-3">
-            {isAuthenticated ? (
+          {isAuthenticated ? (
             <>
               <Link 
                 href="/admin" 
@@ -104,15 +99,18 @@ export default function Header() {
               </Link>
             </>
           )}
-          </div>
-          <div className="hidden lg:flex items-center ml-4" style={{ marginRight: '20px' }}>
-            <div className="relative w-20 h-20 rounded-full bg-crimson flex flex-col items-center justify-center shadow-lg border-2 border-crimson" style={{
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), inset 0 1px 2px rgba(0, 0, 0, 0.1)'
-            }}>
-              <div className="text-base font-bold text-white leading-tight">
-                {loading ? '...' : formatCurrency(displayAmount)}
-              </div>
-              <div className="text-[9px] font-bold text-white uppercase leading-tight tracking-wide mt-0.5">Raised</div>
+        </nav>
+        <div className="hidden lg:flex items-center" style={{ marginRight: '20px' }}>
+          <div className="relative w-16 h-20 bg-crimson flex flex-col items-center justify-center shadow-lg" style={{
+            clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), inset 0 1px 2px rgba(0, 0, 0, 0.1)',
+            border: '2px solid #8A0C13'
+          }}>
+            <div className="text-base font-bold text-white leading-tight">
+              {loading ? '...' : formatCurrency(displayAmount)}
+            </div>
+            <div className="text-[9px] font-bold text-white uppercase leading-tight tracking-wide mt-0.5">
+              Raised
             </div>
           </div>
         </div>

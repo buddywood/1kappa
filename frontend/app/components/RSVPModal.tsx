@@ -166,3 +166,4 @@ export default function RSVPModal({ event, isOpen, onClose }: RSVPModalProps) {
   );
 }
 
+

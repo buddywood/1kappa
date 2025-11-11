@@ -85,7 +85,7 @@ export default function Logo({
   );
 
   const taglineText = tagline === 'primary' 
-    ? 'One Kappa. Infinite Brotherhood.'
+    ? 'One Tribe.  One Step.  One Kappa.'
     : 'Connected by the Bond.';
 
   const content = (

@@ -66,3 +66,4 @@ export default function EventCountdown({ eventDate, className = '' }: EventCount
   );
 }
 
+
