@@ -72,6 +72,9 @@ export default function Header() {
           <Link href="/collections" className="hover:text-crimson transition">Collections</Link>
           <Link href="/connect" className="hover:text-crimson transition">Connect</Link>
           <Link href="/events" className="hover:text-crimson transition">Events</Link>
+          {showAuthenticatedMenu && (
+            <Link href="/steward-marketplace" className="hover:text-crimson transition">Steward Marketplace</Link>
+          )}
           {showAuthenticatedMenu ? (
             <>
               <Link 
@@ -80,6 +83,14 @@ export default function Header() {
               >
                 {firstName ? `Welcome Brother ${firstName}` : 'Profile'}
               </Link>
+              {(session?.user as any)?.role === 'STEWARD' && (
+                <Link 
+                  href="/steward-dashboard" 
+                  className="text-sm font-medium text-midnight-navy hover:text-crimson transition px-4 py-2"
+                >
+                  Steward Dashboard
+                </Link>
+              )}
               <button
                 onClick={handleLogout}
                 className="bg-crimson text-white px-5 py-2 rounded-full font-semibold hover:bg-crimson/90 transition shadow-md hover:shadow-lg text-sm"

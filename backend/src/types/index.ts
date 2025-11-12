@@ -121,14 +121,65 @@ export interface User {
   id: number;
   cognito_sub: string;
   email: string;
-  role: 'ADMIN' | 'SELLER' | 'PROMOTER' | 'CONSUMER';
+  role: 'ADMIN' | 'SELLER' | 'PROMOTER' | 'CONSUMER' | 'STEWARD';
   onboarding_status: 'PRE_COGNITO' | 'COGNITO_CONFIRMED' | 'ONBOARDING_STARTED' | 'ONBOARDING_FINISHED';
   member_id: number | null;
   seller_id: number | null;
   promoter_id: number | null;
+  steward_id: number | null;
   features: Record<string, any>;
   last_login: Date | null;
   created_at: Date;
+  updated_at: Date;
+}
+
+export interface Steward {
+  id: number;
+  member_id: number;
+  sponsoring_chapter_id: number;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  verification_status: 'PENDING' | 'VERIFIED' | 'FAILED' | 'MANUAL_REVIEW';
+  verification_date: Date | null;
+  verification_notes: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface StewardListing {
+  id: number;
+  steward_id: number;
+  name: string;
+  description: string | null;
+  image_url: string | null;
+  shipping_cost_cents: number;
+  chapter_donation_cents: number;
+  sponsoring_chapter_id: number;
+  status: 'ACTIVE' | 'CLAIMED' | 'REMOVED';
+  claimed_by_member_id: number | null;
+  claimed_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface StewardClaim {
+  id: number;
+  listing_id: number;
+  claimant_member_id: number;
+  stripe_session_id: string | null;
+  total_amount_cents: number;
+  shipping_cents: number;
+  platform_fee_cents: number;
+  chapter_donation_cents: number;
+  status: 'PENDING' | 'PAID' | 'FAILED';
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface PlatformSetting {
+  id: number;
+  key: string;
+  value: string | null;
+  description: string | null;
   updated_at: Date;
 }
 

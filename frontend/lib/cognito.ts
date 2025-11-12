@@ -1,4 +1,4 @@
-import { CognitoUserPool, CognitoUser, AuthenticationDetails, CognitoUserAttribute } from 'amazon-cognito-identity-js';
+import { CognitoUserPool, CognitoUser, AuthenticationDetails, CognitoUserAttribute, CognitoRefreshToken } from 'amazon-cognito-identity-js';
 
 const poolData = {
   UserPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID || '',
@@ -173,6 +173,45 @@ export function getCurrentSession(): Promise<SignInResult | null> {
         accessToken,
         idToken,
         refreshToken,
+        userSub,
+        email,
+      });
+    });
+  });
+}
+
+/**
+ * Refresh tokens using refresh token
+ */
+export function refreshTokens(refreshToken: string, email: string): Promise<SignInResult> {
+  return new Promise((resolve, reject) => {
+    const cognitoUser = new CognitoUser({
+      Username: email,
+      Pool: userPool,
+    });
+
+    const cognitoRefreshToken = new CognitoRefreshToken({
+      RefreshToken: refreshToken,
+    });
+
+    cognitoUser.refreshSession(cognitoRefreshToken, (err, session) => {
+      if (err || !session) {
+        reject(err || new Error('Failed to refresh session'));
+        return;
+      }
+
+      const accessToken = session.getAccessToken().getJwtToken();
+      const idToken = session.getIdToken().getJwtToken();
+      const newRefreshToken = session.getRefreshToken().getToken();
+
+      const payload = JSON.parse(atob(idToken.split('.')[1]));
+      const userSub = payload.sub;
+      const email = payload.email || payload['cognito:username'];
+
+      resolve({
+        accessToken,
+        idToken,
+        refreshToken: newRefreshToken,
         userSub,
         email,
       });

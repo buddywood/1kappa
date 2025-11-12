@@ -16,13 +16,22 @@ export default function PromotePage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  
+  // Check for sponsoring_chapter_id in URL params (from setup screen)
+  const [urlParams] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('sponsoring_chapter_id');
+    }
+    return null;
+  });
 
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     membership_number: '',
     initiated_chapter_id: '',
-    sponsoring_chapter_id: '',
+    sponsoring_chapter_id: urlParams || '',
     social_links: {
       instagram: '',
       twitter: '',

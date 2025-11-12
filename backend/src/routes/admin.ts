@@ -1,10 +1,33 @@
 import { Router, Request, Response } from 'express';
-import { getPendingSellers, updateSellerStatus, getAllOrders, getChapterDonations, getSellerById, getPendingPromoters, updatePromoterStatus, getPromoterById, getUserByEmail, linkUserToSeller, updateSellerInvitationToken } from '../db/queries';
-import { createConnectAccount } from '../services/stripe';
+import { 
+  getPendingSellers, 
+  updateSellerStatus, 
+  getAllOrders, 
+  getChapterDonations, 
+  getSellerById, 
+  getPendingPromoters, 
+  updatePromoterStatus, 
+  getPromoterById, 
+  getUserByEmail, 
+  linkUserToSeller, 
+  updateSellerInvitationToken,
+  getPendingStewards,
+  updateStewardStatus,
+  getStewardById,
+  linkUserToSteward,
+  getStewardActivity,
+  getChapterDonationsFromStewards,
+  getPlatformSetting,
+  setPlatformSetting,
+  getAllPlatformSettings,
+  getChapterById
+} from '../db/queries';
+import { createConnectAccount, createChapterConnectAccount } from '../services/stripe';
 import { sendSellerApprovedEmail } from '../services/email';
 import { generateInvitationToken } from '../utils/tokens';
 import { z } from 'zod';
 import { authenticate, requireAdmin } from '../middleware/auth';
+import pool from '../db/connection';
 
 const router = Router();
 
@@ -141,6 +164,156 @@ router.put('/promoters/:id', async (req: Request, res: Response) => {
     }
     console.error('Error updating promoter status:', error);
     res.status(500).json({ error: 'Failed to update promoter status' });
+  }
+});
+
+// Steward admin routes
+router.get('/stewards/pending', async (req: Request, res: Response) => {
+  try {
+    const stewards = await getPendingStewards();
+    
+    // Enrich with member and chapter info
+    const enrichedStewards = await Promise.all(
+      stewards.map(async (steward) => {
+        const memberResult = await pool.query('SELECT * FROM members WHERE id = $1', [steward.member_id]);
+        const chapterResult = await pool.query('SELECT * FROM chapters WHERE id = $1', [steward.sponsoring_chapter_id]);
+        return {
+          ...steward,
+          member: memberResult.rows[0],
+          chapter: chapterResult.rows[0],
+        };
+      })
+    );
+    
+    res.json(enrichedStewards);
+  } catch (error) {
+    console.error('Error fetching pending stewards:', error);
+    res.status(500).json({ error: 'Failed to fetch pending stewards' });
+  }
+});
+
+router.put('/stewards/:id', async (req: Request, res: Response) => {
+  try {
+    const stewardId = parseInt(req.params.id);
+    const body = approveSellerSchema.parse(req.body);
+    
+    const steward = await getStewardById(stewardId);
+    if (!steward) {
+      return res.status(404).json({ error: 'Steward not found' });
+    }
+
+    // Update steward status
+    const updatedSteward = await updateStewardStatus(stewardId, body.status);
+    
+    // If approving, link user to steward
+    if (body.status === 'APPROVED') {
+      const memberResult = await pool.query('SELECT id FROM members WHERE id = $1', [steward.member_id]);
+      const member = memberResult.rows[0];
+      
+      if (member) {
+        // Find user by member_id
+        const userResult = await pool.query('SELECT id FROM users WHERE member_id = $1', [steward.member_id]);
+        const user = userResult.rows[0];
+        
+        if (user) {
+          await linkUserToSteward(user.id, stewardId);
+        }
+      }
+    }
+    
+    res.json(updatedSteward);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: 'Validation error', details: error.errors });
+      return;
+    }
+    console.error('Error updating steward status:', error);
+    res.status(500).json({ error: 'Failed to update steward status' });
+  }
+});
+
+router.get('/stewards/activity', async (req: Request, res: Response) => {
+  try {
+    const activity = await getStewardActivity();
+    res.json(activity);
+  } catch (error) {
+    console.error('Error fetching steward activity:', error);
+    res.status(500).json({ error: 'Failed to fetch steward activity' });
+  }
+});
+
+router.get('/stewards/donations', async (req: Request, res: Response) => {
+  try {
+    const donations = await getChapterDonationsFromStewards();
+    res.json(donations);
+  } catch (error) {
+    console.error('Error fetching steward donations:', error);
+    res.status(500).json({ error: 'Failed to fetch steward donations' });
+  }
+});
+
+// Chapter Stripe account management
+const chapterStripeAccountSchema = z.object({
+  stripe_account_id: z.string().min(1),
+});
+
+router.put('/chapters/:id/stripe-account', async (req: Request, res: Response) => {
+  try {
+    const chapterId = parseInt(req.params.id);
+    const body = chapterStripeAccountSchema.parse(req.body);
+    
+    const chapter = await getChapterById(chapterId);
+    if (!chapter) {
+      return res.status(404).json({ error: 'Chapter not found' });
+    }
+
+    await pool.query(
+      'UPDATE chapters SET stripe_account_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
+      [body.stripe_account_id, chapterId]
+    );
+
+    const updatedChapter = await getChapterById(chapterId);
+    res.json(updatedChapter);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: 'Validation error', details: error.errors });
+      return;
+    }
+    console.error('Error updating chapter Stripe account:', error);
+    res.status(500).json({ error: 'Failed to update chapter Stripe account' });
+  }
+});
+
+// Platform settings routes
+router.get('/platform-settings', async (req: Request, res: Response) => {
+  try {
+    const settings = await getAllPlatformSettings();
+    res.json(settings);
+  } catch (error) {
+    console.error('Error fetching platform settings:', error);
+    res.status(500).json({ error: 'Failed to fetch platform settings' });
+  }
+});
+
+const platformSettingSchema = z.object({
+  value: z.string(),
+  description: z.string().optional().nullable(),
+});
+
+router.put('/platform-settings/:key', async (req: Request, res: Response) => {
+  try {
+    const key = req.params.key;
+    const body = platformSettingSchema.parse(req.body);
+    
+    const setting = await setPlatformSetting(key, body.value, body.description || null);
+    res.json(setting);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      res.status(400).json({ error: 'Validation error', details: error.errors });
+      return;
+    }
+    console.error('Error updating platform setting:', error);
+    res.status(500).json({ error: 'Failed to update platform setting' });
   }
 });
 

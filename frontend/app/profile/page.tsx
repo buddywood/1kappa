@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { fetchMemberProfile, updateMemberProfile, fetchChapters, fetchIndustries, type MemberProfile, type Chapter, type Industry } from '@/lib/api';
+import { fetchMemberProfile, updateMemberProfile, fetchChapters, fetchIndustries, getStewardProfile, type MemberProfile, type Chapter, type Industry } from '@/lib/api';
+import Link from 'next/link';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import SearchableSelect from '../components/SearchableSelect';
 import { SkeletonLoader } from '../components/Skeleton';
+import VerificationStatusBadge from '../components/VerificationStatusBadge';
 import Image from 'next/image';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -25,6 +27,8 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [headshotFile, setHeadshotFile] = useState<File | null>(null);
   const [headshotPreview, setHeadshotPreview] = useState<string | null>(null);
+  const [isSteward, setIsSteward] = useState(false);
+  const [stewardStatus, setStewardStatus] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -80,6 +84,17 @@ export default function ProfilePage() {
       setProfile(profileData);
       setChapters(chaptersData);
       setIndustries(industriesData);
+
+      // Check if user is a steward
+      try {
+        const stewardProfile = await getStewardProfile();
+        setIsSteward(true);
+        setStewardStatus(stewardProfile.status);
+      } catch (err) {
+        // Not a steward or error fetching
+        setIsSteward(false);
+        setStewardStatus(null);
+      }
 
       // Populate form data
       setFormData({
@@ -272,6 +287,51 @@ export default function ProfilePage() {
           </div>
         )}
 
+        {/* Steward Status/CTA */}
+        {isSteward ? (
+          <div className="mb-6 p-4 bg-crimson/10 border border-crimson/20 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-midnight-navy mb-1">Steward Status</h3>
+                <p className="text-sm text-midnight-navy/70">
+                  {stewardStatus === 'APPROVED' ? (
+                    <>You are an approved Steward. <Link href="/steward-dashboard" className="text-crimson hover:underline">Manage your listings</Link></>
+                  ) : stewardStatus === 'PENDING' ? (
+                    'Your steward application is pending approval.'
+                  ) : (
+                    'Your steward application was rejected.'
+                  )}
+                </p>
+              </div>
+              {stewardStatus === 'APPROVED' && (
+                <Link
+                  href="/steward-dashboard"
+                  className="bg-crimson text-white px-4 py-2 rounded-full font-semibold hover:bg-crimson/90 transition text-sm"
+                >
+                  Steward Dashboard
+                </Link>
+              )}
+            </div>
+          </div>
+        ) : profile.verification_status === 'VERIFIED' && (
+          <div className="mb-6 p-4 bg-cream border border-frost-gray rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-midnight-navy mb-1">Become a Steward</h3>
+                <p className="text-sm text-midnight-navy/70">
+                  List legacy fraternity paraphernalia for other verified members. Items are free - recipients only pay shipping, platform fees, and a chapter donation.
+                </p>
+              </div>
+              <Link
+                href="/steward-setup"
+                className="bg-crimson text-white px-4 py-2 rounded-full font-semibold hover:bg-crimson/90 transition text-sm whitespace-nowrap ml-4"
+              >
+                Apply Now
+              </Link>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-lg p-8 space-y-8">
           {/* Headshot */}
           <div>
@@ -342,7 +402,12 @@ export default function ProfilePage() {
 
               <div>
                 <label className="block text-sm font-medium mb-2 text-midnight-navy">Membership Number</label>
-                <p className="px-4 py-2 text-midnight-navy/70">{profile.membership_number || 'Not set'}</p>
+                <div className="px-4 py-2 flex items-center gap-3">
+                  <p className="text-midnight-navy/70">{profile.membership_number || 'Not set'}</p>
+                  {profile.verification_status && (
+                    <VerificationStatusBadge status={profile.verification_status} />
+                  )}
+                </div>
               </div>
 
               <div>

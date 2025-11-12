@@ -18,11 +18,20 @@ export default function ApplyPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [profileLoaded, setProfileLoaded] = useState(false);
+  
+  // Check for sponsoring_chapter_id in URL params (from setup screen)
+  const [urlParams] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('sponsoring_chapter_id');
+    }
+    return null;
+  });
 
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    sponsoring_chapter_id: '',
+    sponsoring_chapter_id: urlParams || '',
     business_name: '',
     business_email: '',
     vendor_license_number: '',

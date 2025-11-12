@@ -587,3 +587,151 @@ BEGIN
   );
 END $$;
 
+-- Stewards table
+CREATE TABLE IF NOT EXISTS stewards (
+  id SERIAL PRIMARY KEY,
+  member_id INTEGER NOT NULL UNIQUE REFERENCES members(id),
+  sponsoring_chapter_id INTEGER NOT NULL REFERENCES chapters(id),
+  status VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
+  verification_status VARCHAR(20) DEFAULT 'PENDING' CHECK (verification_status IN ('PENDING', 'VERIFIED', 'FAILED', 'MANUAL_REVIEW')),
+  verification_date TIMESTAMP,
+  verification_notes TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Steward listings table
+CREATE TABLE IF NOT EXISTS steward_listings (
+  id SERIAL PRIMARY KEY,
+  steward_id INTEGER NOT NULL REFERENCES stewards(id),
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  image_url TEXT,
+  shipping_cost_cents INTEGER NOT NULL CHECK (shipping_cost_cents >= 0),
+  chapter_donation_cents INTEGER NOT NULL CHECK (chapter_donation_cents >= 0),
+  sponsoring_chapter_id INTEGER NOT NULL REFERENCES chapters(id),
+  status VARCHAR(20) DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'CLAIMED', 'REMOVED')),
+  claimed_by_member_id INTEGER REFERENCES members(id),
+  claimed_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Steward claims table
+CREATE TABLE IF NOT EXISTS steward_claims (
+  id SERIAL PRIMARY KEY,
+  listing_id INTEGER NOT NULL REFERENCES steward_listings(id),
+  claimant_member_id INTEGER NOT NULL REFERENCES members(id),
+  stripe_session_id VARCHAR(255) UNIQUE,
+  total_amount_cents INTEGER NOT NULL CHECK (total_amount_cents >= 0),
+  shipping_cents INTEGER NOT NULL CHECK (shipping_cents >= 0),
+  platform_fee_cents INTEGER NOT NULL CHECK (platform_fee_cents >= 0),
+  chapter_donation_cents INTEGER NOT NULL CHECK (chapter_donation_cents >= 0),
+  status VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'PAID', 'FAILED')),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Platform settings table
+CREATE TABLE IF NOT EXISTS platform_settings (
+  id SERIAL PRIMARY KEY,
+  key VARCHAR(255) NOT NULL UNIQUE,
+  value TEXT,
+  description TEXT,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Add steward_id to users table
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_name='users' AND column_name='steward_id') THEN
+    ALTER TABLE users ADD COLUMN steward_id INTEGER REFERENCES stewards(id);
+    CREATE INDEX IF NOT EXISTS idx_users_steward_id ON users(steward_id);
+  END IF;
+END $$;
+
+-- Add stripe_account_id to chapters table
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_name='chapters' AND column_name='stripe_account_id') THEN
+    ALTER TABLE chapters ADD COLUMN stripe_account_id VARCHAR(255);
+  END IF;
+END $$;
+
+-- Update users role enum to include STEWARD
+DO $$
+BEGIN
+  -- Drop the old constraint if it exists
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'users_role_check' 
+    AND conrelid = 'users'::regclass
+  ) THEN
+    ALTER TABLE users DROP CONSTRAINT users_role_check;
+  END IF;
+  
+  -- Add the new constraint with STEWARD role
+  ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('ADMIN', 'SELLER', 'PROMOTER', 'CONSUMER', 'STEWARD'));
+END $$;
+
+-- Update check_role_foreign_key constraint to allow role coexistence
+DO $$
+BEGIN
+  -- Drop the old constraint if it exists
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'check_role_foreign_key' 
+    AND conrelid = 'users'::regclass
+  ) THEN
+    ALTER TABLE users DROP CONSTRAINT check_role_foreign_key;
+  END IF;
+  
+  -- Add the new constraint allowing role coexistence for STEWARD
+  ALTER TABLE users ADD CONSTRAINT check_role_foreign_key CHECK (
+    (role = 'CONSUMER' AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL AND (
+      (member_id IS NOT NULL) OR 
+      (member_id IS NULL AND onboarding_status != 'ONBOARDING_FINISHED')
+    )) OR
+    (role = 'SELLER' AND seller_id IS NOT NULL AND member_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
+    (role = 'PROMOTER' AND promoter_id IS NOT NULL AND member_id IS NULL AND seller_id IS NULL AND steward_id IS NULL) OR
+    (role = 'STEWARD' AND steward_id IS NOT NULL AND member_id IS NOT NULL AND (
+      (seller_id IS NULL AND promoter_id IS NULL) OR
+      (seller_id IS NOT NULL AND promoter_id IS NULL) OR
+      (seller_id IS NULL AND promoter_id IS NOT NULL) OR
+      (seller_id IS NOT NULL AND promoter_id IS NOT NULL)
+    )) OR
+    (role = 'ADMIN' AND member_id IS NULL AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL)
+  );
+END $$;
+
+-- Indexes for steward tables
+CREATE INDEX IF NOT EXISTS idx_stewards_member_id ON stewards(member_id);
+CREATE INDEX IF NOT EXISTS idx_stewards_sponsoring_chapter ON stewards(sponsoring_chapter_id);
+CREATE INDEX IF NOT EXISTS idx_stewards_status ON stewards(status);
+CREATE INDEX IF NOT EXISTS idx_steward_listings_steward ON steward_listings(steward_id);
+CREATE INDEX IF NOT EXISTS idx_steward_listings_status ON steward_listings(status);
+CREATE INDEX IF NOT EXISTS idx_steward_listings_sponsoring_chapter ON steward_listings(sponsoring_chapter_id);
+CREATE INDEX IF NOT EXISTS idx_steward_claims_listing ON steward_claims(listing_id);
+CREATE INDEX IF NOT EXISTS idx_steward_claims_claimant ON steward_claims(claimant_member_id);
+CREATE INDEX IF NOT EXISTS idx_steward_claims_status ON steward_claims(status);
+CREATE INDEX IF NOT EXISTS idx_steward_claims_stripe_session ON steward_claims(stripe_session_id);
+
+-- Triggers for steward tables
+DROP TRIGGER IF EXISTS update_stewards_updated_at ON stewards;
+CREATE TRIGGER update_stewards_updated_at BEFORE UPDATE ON stewards
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_steward_listings_updated_at ON steward_listings;
+CREATE TRIGGER update_steward_listings_updated_at BEFORE UPDATE ON steward_listings
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_steward_claims_updated_at ON steward_claims;
+CREATE TRIGGER update_steward_claims_updated_at BEFORE UPDATE ON steward_claims
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_platform_settings_updated_at ON platform_settings;
+CREATE TRIGGER update_platform_settings_updated_at BEFORE UPDATE ON platform_settings
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+

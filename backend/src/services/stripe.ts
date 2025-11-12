@@ -104,3 +104,131 @@ export function verifyWebhookSignature(
   );
 }
 
+/**
+ * Calculate platform fee for steward listings
+ * Uses admin-configured platform fee from database
+ */
+export async function calculateStewardPlatformFee(
+  shippingCents: number,
+  donationCents: number
+): Promise<number> {
+  // Import here to avoid circular dependency
+  const { getPlatformSetting } = await import('../db/queries');
+  
+  // Try percentage first
+  const percentageSetting = await getPlatformSetting('steward_platform_fee_percentage');
+  if (percentageSetting && percentageSetting.value) {
+    const percentage = parseFloat(percentageSetting.value);
+    if (!isNaN(percentage) && percentage > 0 && percentage <= 1) {
+      return Math.round((shippingCents + donationCents) * percentage);
+    }
+  }
+
+  // Try flat fee
+  const flatFeeSetting = await getPlatformSetting('steward_platform_fee_flat_cents');
+  if (flatFeeSetting && flatFeeSetting.value) {
+    const flatFee = parseInt(flatFeeSetting.value);
+    if (!isNaN(flatFee) && flatFee >= 0) {
+      return flatFee;
+    }
+  }
+
+  // Default: 5% of total
+  return Math.round((shippingCents + donationCents) * 0.05);
+}
+
+/**
+ * Create a Stripe Connect account for a chapter
+ */
+export async function createChapterConnectAccount(email: string, country: string = 'US'): Promise<Stripe.Account> {
+  return createConnectAccount(email, country);
+}
+
+/**
+ * Create checkout session for steward listing claim
+ */
+export async function createStewardCheckoutSession(params: {
+  listingId: number;
+  listingName: string;
+  shippingCents: number;
+  platformFeeCents: number;
+  chapterDonationCents: number;
+  chapterStripeAccountId: string;
+  buyerEmail: string;
+  successUrl: string;
+  cancelUrl: string;
+}): Promise<Stripe.Checkout.Session> {
+  const totalAmountCents = params.shippingCents + params.platformFeeCents + params.chapterDonationCents;
+
+  // Create line items breakdown
+  const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [];
+
+  // Shipping cost
+  if (params.shippingCents > 0) {
+    lineItems.push({
+      price_data: {
+        currency: 'usd',
+        product_data: {
+          name: 'Shipping',
+        },
+        unit_amount: params.shippingCents,
+      },
+      quantity: 1,
+    });
+  }
+
+  // Platform fee
+  if (params.platformFeeCents > 0) {
+    lineItems.push({
+      price_data: {
+        currency: 'usd',
+        product_data: {
+          name: 'Platform Fee',
+        },
+        unit_amount: params.platformFeeCents,
+      },
+      quantity: 1,
+    });
+  }
+
+  // Chapter donation
+  if (params.chapterDonationCents > 0) {
+    lineItems.push({
+      price_data: {
+        currency: 'usd',
+        product_data: {
+          name: 'Chapter Donation',
+        },
+        unit_amount: params.chapterDonationCents,
+      },
+      quantity: 1,
+    });
+  }
+
+  // Create session with transfer to chapter for donation portion
+  // Platform fee and shipping stay with platform
+  // Donation goes to chapter via Stripe Connect
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ['card'],
+    line_items: lineItems,
+    mode: 'payment',
+    payment_intent_data: {
+      // Transfer donation amount to chapter
+      on_behalf_of: params.chapterStripeAccountId,
+      transfer_data: {
+        destination: params.chapterStripeAccountId,
+        amount: params.chapterDonationCents, // Only transfer donation, not platform fee or shipping
+      },
+    },
+    customer_email: params.buyerEmail,
+    success_url: params.successUrl,
+    cancel_url: params.cancelUrl,
+    metadata: {
+      listing_id: params.listingId.toString(),
+      type: 'steward_claim',
+    },
+  });
+
+  return session;
+}
+

@@ -1,6 +1,7 @@
 import NextAuth, { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { signIn } from '@/lib/cognito';
+import { signIn, refreshTokens } from '@/lib/cognito';
+import jwt from 'jsonwebtoken';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -74,6 +75,7 @@ export const authOptions: NextAuthOptions = {
             memberId: userData.member_id,
             sellerId: userData.seller_id,
             promoterId: userData.promoter_id,
+            stewardId: userData.steward_id,
             features: userData.features,
             name: userData.name,
             onboarding_status: userData.onboarding_status || 'PRE_COGNITO',
@@ -134,6 +136,7 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
     async jwt({ token, user }) {
+      // Initial sign in
       if (user) {
         token.id = user.id;
         token.email = user.email;
@@ -145,10 +148,71 @@ export const authOptions: NextAuthOptions = {
         token.memberId = (user as any).memberId;
         token.sellerId = (user as any).sellerId;
         token.promoterId = (user as any).promoterId;
+        token.stewardId = (user as any).stewardId;
         token.features = (user as any).features || {};
         token.name = (user as any).name;
         token.onboarding_status = (user as any).onboarding_status;
+        return token;
       }
+
+      // Check if token is expired and refresh if needed
+      if (token.idToken) {
+        try {
+          const decoded = jwt.decode(token.idToken as string) as any;
+          if (decoded && decoded.exp) {
+            const expirationTime = decoded.exp * 1000; // Convert to milliseconds
+            const now = Date.now();
+            const timeUntilExpiry = expirationTime - now;
+            
+            // Refresh if token expires in less than 5 minutes (300000 ms)
+            if (timeUntilExpiry < 300000 && token.refreshToken && token.email) {
+              try {
+                const refreshed = await refreshTokens(
+                  token.refreshToken as string,
+                  token.email as string
+                );
+                
+                // Update tokens
+                token.accessToken = refreshed.accessToken;
+                token.idToken = refreshed.idToken;
+                token.refreshToken = refreshed.refreshToken;
+                
+                // Optionally refresh user data from backend
+                try {
+                  const userResponse = await fetch(`${API_URL}/api/users/me`, {
+                    headers: {
+                      Authorization: `Bearer ${refreshed.idToken}`,
+                    },
+                  });
+                  
+                  if (userResponse.ok) {
+                    const userData = await userResponse.json();
+                    token.role = userData.role;
+                    token.memberId = userData.member_id;
+                    token.sellerId = userData.seller_id;
+                    token.promoterId = userData.promoter_id;
+                    token.stewardId = userData.steward_id;
+                    token.features = userData.features || {};
+                    token.name = userData.name;
+                    token.onboarding_status = userData.onboarding_status;
+                  }
+                } catch (err) {
+                  console.error('Error refreshing user data:', err);
+                  // Continue with refreshed tokens even if user data refresh fails
+                }
+              } catch (refreshError) {
+                console.error('Error refreshing token:', refreshError);
+                // If refresh fails, token will be invalid and user will need to re-login
+                // Return null to force re-authentication
+                return null as any;
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Error checking token expiration:', err);
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {
@@ -159,6 +223,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).memberId = token.memberId as number | null;
         (session.user as any).sellerId = token.sellerId as number | null;
         (session.user as any).promoterId = token.promoterId as number | null;
+        (session.user as any).stewardId = token.stewardId as number | null;
         (session.user as any).features = token.features as Record<string, any>;
         (session.user as any).name = token.name as string | null;
         (session.user as any).onboarding_status = token.onboarding_status as string;

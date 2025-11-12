@@ -1,5 +1,5 @@
 import pool from './connection';
-import { Chapter, Seller, Product, Order, Promoter, Event, User } from '../types';
+import { Chapter, Seller, Product, Order, Promoter, Event, User, Steward, StewardListing, StewardClaim, PlatformSetting } from '../types';
 
 export interface Industry {
   id: number;
@@ -636,6 +636,30 @@ export async function linkUserToPromoter(userId: number, promoterId: number): Pr
   return row;
 }
 
+export async function linkUserToSteward(userId: number, stewardId: number): Promise<User> {
+  // For stewards, we keep member_id (required) and can coexist with seller/promoter
+  // Get current user to preserve member_id
+  const currentUser = await pool.query('SELECT member_id, seller_id, promoter_id FROM users WHERE id = $1', [userId]);
+  const memberId = currentUser.rows[0]?.member_id;
+  
+  if (!memberId) {
+    throw new Error('User must have a member_id to become a steward');
+  }
+
+  const result = await pool.query(
+    `UPDATE users 
+     SET steward_id = $2, role = 'STEWARD', updated_at = CURRENT_TIMESTAMP 
+     WHERE id = $1 
+     RETURNING *`,
+    [userId, stewardId]
+  );
+  const row = result.rows[0];
+  if (row.features && typeof row.features === 'string') {
+    row.features = JSON.parse(row.features);
+  }
+  return row;
+}
+
 export async function updateUserOnboardingStatus(
   id: number,
   onboarding_status: 'PRE_COGNITO' | 'COGNITO_CONFIRMED' | 'ONBOARDING_STARTED' | 'ONBOARDING_FINISHED'
@@ -944,5 +968,309 @@ export async function updateIndustry(
 export async function deleteIndustry(id: number): Promise<boolean> {
   const result = await pool.query('DELETE FROM industries WHERE id = $1', [id]);
   return result.rowCount !== null && result.rowCount > 0;
+}
+
+// Member queries
+export async function getMemberById(id: number): Promise<any | null> {
+  const result = await pool.query('SELECT * FROM members WHERE id = $1', [id]);
+  if (result.rows[0] && result.rows[0].social_links) {
+    result.rows[0].social_links = typeof result.rows[0].social_links === 'string' 
+      ? JSON.parse(result.rows[0].social_links) 
+      : result.rows[0].social_links;
+  }
+  return result.rows[0] || null;
+}
+
+// Steward queries
+export async function createSteward(steward: {
+  member_id: number;
+  sponsoring_chapter_id: number;
+}): Promise<Steward> {
+  const result = await pool.query(
+    `INSERT INTO stewards (member_id, sponsoring_chapter_id, status)
+     VALUES ($1, $2, 'PENDING')
+     RETURNING *`,
+    [steward.member_id, steward.sponsoring_chapter_id]
+  );
+  return result.rows[0];
+}
+
+export async function getStewardById(id: number): Promise<Steward | null> {
+  const result = await pool.query('SELECT * FROM stewards WHERE id = $1', [id]);
+  return result.rows[0] || null;
+}
+
+export async function getStewardByMemberId(memberId: number): Promise<Steward | null> {
+  const result = await pool.query('SELECT * FROM stewards WHERE member_id = $1', [memberId]);
+  return result.rows[0] || null;
+}
+
+export async function getPendingStewards(): Promise<Steward[]> {
+  const result = await pool.query(
+    'SELECT * FROM stewards WHERE status = $1 ORDER BY created_at DESC',
+    ['PENDING']
+  );
+  return result.rows;
+}
+
+export async function updateStewardStatus(
+  id: number,
+  status: 'PENDING' | 'APPROVED' | 'REJECTED'
+): Promise<Steward> {
+  const result = await pool.query(
+    `UPDATE stewards SET status = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *`,
+    [id, status]
+  );
+  return result.rows[0];
+}
+
+// Steward listing queries
+export async function createStewardListing(listing: {
+  steward_id: number;
+  name: string;
+  description?: string | null;
+  image_url?: string | null;
+  shipping_cost_cents: number;
+  chapter_donation_cents: number;
+  sponsoring_chapter_id: number;
+}): Promise<StewardListing> {
+  const result = await pool.query(
+    `INSERT INTO steward_listings (steward_id, name, description, image_url, shipping_cost_cents, chapter_donation_cents, sponsoring_chapter_id, status)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, 'ACTIVE')
+     RETURNING *`,
+    [
+      listing.steward_id,
+      listing.name,
+      listing.description || null,
+      listing.image_url || null,
+      listing.shipping_cost_cents,
+      listing.chapter_donation_cents,
+      listing.sponsoring_chapter_id,
+    ]
+  );
+  return result.rows[0];
+}
+
+export async function getStewardListingById(id: number): Promise<StewardListing | null> {
+  const result = await pool.query('SELECT * FROM steward_listings WHERE id = $1', [id]);
+  return result.rows[0] || null;
+}
+
+export async function getStewardListings(stewardId: number): Promise<StewardListing[]> {
+  const result = await pool.query(
+    'SELECT * FROM steward_listings WHERE steward_id = $1 ORDER BY created_at DESC',
+    [stewardId]
+  );
+  return result.rows;
+}
+
+export async function getActiveStewardListings(): Promise<StewardListing[]> {
+  const result = await pool.query(
+    `SELECT sl.*, s.status as steward_status
+     FROM steward_listings sl
+     JOIN stewards s ON sl.steward_id = s.id
+     WHERE sl.status = 'ACTIVE' AND s.status = 'APPROVED'
+     ORDER BY sl.created_at DESC`
+  );
+  return result.rows;
+}
+
+export async function updateStewardListing(
+  id: number,
+  updates: {
+    name?: string;
+    description?: string | null;
+    image_url?: string | null;
+    shipping_cost_cents?: number;
+    chapter_donation_cents?: number;
+    status?: 'ACTIVE' | 'CLAIMED' | 'REMOVED';
+  }
+): Promise<StewardListing | null> {
+  const fields: string[] = [];
+  const values: any[] = [id];
+  let paramIndex = 2;
+
+  if (updates.name !== undefined) {
+    fields.push(`name = $${paramIndex++}`);
+    values.push(updates.name);
+  }
+  if (updates.description !== undefined) {
+    fields.push(`description = $${paramIndex++}`);
+    values.push(updates.description);
+  }
+  if (updates.image_url !== undefined) {
+    fields.push(`image_url = $${paramIndex++}`);
+    values.push(updates.image_url);
+  }
+  if (updates.shipping_cost_cents !== undefined) {
+    fields.push(`shipping_cost_cents = $${paramIndex++}`);
+    values.push(updates.shipping_cost_cents);
+  }
+  if (updates.chapter_donation_cents !== undefined) {
+    fields.push(`chapter_donation_cents = $${paramIndex++}`);
+    values.push(updates.chapter_donation_cents);
+  }
+  if (updates.status !== undefined) {
+    fields.push(`status = $${paramIndex++}`);
+    values.push(updates.status);
+    if (updates.status === 'CLAIMED') {
+      // This should be set by the claim endpoint, but handle it here for safety
+    }
+  }
+
+  if (fields.length === 0) {
+    return getStewardListingById(id);
+  }
+
+  fields.push(`updated_at = CURRENT_TIMESTAMP`);
+
+  const result = await pool.query(
+    `UPDATE steward_listings SET ${fields.join(', ')} WHERE id = $1 RETURNING *`,
+    values
+  );
+  return result.rows[0] || null;
+}
+
+export async function claimStewardListing(
+  listingId: number,
+  claimantMemberId: number
+): Promise<StewardListing | null> {
+  const result = await pool.query(
+    `UPDATE steward_listings 
+     SET status = 'CLAIMED', claimed_by_member_id = $2, claimed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+     WHERE id = $1 AND status = 'ACTIVE'
+     RETURNING *`,
+    [listingId, claimantMemberId]
+  );
+  return result.rows[0] || null;
+}
+
+export async function deleteStewardListing(id: number): Promise<boolean> {
+  const result = await pool.query(
+    `UPDATE steward_listings SET status = 'REMOVED', updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+    [id]
+  );
+  return result.rowCount !== null && result.rowCount > 0;
+}
+
+// Steward claim queries
+export async function createStewardClaim(claim: {
+  listing_id: number;
+  claimant_member_id: number;
+  stripe_session_id: string;
+  total_amount_cents: number;
+  shipping_cents: number;
+  platform_fee_cents: number;
+  chapter_donation_cents: number;
+}): Promise<StewardClaim> {
+  const result = await pool.query(
+    `INSERT INTO steward_claims (listing_id, claimant_member_id, stripe_session_id, total_amount_cents, shipping_cents, platform_fee_cents, chapter_donation_cents, status)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING')
+     RETURNING *`,
+    [
+      claim.listing_id,
+      claim.claimant_member_id,
+      claim.stripe_session_id,
+      claim.total_amount_cents,
+      claim.shipping_cents,
+      claim.platform_fee_cents,
+      claim.chapter_donation_cents,
+    ]
+  );
+  return result.rows[0];
+}
+
+export async function getStewardClaimByStripeSessionId(stripeSessionId: string): Promise<StewardClaim | null> {
+  const result = await pool.query(
+    'SELECT * FROM steward_claims WHERE stripe_session_id = $1',
+    [stripeSessionId]
+  );
+  return result.rows[0] || null;
+}
+
+export async function updateStewardClaimStatus(
+  id: number,
+  status: 'PENDING' | 'PAID' | 'FAILED'
+): Promise<StewardClaim | null> {
+  const result = await pool.query(
+    `UPDATE steward_claims SET status = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *`,
+    [id, status]
+  );
+  return result.rows[0] || null;
+}
+
+// Steward activity and reports
+export async function getStewardActivity(): Promise<Array<{
+  steward_id: number;
+  steward_name: string;
+  total_listings: number;
+  active_listings: number;
+  claimed_listings: number;
+  total_donations_cents: number;
+}>> {
+  const result = await pool.query(
+    `SELECT 
+      s.id as steward_id,
+      m.name as steward_name,
+      COUNT(sl.id) as total_listings,
+      COUNT(CASE WHEN sl.status = 'ACTIVE' THEN 1 END) as active_listings,
+      COUNT(CASE WHEN sl.status = 'CLAIMED' THEN 1 END) as claimed_listings,
+      COALESCE(SUM(sc.chapter_donation_cents), 0) as total_donations_cents
+     FROM stewards s
+     JOIN members m ON s.member_id = m.id
+     LEFT JOIN steward_listings sl ON s.id = sl.steward_id
+     LEFT JOIN steward_claims sc ON sl.id = sc.listing_id AND sc.status = 'PAID'
+     GROUP BY s.id, m.name
+     ORDER BY s.created_at DESC`
+  );
+  return result.rows;
+}
+
+export async function getChapterDonationsFromStewards(): Promise<Array<{
+  chapter_id: number;
+  chapter_name: string;
+  total_donations_cents: number;
+  claim_count: number;
+}>> {
+  const result = await pool.query(
+    `SELECT 
+      c.id as chapter_id,
+      c.name as chapter_name,
+      COALESCE(SUM(sc.chapter_donation_cents), 0) as total_donations_cents,
+      COUNT(sc.id) as claim_count
+     FROM chapters c
+     LEFT JOIN steward_listings sl ON c.id = sl.sponsoring_chapter_id
+     LEFT JOIN steward_claims sc ON sl.id = sc.listing_id AND sc.status = 'PAID'
+     GROUP BY c.id, c.name
+     HAVING COUNT(sc.id) > 0
+     ORDER BY total_donations_cents DESC`
+  );
+  return result.rows;
+}
+
+// Platform settings queries
+export async function getPlatformSetting(key: string): Promise<PlatformSetting | null> {
+  const result = await pool.query('SELECT * FROM platform_settings WHERE key = $1', [key]);
+  return result.rows[0] || null;
+}
+
+export async function setPlatformSetting(
+  key: string,
+  value: string,
+  description?: string | null
+): Promise<PlatformSetting> {
+  const result = await pool.query(
+    `INSERT INTO platform_settings (key, value, description, updated_at)
+     VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+     ON CONFLICT (key) DO UPDATE SET value = $2, description = $3, updated_at = CURRENT_TIMESTAMP
+     RETURNING *`,
+    [key, value, description || null]
+  );
+  return result.rows[0];
+}
+
+export async function getAllPlatformSettings(): Promise<PlatformSetting[]> {
+  const result = await pool.query('SELECT * FROM platform_settings ORDER BY key');
+  return result.rows;
 }
 

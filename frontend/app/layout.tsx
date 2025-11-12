@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Oswald, Inter, Playfair_Display } from 'next/font/google'
 import Providers from './components/Providers'
+import SessionManager from './components/SessionManager'
 import './globals.css'
 
 const oswald = Oswald({
@@ -39,6 +40,7 @@ export default function RootLayout({
     <html lang="en" className={`${oswald.variable} ${inter.variable} ${playfair.variable}`}>
       <body>
         <Providers>
+          <SessionManager />
           {children}
         </Providers>
       </body>

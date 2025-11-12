@@ -27,6 +27,8 @@ export default function HeroBanner() {
   const showBecomePromoter = !isAuthenticated || 
     (userRole !== 'PROMOTER'); // Hide if already a promoter
   
+  const showBecomeSteward = !isAuthenticated || userRole !== 'STEWARD'; // Show for everyone, hide only if already a steward
+  
   // Show "Become a Member" if:
   // - Not authenticated, OR
   // - Seller without memberId, AND
@@ -61,18 +63,23 @@ export default function HeroBanner() {
             Shop Now
           </Link>
           {finalShowBecomeMember && (
-            <Link href="/register" className="border-2 border-white px-5 sm:px-6 py-2.5 rounded-full font-semibold hover:bg-white/10 hover:shadow-lg hover:shadow-white/20 hover:scale-105 active:scale-100 transition-all duration-200 text-sm sm:text-base whitespace-nowrap h-[42px] flex items-center justify-center">
+            <Link href="/member-setup" className="border-2 border-white px-5 sm:px-6 py-2.5 rounded-full font-semibold hover:bg-white/10 hover:shadow-lg hover:shadow-white/20 hover:scale-105 active:scale-100 transition-all duration-200 text-sm sm:text-base whitespace-nowrap h-[42px] flex items-center justify-center">
               Become a Member
             </Link>
           )}
           {showBecomeSeller && (
-            <Link href="/apply" className="border-2 border-white px-5 sm:px-6 py-2.5 rounded-full font-semibold hover:bg-white/10 hover:shadow-lg hover:shadow-white/20 hover:scale-105 active:scale-100 transition-all duration-200 text-sm sm:text-base whitespace-nowrap h-[42px] flex items-center justify-center">
+            <Link href="/seller-setup-intro" className="border-2 border-white px-5 sm:px-6 py-2.5 rounded-full font-semibold hover:bg-white/10 hover:shadow-lg hover:shadow-white/20 hover:scale-105 active:scale-100 transition-all duration-200 text-sm sm:text-base whitespace-nowrap h-[42px] flex items-center justify-center">
               Become a Seller
             </Link>
           )}
           {showBecomePromoter && (
-            <Link href="/promote" className="border-2 border-white px-5 sm:px-6 py-2.5 rounded-full font-semibold hover:bg-white/10 hover:shadow-lg hover:shadow-white/20 hover:scale-105 active:scale-100 transition-all duration-200 text-sm sm:text-base whitespace-nowrap h-[42px] flex items-center justify-center">
+            <Link href="/promoter-setup" className="border-2 border-white px-5 sm:px-6 py-2.5 rounded-full font-semibold hover:bg-white/10 hover:shadow-lg hover:shadow-white/20 hover:scale-105 active:scale-100 transition-all duration-200 text-sm sm:text-base whitespace-nowrap h-[42px] flex items-center justify-center">
               Become a Promoter
+            </Link>
+          )}
+          {showBecomeSteward && (
+            <Link href="/steward-setup" className="border-2 border-white px-5 sm:px-6 py-2.5 rounded-full font-semibold hover:bg-white/10 hover:shadow-lg hover:shadow-white/20 hover:scale-105 active:scale-100 transition-all duration-200 text-sm sm:text-base whitespace-nowrap h-[42px] flex items-center justify-center">
+              Become a Steward
             </Link>
           )}
         </div>

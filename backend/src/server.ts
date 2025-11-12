@@ -17,6 +17,8 @@ import donationsRouter from './routes/donations';
 import locationRouter from './routes/location';
 import industriesRouter from './routes/industries';
 import sellerSetupRouter from './routes/seller-setup';
+import stewardsRouter from './routes/stewards';
+import stewardCheckoutRouter from './routes/steward-checkout';
 import { initializeDatabase } from './db/migrations';
 import { runVerification, runSellerVerification } from './scripts/verify-members';
 
@@ -62,6 +64,8 @@ app.use('/api/donations', donationsRouter);
 app.use('/api/location', locationRouter);
 app.use('/api/industries', industriesRouter);
 app.use('/api/seller-setup', sellerSetupRouter);
+app.use('/api/stewards', stewardsRouter);
+app.use('/api/steward-checkout', stewardCheckoutRouter);
 
 // Initialize database on startup
 initializeDatabase().catch(console.error);

@@ -327,6 +327,7 @@ export interface MemberProfile {
   bio: string | null;
   headshot_url: string | null;
   social_links: Record<string, string>;
+  verification_status?: 'PENDING' | 'VERIFIED' | 'FAILED' | 'MANUAL_REVIEW';
   created_at: string;
   updated_at: string;
 }
@@ -465,5 +466,265 @@ export async function unlikePost(postId: number): Promise<void> {
     headers,
   });
   if (!res.ok) throw new Error('Failed to unlike post');
+}
+
+// Steward API functions
+export interface Steward {
+  id: number;
+  member_id: number;
+  sponsoring_chapter_id: number;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  verification_status: 'PENDING' | 'VERIFIED' | 'FAILED' | 'MANUAL_REVIEW';
+  verification_date: string | null;
+  verification_notes: string | null;
+  created_at: string;
+  updated_at: string;
+  member?: MemberProfile;
+  chapter?: Chapter;
+}
+
+export interface StewardListing {
+  id: number;
+  steward_id: number;
+  name: string;
+  description: string | null;
+  image_url: string | null;
+  shipping_cost_cents: number;
+  chapter_donation_cents: number;
+  sponsoring_chapter_id: number;
+  status: 'ACTIVE' | 'CLAIMED' | 'REMOVED';
+  claimed_by_member_id: number | null;
+  claimed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  steward?: Steward;
+  chapter?: Chapter;
+}
+
+export async function applyToBecomeSteward(sponsoringChapterId: number): Promise<Steward> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/stewards/apply`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ sponsoring_chapter_id: sponsoringChapterId }),
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to apply to become a steward');
+  }
+  return res.json();
+}
+
+export async function getStewardProfile(): Promise<Steward> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/stewards/profile`, {
+    headers,
+  });
+  if (!res.ok) throw new Error('Failed to fetch steward profile');
+  return res.json();
+}
+
+export async function createStewardListing(formData: FormData): Promise<StewardListing> {
+  const session = await fetch('/api/auth/session').then(res => res.json());
+  const idToken = (session as any)?.idToken;
+  
+  if (!idToken) {
+    throw new Error('Not authenticated');
+  }
+
+  const res = await fetch(`${API_URL}/api/stewards/listings`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${idToken}`,
+    },
+    body: formData,
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to create steward listing');
+  }
+  return res.json();
+}
+
+export async function getStewardListings(): Promise<StewardListing[]> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/stewards/listings`, {
+    headers,
+  });
+  if (!res.ok) throw new Error('Failed to fetch steward listings');
+  return res.json();
+}
+
+export async function getStewardListing(id: number): Promise<StewardListing> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/stewards/listings/${id}`, {
+    headers,
+  });
+  if (!res.ok) throw new Error('Failed to fetch steward listing');
+  return res.json();
+}
+
+export async function getStewardMarketplace(): Promise<StewardListing[]> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/stewards/marketplace`, {
+    headers,
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    if (error.code === 'VERIFICATION_REQUIRED') {
+      throw new Error('VERIFICATION_REQUIRED');
+    }
+    throw new Error(error.error || 'Failed to fetch steward marketplace');
+  }
+  return res.json();
+}
+
+export async function claimStewardListing(listingId: number): Promise<{ success: boolean; listing: StewardListing }> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/stewards/listings/${listingId}/claim`, {
+    method: 'POST',
+    headers,
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to claim steward listing');
+  }
+  return res.json();
+}
+
+export async function createStewardCheckoutSession(listingId: number): Promise<{ sessionId: string; url: string }> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/steward-checkout/${listingId}`, {
+    method: 'POST',
+    headers,
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to create checkout session');
+  }
+  return res.json();
+}
+
+export async function updateStewardListing(
+  listingId: number,
+  formData: FormData
+): Promise<StewardListing> {
+  const session = await fetch('/api/auth/session').then(res => res.json());
+  const idToken = (session as any)?.idToken;
+  
+  if (!idToken) {
+    throw new Error('Not authenticated');
+  }
+
+  const res = await fetch(`${API_URL}/api/stewards/listings/${listingId}`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${idToken}`,
+    },
+    body: formData,
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to update steward listing');
+  }
+  return res.json();
+}
+
+export async function deleteStewardListing(listingId: number): Promise<void> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/stewards/listings/${listingId}`, {
+    method: 'DELETE',
+    headers,
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to delete steward listing');
+  }
+}
+
+// Admin steward functions
+export async function fetchPendingStewards(): Promise<Steward[]> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/admin/stewards/pending`, {
+    headers,
+  });
+  if (!res.ok) throw new Error('Failed to fetch pending stewards');
+  return res.json();
+}
+
+export async function updateStewardStatus(
+  stewardId: number,
+  status: 'APPROVED' | 'REJECTED'
+): Promise<Steward> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/admin/stewards/${stewardId}`, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) throw new Error('Failed to update steward status');
+  return res.json();
+}
+
+export async function fetchStewardActivity(): Promise<Array<{
+  steward_id: number;
+  steward_name: string;
+  total_listings: number;
+  active_listings: number;
+  claimed_listings: number;
+  total_donations_cents: number;
+}>> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/admin/stewards/activity`, {
+    headers,
+  });
+  if (!res.ok) throw new Error('Failed to fetch steward activity');
+  return res.json();
+}
+
+export async function fetchStewardDonations(): Promise<Array<{
+  chapter_id: number;
+  chapter_name: string;
+  total_donations_cents: number;
+  claim_count: number;
+}>> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/admin/stewards/donations`, {
+    headers,
+  });
+  if (!res.ok) throw new Error('Failed to fetch steward donations');
+  return res.json();
+}
+
+export interface PlatformSetting {
+  id: number;
+  key: string;
+  value: string | null;
+  description: string | null;
+  updated_at: string;
+}
+
+export async function fetchPlatformSettings(): Promise<PlatformSetting[]> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/admin/platform-settings`, {
+    headers,
+  });
+  if (!res.ok) throw new Error('Failed to fetch platform settings');
+  return res.json();
+}
+
+export async function updatePlatformSetting(
+  key: string,
+  value: string,
+  description?: string | null
+): Promise<PlatformSetting> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/admin/platform-settings/${key}`, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify({ value, description }),
+  });
+  if (!res.ok) throw new Error('Failed to update platform setting');
+  return res.json();
 }
 
