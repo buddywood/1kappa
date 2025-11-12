@@ -43,7 +43,9 @@ export interface Brother {
 export interface Seller extends Brother {
   sponsoring_chapter_id: number;
   business_name: string | null;
+  business_email: string | null;
   vendor_license_number: string;
+  website: string | null;
   stripe_account_id: string | null;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
 }

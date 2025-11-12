@@ -22,8 +22,24 @@ const sellerApplicationSchema = z.object({
   email: z.string().email(),
   sponsoring_chapter_id: z.number().int().positive(),
   business_name: z.string().optional().nullable(),
+  business_email: z.string().email().optional().nullable(),
   vendor_license_number: z.string().min(1),
+  website: z.string().optional().nullable(),
   social_links: z.record(z.string()).optional(),
+}).refine((data) => {
+  // If website is provided, it must be a valid URL
+  if (data.website && data.website.trim() !== '') {
+    try {
+      new URL(data.website);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  return true;
+}, {
+  message: 'Website must be a valid URL',
+  path: ['website'],
 });
 
 // Optional authentication middleware - doesn't fail if not authenticated
@@ -92,7 +108,9 @@ router.post('/apply', optionalAuthenticate, upload.fields([
       ...req.body,
       sponsoring_chapter_id: parseInt(req.body.sponsoring_chapter_id),
       business_name: toNullIfEmpty(req.body.business_name),
+      business_email: toNullIfEmpty(req.body.business_email),
       vendor_license_number: req.body.vendor_license_number,
+      website: toNullIfEmpty(req.body.website),
       social_links: req.body.social_links ? JSON.parse(req.body.social_links) : {},
     });
 

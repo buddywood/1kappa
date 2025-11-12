@@ -115,6 +115,18 @@ BEGIN
     ALTER TABLE sellers ADD COLUMN invitation_token VARCHAR(255) UNIQUE;
     CREATE INDEX IF NOT EXISTS idx_sellers_invitation_token ON sellers(invitation_token);
   END IF;
+
+  -- Add business_email column (for members who want a different business email)
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_name='sellers' AND column_name='business_email') THEN
+    ALTER TABLE sellers ADD COLUMN business_email VARCHAR(255);
+  END IF;
+
+  -- Add website column
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_name='sellers' AND column_name='website') THEN
+    ALTER TABLE sellers ADD COLUMN website VARCHAR(500);
+  END IF;
 END $$;
 
 -- Drop member-specific fields from sellers table (sellers reference members via member_id foreign key)

@@ -24,7 +24,9 @@ export default function ApplyPage() {
     email: '',
     sponsoring_chapter_id: '',
     business_name: '',
+    business_email: '',
     vendor_license_number: '',
+    website: '',
     social_links: {
       instagram: '',
       twitter: '',
@@ -137,7 +139,13 @@ export default function ApplyPage() {
       if (formData.business_name) {
         formDataToSend.append('business_name', formData.business_name);
       }
+      if (formData.business_email) {
+        formDataToSend.append('business_email', formData.business_email);
+      }
       formDataToSend.append('vendor_license_number', formData.vendor_license_number);
+      if (formData.website) {
+        formDataToSend.append('website', formData.website);
+      }
       formDataToSend.append('social_links', JSON.stringify(formData.social_links));
       
       // Store logo is required
@@ -295,6 +303,36 @@ export default function ApplyPage() {
               className="w-full px-4 py-2 border border-frost-gray rounded-lg focus:ring-2 focus:ring-crimson focus:border-transparent text-midnight-navy"
               placeholder="Enter your business name if applicable"
             />
+          </div>
+
+          {sessionStatus === 'authenticated' && (session?.user as any)?.memberId && (
+            <div>
+              <label className="block text-sm font-medium mb-2 text-midnight-navy">Business Email (Optional)</label>
+              <p className="text-xs text-midnight-navy/60 mb-2">
+                If you have a separate business email address, enter it here. Otherwise, your member email will be used.
+              </p>
+              <input
+                type="email"
+                value={formData.business_email}
+                onChange={(e) => setFormData({ ...formData, business_email: e.target.value })}
+                className="w-full px-4 py-2 border border-frost-gray rounded-lg focus:ring-2 focus:ring-crimson focus:border-transparent text-midnight-navy"
+                placeholder="business@example.com"
+              />
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium mb-2 text-midnight-navy">Website (Optional)</label>
+            <input
+              type="url"
+              value={formData.website}
+              onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+              className="w-full px-4 py-2 border border-frost-gray rounded-lg focus:ring-2 focus:ring-crimson focus:border-transparent text-midnight-navy"
+              placeholder="https://yourwebsite.com"
+            />
+            <p className="text-xs text-midnight-navy/60 mt-1">
+              Your business or store website URL
+            </p>
           </div>
 
           <div>

@@ -18,7 +18,7 @@ import locationRouter from './routes/location';
 import industriesRouter from './routes/industries';
 import sellerSetupRouter from './routes/seller-setup';
 import { initializeDatabase } from './db/migrations';
-import { runVerification } from './scripts/verify-members';
+import { runVerification, runSellerVerification } from './scripts/verify-members';
 
 // Load .env.local first, then .env
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
@@ -81,7 +81,22 @@ cron.schedule('0 2 * * *', async () => {
   timezone: 'America/New_York', // Adjust timezone as needed
 });
 
+// Schedule daily seller verification at 3 AM (separate from member verification)
+// Seller verification searches vendor program page - no login required
+cron.schedule('0 3 * * *', async () => {
+  console.log('⏰ Scheduled seller verification started at', new Date().toISOString());
+  try {
+    await runSellerVerification();
+  } catch (error) {
+    console.error('❌ Error in scheduled seller verification:', error);
+  }
+}, {
+  scheduled: true,
+  timezone: 'America/New_York', // Adjust timezone as needed
+});
+
 console.log('📅 Member verification scheduled to run daily at 2:00 AM');
+console.log('📅 Seller verification scheduled to run daily at 3:00 AM');
 
 // Start server
 app.listen(PORT, () => {

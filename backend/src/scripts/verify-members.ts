@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import path from 'path';
-import { createBrowser, loginToKappaPortal, verifyMember } from '../services/memberVerification';
+import { createBrowser as createMemberBrowser, loginToKappaPortal, verifyMember } from '../services/memberVerification';
+import { verifySellerFromContent, createBrowser as createSellerBrowser } from '../services/sellerVerification';
 import {
   getPendingMembersForVerification,
   getPendingSellersForVerification,
@@ -93,15 +94,13 @@ async function runVerification() {
     // Initialize database connection
     await initializeDatabase();
 
-    // Fetch all pending members
-    console.log('📋 Fetching pending members...');
+    // Fetch all pending members and promoters (sellers are handled separately)
+    console.log('📋 Fetching pending members and promoters...');
     const pendingMembers = await getPendingMembersForVerification();
-    const pendingSellers = await getPendingSellersForVerification();
     const pendingPromoters = await getPendingPromotersForVerification();
 
-    const totalPending = pendingMembers.length + pendingSellers.length + pendingPromoters.length;
+    const totalPending = pendingMembers.length + pendingPromoters.length;
     console.log(`   Found ${pendingMembers.length} pending members`);
-    console.log(`   Found ${pendingSellers.length} pending sellers`);
     console.log(`   Found ${pendingPromoters.length} pending promoters`);
     console.log(`   Total: ${totalPending} pending verifications\n`);
 
@@ -116,7 +115,7 @@ async function runVerification() {
     } else {
       console.log('🌐 Initializing browser...');
     }
-    browser = await createBrowser(!isVisibleMode);
+    browser = await createMemberBrowser(!isVisibleMode);
     page = await browser.newPage();
 
     // Set timeouts (longer in visible mode so user can see what's happening)
@@ -170,16 +169,16 @@ async function runVerification() {
 
         if (!result.success) {
           errorCount++;
-          await updateMemberVerification(member.id, 'FAILED', result.notes);
-          console.log(`      ❌ Error: ${result.notes}`);
+          await updateMemberVerification(member.id, 'MANUAL_REVIEW', `Error during verification: ${result.notes || 'Unknown error'}`);
+          console.log(`      ⚠️  Error - marked for manual review: ${result.notes}`);
         } else if (result.verified) {
           verifiedCount++;
           await updateMemberVerification(member.id, 'VERIFIED', result.notes);
           console.log(`      ✅ Verified`);
         } else {
-          failedCount++;
-          await updateMemberVerification(member.id, 'FAILED', result.notes);
-          console.log(`      ❌ Failed: ${result.notes}`);
+          // Mark for manual review instead of failing
+          await updateMemberVerification(member.id, 'MANUAL_REVIEW', result.notes || 'Verification inconclusive - requires manual review');
+          console.log(`      ⚠️  Marked for manual review: ${result.notes}`);
         }
 
         // Small delay between verifications to avoid overwhelming the server
@@ -187,37 +186,6 @@ async function runVerification() {
       }
     }
 
-    // Process sellers
-    if (pendingSellers.length > 0) {
-      console.log(`\n📝 Processing ${pendingSellers.length} sellers...`);
-      for (const seller of pendingSellers) {
-        if (!seller.name || !seller.membership_number) {
-          console.log(`   ⚠️  Skipping seller ${seller.id}: missing name or membership number`);
-          await updateSellerVerification(seller.id, 'MANUAL_REVIEW', 'Missing name or membership number', false);
-          continue;
-        }
-
-        console.log(`   Verifying: ${seller.name} (${seller.membership_number})...`);
-        const result = await verifySingleMember(page, seller.name, seller.membership_number);
-
-        if (!result.success) {
-          errorCount++;
-          await updateSellerVerification(seller.id, 'FAILED', result.notes, false);
-          console.log(`      ❌ Error: ${result.notes}`);
-        } else if (result.verified) {
-          verifiedCount++;
-          // Auto-approve verified sellers
-          await updateSellerVerification(seller.id, 'VERIFIED', result.notes, true);
-          console.log(`      ✅ Verified and auto-approved`);
-        } else {
-          failedCount++;
-          await updateSellerVerification(seller.id, 'FAILED', result.notes, false);
-          console.log(`      ❌ Failed: ${result.notes}`);
-        }
-
-        await delay(1000);
-      }
-    }
 
     // Process promoters
     if (pendingPromoters.length > 0) {
@@ -234,17 +202,17 @@ async function runVerification() {
 
         if (!result.success) {
           errorCount++;
-          await updatePromoterVerification(promoter.id, 'FAILED', result.notes, false);
-          console.log(`      ❌ Error: ${result.notes}`);
+          await updatePromoterVerification(promoter.id, 'MANUAL_REVIEW', `Error during verification: ${result.notes || 'Unknown error'}`, false);
+          console.log(`      ⚠️  Error - marked for manual review: ${result.notes}`);
         } else if (result.verified) {
           verifiedCount++;
           // Auto-approve verified promoters
           await updatePromoterVerification(promoter.id, 'VERIFIED', result.notes, true);
           console.log(`      ✅ Verified and auto-approved`);
         } else {
-          failedCount++;
-          await updatePromoterVerification(promoter.id, 'FAILED', result.notes, false);
-          console.log(`      ❌ Failed: ${result.notes}`);
+          // Mark for manual review instead of failing
+          await updatePromoterVerification(promoter.id, 'MANUAL_REVIEW', result.notes || 'Verification inconclusive - requires manual review', false);
+          console.log(`      ⚠️  Marked for manual review: ${result.notes}`);
         }
 
         await delay(1000);
@@ -255,7 +223,7 @@ async function runVerification() {
     console.log('\n' + '='.repeat(50));
     console.log('📊 Verification Summary:');
     console.log(`   ✅ Verified: ${verifiedCount}`);
-    console.log(`   ❌ Failed: ${failedCount}`);
+    console.log(`   ⚠️  Manual Review: ${failedCount}`);
     console.log(`   ⚠️  Errors: ${errorCount}`);
     console.log(`   📝 Total processed: ${totalPending}`);
     console.log('='.repeat(50) + '\n');
@@ -285,6 +253,158 @@ if (require.main === module) {
       console.error('Unhandled error:', error);
       process.exit(1);
     });
+}
+
+/**
+ * Seller verification process (separate from member verification)
+ * Searches vendor program page - no login required
+ */
+export async function runSellerVerification() {
+  console.log('🚀 Starting seller verification process...\n');
+
+  let browser: Browser | null = null;
+  let page: Page | null = null;
+
+  try {
+    // Initialize database connection
+    await initializeDatabase();
+
+    // Fetch all pending sellers
+    console.log('📋 Fetching pending sellers...');
+    const pendingSellers = await getPendingSellersForVerification();
+
+    console.log(`   Found ${pendingSellers.length} pending sellers\n`);
+
+    if (pendingSellers.length === 0) {
+      console.log('✅ No pending seller verifications. Exiting.');
+      return;
+    }
+
+    // Initialize browser (no login needed for vendor program page)
+    console.log('🌐 Initializing browser for seller verification...');
+    browser = await createSellerBrowser(true); // Always headless for scheduled runs
+    page = await browser.newPage();
+    page.setDefaultTimeout(30000);
+    page.setDefaultNavigationTimeout(30000);
+
+    // Navigate to vendor program page once (more efficient than navigating for each seller)
+    console.log('📄 Navigating to vendor program page...');
+    const VENDOR_PROGRAM_URL = 'https://www.kappaalphapsi1911.com/vendor-program/';
+    try {
+      await page.goto(VENDOR_PROGRAM_URL, { 
+        waitUntil: 'domcontentloaded', 
+        timeout: 30000 
+      });
+      // Wait for page content to load
+      await page.waitForFunction(
+        () => document.body && document.body.innerText.length > 0,
+        { timeout: 30000 }
+      );
+      await delay(1000);
+    } catch (navError: any) {
+      console.error(`❌ Failed to navigate to vendor program page: ${navError.message}`);
+      // Mark all sellers for manual review if we can't load the page
+      for (const seller of pendingSellers) {
+        await updateSellerVerification(
+          seller.id, 
+          'MANUAL_REVIEW', 
+          `Failed to load vendor program page: ${navError.message}`, 
+          false
+        );
+      }
+      throw navError;
+    }
+
+    // Get page content once
+    let pageContent: { bodyText: string; bodyHTML: string };
+    try {
+      pageContent = await page.evaluate(() => {
+        if (!document.body) {
+          return { bodyText: '', bodyHTML: '' };
+        }
+        return {
+          bodyText: (document.body.innerText || document.body.textContent || '').toLowerCase(),
+          bodyHTML: (document.body.innerHTML || '').toLowerCase(),
+        };
+      });
+    } catch (contentError: any) {
+      console.error(`❌ Failed to extract page content: ${contentError.message}`);
+      // Mark all sellers for manual review
+      for (const seller of pendingSellers) {
+        await updateSellerVerification(
+          seller.id, 
+          'MANUAL_REVIEW', 
+          `Failed to extract page content: ${contentError.message}`, 
+          false
+        );
+      }
+      throw contentError;
+    }
+
+    let verifiedCount = 0;
+    let manualReviewCount = 0;
+    let errorCount = 0;
+
+    // Process sellers using the cached page content
+    console.log(`\n📝 Processing ${pendingSellers.length} sellers...`);
+    for (const seller of pendingSellers) {
+      if (!seller.name || !seller.email) {
+        console.log(`   ⚠️  Skipping seller ${seller.id}: missing name or email`);
+        await updateSellerVerification(seller.id, 'MANUAL_REVIEW', 'Missing name or email', false);
+        manualReviewCount++;
+        continue;
+      }
+
+      console.log(`   Verifying seller: ${seller.name} (${seller.email})...`);
+      
+      try {
+        const result = verifySellerFromContent(pageContent, seller.name, seller.email);
+
+        if (result.found && result.nameMatch && result.emailMatch) {
+          verifiedCount++;
+          const notes = `Verified on vendor program: Name and email match found. Name: ${result.details?.name || seller.name}, Email: ${result.details?.email || seller.email}`;
+          // Auto-approve verified sellers
+          await updateSellerVerification(seller.id, 'VERIFIED', notes, true);
+          console.log(`      ✅ Verified and auto-approved`);
+        } else {
+          // Mark for manual review instead of failing
+          manualReviewCount++;
+          let notes = 'Verification inconclusive - requires manual review: ';
+          if (!result.nameMatch && !result.emailMatch) {
+            notes += 'Neither name nor email found on vendor program page.';
+          } else if (!result.nameMatch) {
+            notes += 'Name not found on vendor program page (email found).';
+          } else if (!result.emailMatch) {
+            notes += 'Email not found on vendor program page (name found).';
+          }
+          await updateSellerVerification(seller.id, 'MANUAL_REVIEW', notes, false);
+          console.log(`      ⚠️  Marked for manual review: ${notes}`);
+        }
+      } catch (error: any) {
+        errorCount++;
+        await updateSellerVerification(seller.id, 'MANUAL_REVIEW', `Error during verification: ${error.message}`, false);
+        console.log(`      ⚠️  Error - marked for manual review: ${error.message}`);
+      }
+
+      await delay(500); // Smaller delay since we're not navigating
+    }
+
+    // Summary
+    console.log('\n' + '='.repeat(50));
+    console.log('📊 Seller Verification Summary:');
+    console.log(`   ✅ Verified: ${verifiedCount}`);
+    console.log(`   ⚠️  Manual Review: ${manualReviewCount}`);
+    console.log(`   ⚠️  Errors: ${errorCount}`);
+    console.log(`   📝 Total processed: ${pendingSellers.length}`);
+    console.log('='.repeat(50) + '\n');
+
+  } catch (error: any) {
+    console.error('❌ Fatal error during seller verification:', error);
+    console.error(error.stack);
+  } finally {
+    if (page) await page.close().catch(() => {});
+    if (browser) await browser.close().catch(() => {});
+  }
 }
 
 export { runVerification };

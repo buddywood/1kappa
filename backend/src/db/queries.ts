@@ -64,14 +64,16 @@ export async function createSeller(seller: {
   member_id?: number | null;
   sponsoring_chapter_id: number;
   business_name?: string | null;
+  business_email?: string | null;
   vendor_license_number: string;
+  website?: string | null;
   headshot_url?: string;
   store_logo_url?: string;
   social_links?: Record<string, string>;
 }): Promise<Seller> {
   const result = await pool.query(
-    `INSERT INTO sellers (email, name, member_id, sponsoring_chapter_id, business_name, vendor_license_number, headshot_url, store_logo_url, social_links, status)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'PENDING')
+    `INSERT INTO sellers (email, name, member_id, sponsoring_chapter_id, business_name, business_email, vendor_license_number, website, headshot_url, store_logo_url, social_links, status)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'PENDING')
      RETURNING *`,
     [
       seller.email,
@@ -79,7 +81,9 @@ export async function createSeller(seller: {
       seller.member_id || null,
       seller.sponsoring_chapter_id,
       seller.business_name || null,
+      seller.business_email || null,
       seller.vendor_license_number,
+      seller.website || null,
       seller.headshot_url || null,
       seller.store_logo_url || null,
       JSON.stringify(seller.social_links || {}),
