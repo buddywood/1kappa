@@ -28,29 +28,34 @@ async function deleteTestUser(email: string) {
       promoter_id: user.promoter_id,
     });
     
-    // Delete associated records based on role
-    if (user.member_id) {
-      console.log(`🗑️  Deleting member record (id: ${user.member_id})...`);
-      await pool.query('DELETE FROM members WHERE id = $1', [user.member_id]);
-      console.log('✅ Member record deleted');
-    }
+    // Store IDs before deleting user
+    const memberId = user.member_id;
+    const sellerId = user.seller_id;
+    const promoterId = user.promoter_id;
     
-    if (user.seller_id) {
-      console.log(`🗑️  Deleting seller record (id: ${user.seller_id})...`);
-      await pool.query('DELETE FROM sellers WHERE id = $1', [user.seller_id]);
-      console.log('✅ Seller record deleted');
-    }
-    
-    if (user.promoter_id) {
-      console.log(`🗑️  Deleting promoter record (id: ${user.promoter_id})...`);
-      await pool.query('DELETE FROM promoters WHERE id = $1', [user.promoter_id]);
-      console.log('✅ Promoter record deleted');
-    }
-    
-    // Delete the user record
+    // Delete the user record first (this will break foreign key references)
     console.log(`🗑️  Deleting user record (id: ${user.id})...`);
     await pool.query('DELETE FROM users WHERE id = $1', [user.id]);
     console.log('✅ User record deleted');
+    
+    // Now delete associated records
+    if (memberId) {
+      console.log(`🗑️  Deleting member record (id: ${memberId})...`);
+      await pool.query('DELETE FROM members WHERE id = $1', [memberId]);
+      console.log('✅ Member record deleted');
+    }
+    
+    if (sellerId) {
+      console.log(`🗑️  Deleting seller record (id: ${sellerId})...`);
+      await pool.query('DELETE FROM sellers WHERE id = $1', [sellerId]);
+      console.log('✅ Seller record deleted');
+    }
+    
+    if (promoterId) {
+      console.log(`🗑️  Deleting promoter record (id: ${promoterId})...`);
+      await pool.query('DELETE FROM promoters WHERE id = $1', [promoterId]);
+      console.log('✅ Promoter record deleted');
+    }
     
     console.log('✅ Test user successfully deleted from database');
   } catch (error) {

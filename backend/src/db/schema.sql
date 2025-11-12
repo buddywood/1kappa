@@ -230,6 +230,12 @@ BEGIN
     ALTER TABLE users ADD COLUMN onboarding_status VARCHAR(50) DEFAULT 'PRE_COGNITO' CHECK (onboarding_status IN ('PRE_COGNITO', 'COGNITO_CONFIRMED', 'ONBOARDING_STARTED', 'ONBOARDING_FINISHED'));
   END IF;
 
+  -- Add last_login to users table if it doesn't exist
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_name='users' AND column_name='last_login') THEN
+    ALTER TABLE users ADD COLUMN last_login TIMESTAMP;
+  END IF;
+
   -- Add verification fields to members table
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns
                  WHERE table_name='members' AND column_name='verification_status') THEN
@@ -366,6 +372,16 @@ CREATE TABLE IF NOT EXISTS events (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Industries table - for professional industries
+CREATE TABLE IF NOT EXISTS industries (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL UNIQUE,
+  display_order INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Users table - for authentication and role management
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
@@ -380,8 +396,12 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   -- Ensure only one foreign key is set based on role
+  -- CONSUMER can have null member_id during onboarding (before ONBOARDING_FINISHED)
   CONSTRAINT check_role_foreign_key CHECK (
-    (role = 'CONSUMER' AND member_id IS NOT NULL AND seller_id IS NULL AND promoter_id IS NULL) OR
+    (role = 'CONSUMER' AND seller_id IS NULL AND promoter_id IS NULL AND (
+      (member_id IS NOT NULL) OR 
+      (member_id IS NULL AND onboarding_status != 'ONBOARDING_FINISHED')
+    )) OR
     (role = 'SELLER' AND seller_id IS NOT NULL AND member_id IS NULL AND promoter_id IS NULL) OR
     (role = 'PROMOTER' AND promoter_id IS NOT NULL AND member_id IS NULL AND seller_id IS NULL) OR
     (role = 'ADMIN' AND member_id IS NULL AND seller_id IS NULL AND promoter_id IS NULL)
@@ -410,6 +430,8 @@ CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_users_member_id ON users(member_id);
 CREATE INDEX IF NOT EXISTS idx_users_seller_id ON users(seller_id);
 CREATE INDEX IF NOT EXISTS idx_users_promoter_id ON users(promoter_id);
+CREATE INDEX IF NOT EXISTS idx_industries_active ON industries(is_active);
+CREATE INDEX IF NOT EXISTS idx_industries_display_order ON industries(display_order);
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -452,4 +474,32 @@ CREATE TRIGGER update_events_updated_at BEFORE UPDATE ON events
 DROP TRIGGER IF EXISTS update_users_updated_at ON users;
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_industries_updated_at ON industries;
+CREATE TRIGGER update_industries_updated_at BEFORE UPDATE ON industries
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Update check_role_foreign_key constraint to allow CONSUMER with null member_id during onboarding
+DO $$
+BEGIN
+  -- Drop the old constraint if it exists
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'check_role_foreign_key' 
+    AND conrelid = 'users'::regclass
+  ) THEN
+    ALTER TABLE users DROP CONSTRAINT check_role_foreign_key;
+  END IF;
+  
+  -- Add the new constraint
+  ALTER TABLE users ADD CONSTRAINT check_role_foreign_key CHECK (
+    (role = 'CONSUMER' AND seller_id IS NULL AND promoter_id IS NULL AND (
+      (member_id IS NOT NULL) OR 
+      (member_id IS NULL AND onboarding_status != 'ONBOARDING_FINISHED')
+    )) OR
+    (role = 'SELLER' AND seller_id IS NOT NULL AND member_id IS NULL AND promoter_id IS NULL) OR
+    (role = 'PROMOTER' AND promoter_id IS NOT NULL AND member_id IS NULL AND seller_id IS NULL) OR
+    (role = 'ADMIN' AND member_id IS NULL AND seller_id IS NULL AND promoter_id IS NULL)
+  );
+END $$;
 

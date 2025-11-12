@@ -39,6 +39,7 @@
    heroku config:set AWS_SECRET_ACCESS_KEY=...
    heroku config:set AWS_S3_BUCKET_NAME=...
    heroku config:set AWS_REGION=us-east-1
+   heroku config:set FROM_EMAIL=noreply@yourdomain.com
    heroku config:set FRONTEND_URL=https://1kappa.com
    heroku config:set ADMIN_KEY=...
    ```
@@ -87,6 +88,27 @@
 3. Set bucket policy for public read access (if needed)
 4. Configure environment variables with AWS credentials
 
+## SES Setup (Email)
+
+1. **Verify Email Address or Domain**
+   - Go to [AWS SES Console](https://console.aws.amazon.com/ses/)
+   - Verify the email address you'll use as `FROM_EMAIL`
+   - Or verify your entire domain (recommended for production)
+
+2. **Request Production Access** (if sending to unverified recipients)
+   - By default, SES is in sandbox mode
+   - Sandbox allows sending only to verified recipients
+   - Request production access in SES console
+
+3. **Configure IAM Permissions**
+   - Ensure your AWS credentials have `ses:SendEmail` permission
+   - See [AWS_SES_SETUP.md](./AWS_SES_SETUP.md) for detailed instructions
+
+4. **Set Environment Variable**
+   - `FROM_EMAIL` must match a verified email or be from a verified domain
+
+See [AWS_SES_SETUP.md](./AWS_SES_SETUP.md) for complete setup guide.
+
 ## Post-Deployment Checklist
 
 - [ ] Frontend accessible at production URL
@@ -94,6 +116,8 @@
 - [ ] Database migrations completed
 - [ ] Stripe webhook configured and tested
 - [ ] S3 bucket accessible and CORS configured
+- [ ] SES email address/domain verified
+- [ ] Welcome emails sending successfully
 - [ ] Admin dashboard accessible with admin key
 - [ ] Test seller application flow
 - [ ] Test checkout flow with test card

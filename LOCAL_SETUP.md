@@ -35,6 +35,7 @@
    AWS_SECRET_ACCESS_KEY=your-secret
    AWS_S3_BUCKET_NAME=your-bucket
    AWS_REGION=us-east-1
+   FROM_EMAIL=noreply@yourdomain.com
    COGNITO_USER_POOL_ID=us-east-1_xxxxxxxxx
    COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
    COGNITO_CLIENT_SECRET=your-client-secret-if-using-secret

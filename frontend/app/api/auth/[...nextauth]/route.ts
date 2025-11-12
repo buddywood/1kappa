@@ -21,28 +21,47 @@ export const authOptions: NextAuthOptions = {
           // Authenticate with Cognito
           const cognitoResult = await signIn(credentials.email, credentials.password);
 
-          // Get user info from backend
-          const userResponse = await fetch(`${API_URL}/api/users/me`, {
+          // Upsert user and update last_login
+          const upsertResponse = await fetch(`${API_URL}/api/users/upsert-on-login`, {
+            method: 'POST',
             headers: {
+              'Content-Type': 'application/json',
               Authorization: `Bearer ${cognitoResult.idToken}`,
             },
+            body: JSON.stringify({
+              cognito_sub: cognitoResult.userSub,
+              email: cognitoResult.email,
+            }),
           });
 
-          if (!userResponse.ok) {
-            // If user doesn't exist in backend, create a basic user object
-            return {
-              id: cognitoResult.userSub,
-              email: cognitoResult.email,
-              cognitoSub: cognitoResult.userSub,
-              accessToken: cognitoResult.accessToken,
-              idToken: cognitoResult.idToken,
-              refreshToken: cognitoResult.refreshToken,
-              role: 'CONSUMER', // Default role
-              onboarding_status: 'PRE_COGNITO',
-            };
-          }
+          let userData;
+          if (upsertResponse.ok) {
+            userData = await upsertResponse.json();
+          } else {
+            // Fallback: try to get user info from /me endpoint
+            const userResponse = await fetch(`${API_URL}/api/users/me`, {
+              headers: {
+                Authorization: `Bearer ${cognitoResult.idToken}`,
+              },
+            });
 
-          const userData = await userResponse.json();
+            if (userResponse.ok) {
+              userData = await userResponse.json();
+            } else {
+              // If user doesn't exist in backend, create a basic user object
+              // The upsert will happen on next login attempt
+              return {
+                id: cognitoResult.userSub,
+                email: cognitoResult.email,
+                cognitoSub: cognitoResult.userSub,
+                accessToken: cognitoResult.accessToken,
+                idToken: cognitoResult.idToken,
+                refreshToken: cognitoResult.refreshToken,
+                role: 'CONSUMER', // Default role
+                onboarding_status: 'PRE_COGNITO',
+              };
+            }
+          }
 
           return {
             id: userData.id.toString(),

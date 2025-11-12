@@ -76,6 +76,11 @@ async function main() {
   }
 
   try {
+    // Always seed industries (they're needed for registration)
+    console.log('🏭 Seeding industries...\n');
+    await runScript(path.join(__dirname, '../scripts/seed-industries.ts'));
+    console.log('✅ Industries seeded successfully!\n');
+
     // Seed production chapters
     if (seedProd) {
       console.log('📚 Seeding production chapters...\n');

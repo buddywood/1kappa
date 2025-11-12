@@ -10,6 +10,7 @@ import Logo from '../../components/Logo';
 import VerificationBadge from '../../components/VerificationBadge';
 import EventCountdown from '../../components/EventCountdown';
 import RSVPModal from '../../components/RSVPModal';
+import { SkeletonLoader } from '../../components/Skeleton';
 
 export default function EventPage() {
   const params = useParams();
@@ -63,11 +64,7 @@ export default function EventPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-cream flex items-center justify-center">
-        <div className="text-xl text-midnight-navy">Loading...</div>
-      </div>
-    );
+    return <SkeletonLoader />;
   }
 
   if (!event) {

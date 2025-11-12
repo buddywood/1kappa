@@ -179,7 +179,22 @@ export default function LoginPage() {
           setError('Invalid email or password');
           setLoading(false);
         } else {
-          router.push('/');
+          // Check onboarding status and redirect accordingly
+          const { getSession } = await import('next-auth/react');
+          const session = await getSession();
+          
+          if (session?.user) {
+            const onboardingStatus = (session.user as any)?.onboarding_status;
+            
+            // If onboarding is incomplete, redirect to registration step 2
+            if (onboardingStatus && onboardingStatus !== 'ONBOARDING_FINISHED') {
+              router.push('/register');
+            } else {
+              router.push('/');
+            }
+          } else {
+            router.push('/');
+          }
         }
       }
     } catch (err: any) {
@@ -255,7 +270,22 @@ export default function LoginPage() {
         setError('Please try logging in again');
         setLoading(false);
       } else {
-        router.push('/');
+        // Check onboarding status and redirect accordingly
+        const { getSession } = await import('next-auth/react');
+        const session = await getSession();
+        
+        if (session?.user) {
+          const onboardingStatus = (session.user as any)?.onboarding_status;
+          
+          // If onboarding is incomplete, redirect to registration step 2
+          if (onboardingStatus && onboardingStatus !== 'ONBOARDING_FINISHED') {
+            router.push('/register');
+          } else {
+            router.push('/');
+          }
+        } else {
+          router.push('/');
+        }
       }
     } catch (err: any) {
       setError(err.message || 'Invalid verification code. Please try again.');
@@ -326,7 +356,22 @@ export default function LoginPage() {
         setError('Failed to complete login after password change');
         setLoading(false);
       } else {
-        router.push('/');
+        // Check onboarding status and redirect accordingly
+        const { getSession } = await import('next-auth/react');
+        const session = await getSession();
+        
+        if (session?.user) {
+          const onboardingStatus = (session.user as any)?.onboarding_status;
+          
+          // If onboarding is incomplete, redirect to registration step 2
+          if (onboardingStatus && onboardingStatus !== 'ONBOARDING_FINISHED') {
+            router.push('/register');
+          } else {
+            router.push('/');
+          }
+        } else {
+          router.push('/');
+        }
       }
     } catch (err: any) {
       setError(err.message || 'Failed to change password');

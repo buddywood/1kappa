@@ -1,6 +1,15 @@
 import pool from './connection';
 import { Chapter, Seller, Product, Order, Promoter, Event, User } from '../types';
 
+export interface Industry {
+  id: number;
+  name: string;
+  display_order: number;
+  is_active: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+
 // Chapter queries
 export async function getAllChapters(): Promise<Chapter[]> {
   const result = await pool.query('SELECT * FROM chapters ORDER BY name');
@@ -470,6 +479,10 @@ export async function createUser(user: {
   promoter_id?: number | null;
   features?: Record<string, any>;
 }): Promise<User> {
+  // Ensure onboarding_status is set properly for CONSUMER role with null member_id
+  const onboardingStatus = user.onboarding_status || 
+    (user.role === 'CONSUMER' && !user.member_id ? 'COGNITO_CONFIRMED' : 'COGNITO_CONFIRMED');
+  
   const result = await pool.query(
     `INSERT INTO users (cognito_sub, email, role, onboarding_status, member_id, seller_id, promoter_id, features)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -478,7 +491,7 @@ export async function createUser(user: {
       user.cognito_sub,
       user.email,
       user.role,
-      user.onboarding_status || 'COGNITO_CONFIRMED',
+      onboardingStatus,
       user.member_id || null,
       user.seller_id || null,
       user.promoter_id || null,
@@ -627,6 +640,57 @@ export async function updateUserOnboardingStatusByCognitoSub(
   return row;
 }
 
+export async function updateUserLastLogin(cognitoSub: string): Promise<User | null> {
+  const result = await pool.query(
+    `UPDATE users 
+     SET last_login = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP 
+     WHERE cognito_sub = $1 
+     RETURNING *`,
+    [cognitoSub]
+  );
+  if (result.rows.length === 0) {
+    return null;
+  }
+  const row = result.rows[0];
+  if (row.features && typeof row.features === 'string') {
+    row.features = JSON.parse(row.features);
+  }
+  return row;
+}
+
+export async function upsertUserOnLogin(cognitoSub: string, email: string): Promise<User> {
+  // First try to update existing user
+  const updateResult = await pool.query(
+    `UPDATE users 
+     SET last_login = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP, email = $2
+     WHERE cognito_sub = $1 
+     RETURNING *`,
+    [cognitoSub, email]
+  );
+  
+  if (updateResult.rows.length > 0) {
+    const row = updateResult.rows[0];
+    if (row.features && typeof row.features === 'string') {
+      row.features = JSON.parse(row.features);
+    }
+    return row;
+  }
+  
+  // If no user exists, create one
+  const insertResult = await pool.query(
+    `INSERT INTO users (cognito_sub, email, role, onboarding_status, last_login)
+     VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+     RETURNING *`,
+    [cognitoSub, email, 'CONSUMER', 'COGNITO_CONFIRMED']
+  );
+  
+  const row = insertResult.rows[0];
+  if (row.features && typeof row.features === 'string') {
+    row.features = JSON.parse(row.features);
+  }
+  return row;
+}
+
 export async function updateUserFeatures(
   id: number,
   features: Record<string, any>
@@ -763,5 +827,87 @@ export async function updatePromoterVerification(
       : result.rows[0].social_links;
   }
   return result.rows[0];
+}
+
+// Industry queries
+export async function getAllIndustries(includeInactive: boolean = false): Promise<Industry[]> {
+  const query = includeInactive
+    ? 'SELECT * FROM industries ORDER BY display_order, name'
+    : 'SELECT * FROM industries WHERE is_active = true ORDER BY display_order, name';
+  const result = await pool.query(query);
+  return result.rows;
+}
+
+export async function getIndustryById(id: number): Promise<Industry | null> {
+  const result = await pool.query('SELECT * FROM industries WHERE id = $1', [id]);
+  return result.rows[0] || null;
+}
+
+export async function createIndustry(industry: {
+  name: string;
+  display_order?: number;
+  is_active?: boolean;
+}): Promise<Industry> {
+  // Get max display_order if not provided
+  let displayOrder = industry.display_order;
+  if (displayOrder === undefined) {
+    const maxResult = await pool.query('SELECT MAX(display_order) as max_order FROM industries');
+    displayOrder = (maxResult.rows[0]?.max_order || 0) + 1;
+  }
+
+  const result = await pool.query(
+    `INSERT INTO industries (name, display_order, is_active)
+     VALUES ($1, $2, $3)
+     RETURNING *`,
+    [industry.name, displayOrder, industry.is_active !== undefined ? industry.is_active : true]
+  );
+  return result.rows[0];
+}
+
+export async function updateIndustry(
+  id: number,
+  updates: {
+    name?: string;
+    display_order?: number;
+    is_active?: boolean;
+  }
+): Promise<Industry | null> {
+  const updatesList: string[] = [];
+  const values: any[] = [];
+  let paramCount = 1;
+
+  if (updates.name !== undefined) {
+    updatesList.push(`name = $${paramCount}`);
+    values.push(updates.name);
+    paramCount++;
+  }
+  if (updates.display_order !== undefined) {
+    updatesList.push(`display_order = $${paramCount}`);
+    values.push(updates.display_order);
+    paramCount++;
+  }
+  if (updates.is_active !== undefined) {
+    updatesList.push(`is_active = $${paramCount}`);
+    values.push(updates.is_active);
+    paramCount++;
+  }
+
+  if (updatesList.length === 0) {
+    return getIndustryById(id);
+  }
+
+  updatesList.push(`updated_at = CURRENT_TIMESTAMP`);
+  values.push(id);
+
+  const result = await pool.query(
+    `UPDATE industries SET ${updatesList.join(', ')} WHERE id = $${paramCount} RETURNING *`,
+    values
+  );
+  return result.rows[0] || null;
+}
+
+export async function deleteIndustry(id: number): Promise<boolean> {
+  const result = await pool.query('DELETE FROM industries WHERE id = $1', [id]);
+  return result.rowCount !== null && result.rowCount > 0;
 }
 

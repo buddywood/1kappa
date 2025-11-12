@@ -125,6 +125,7 @@ export interface User {
   seller_id: number | null;
   promoter_id: number | null;
   features: Record<string, any>;
+  last_login: Date | null;
   created_at: Date;
   updated_at: Date;
 }

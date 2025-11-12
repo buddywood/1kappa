@@ -1,7 +1,8 @@
 import Link from 'next/link';
-import { fetchProducts, fetchChapters, fetchEvents } from '@/lib/api';
+import { fetchProducts, fetchChapters, fetchEvents, type Product } from '@/lib/api';
 import Image from 'next/image';
 import Header from './components/Header';
+import HeroBanner from './components/HeroBanner';
 import VerificationBadge from './components/VerificationBadge';
 import ImpactBanner from './components/ImpactBanner';
 import EventCard from './components/EventCard';
@@ -26,7 +27,7 @@ export default async function Home() {
   console.log(`Fetched ${products.length} products and ${chapters.length} chapters`);
 
   // Group products by seller to get featured brothers
-  const sellerMap = new Map<number, { id: number; name: string; products: typeof products; chapter?: string }>();
+  const sellerMap = new Map<number, { id: number; name: string; products: Product[]; chapter?: string }>();
   products.forEach((product) => {
     if (product.seller_name && product.seller_id) {
       if (!sellerMap.has(product.seller_id)) {
@@ -53,38 +54,7 @@ export default async function Home() {
       <Header />
 
       {/* Hero Banner */}
-      <section className="relative flex flex-col items-center justify-center text-center py-24 px-6 bg-gradient-to-br from-crimson to-midnight-navy text-white overflow-hidden">
-        {/* Radial vignette behind text area */}
-        <div className="absolute inset-0 bg-radial-gradient from-transparent via-transparent to-black/20 pointer-events-none" 
-             style={{
-               background: 'radial-gradient(ellipse at center, transparent 0%, transparent 40%, rgba(0,0,0,0.2) 100%)'
-             }}
-        />
-        
-        <div className="relative z-10 text-center max-w-4xl mx-auto px-4">
-          <h1 className="text-4xl font-display font-bold mb-4">One Tribe.  One Step.  One Kappa.</h1>
-          <p className="text-lg max-w-xl mx-auto mb-4">
-            A digital home for Brothers worldwide — where Community, Commerce, Culture, and Contribution unite in excellence and distinction.
-          </p>
-          <p className="text-base max-w-xl mx-auto mb-8 opacity-90">
-          One Kappa. Infinite Brotherhood.
-          </p>
-          <div className="flex flex-wrap gap-3 md:gap-4 justify-center items-center max-w-3xl mx-auto">
-            <Link href="#shop" className="bg-crimson text-white px-5 sm:px-6 py-2.5 rounded-full font-bold hover:bg-crimson/90 hover:shadow-lg hover:shadow-crimson/50 hover:scale-105 active:scale-100 transition-all duration-200 text-sm sm:text-base whitespace-nowrap h-[42px] flex items-center justify-center">
-              Shop Now
-            </Link>
-            <Link href="/register" className="border-2 border-white px-5 sm:px-6 py-2.5 rounded-full font-semibold hover:bg-white/10 hover:shadow-lg hover:shadow-white/20 hover:scale-105 active:scale-100 transition-all duration-200 text-sm sm:text-base whitespace-nowrap h-[42px] flex items-center justify-center">
-              Become a Member
-            </Link>
-            <Link href="/apply" className="border-2 border-white px-5 sm:px-6 py-2.5 rounded-full font-semibold hover:bg-white/10 hover:shadow-lg hover:shadow-white/20 hover:scale-105 active:scale-100 transition-all duration-200 text-sm sm:text-base whitespace-nowrap h-[42px] flex items-center justify-center">
-              Become a Seller
-            </Link>
-            <Link href="/promote" className="border-2 border-white px-5 sm:px-6 py-2.5 rounded-full font-semibold hover:bg-white/10 hover:shadow-lg hover:shadow-white/20 hover:scale-105 active:scale-100 transition-all duration-200 text-sm sm:text-base whitespace-nowrap h-[42px] flex items-center justify-center">
-              Become a Promoter
-            </Link>
-          </div>
-        </div>
-      </section>
+      <HeroBanner />
 
       {/* Product Highlights */}
       {products.length > 0 && (

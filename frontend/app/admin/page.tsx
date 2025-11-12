@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth';
+import Skeleton, { SkeletonLoader } from '../components/Skeleton';
 import {
   fetchPendingSellers,
   updateSellerStatus,
@@ -15,7 +16,7 @@ import type { Seller, Promoter, Order } from '@/lib/api';
 import Link from 'next/link';
 
 export default function AdminDashboard() {
-  const { data: session, status } = useSession();
+  const { session, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'sellers' | 'promoters' | 'orders' | 'donations'>('sellers');
   const [sellers, setSellers] = useState<Seller[]>([]);
@@ -27,16 +28,16 @@ export default function AdminDashboard() {
   const [processingType, setProcessingType] = useState<'seller' | 'promoter' | null>(null);
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
+    if (!isLoading && !isAuthenticated) {
       router.push('/admin/login');
     }
-  }, [status, router]);
+  }, [isLoading, isAuthenticated, router]);
 
   useEffect(() => {
-    if (status === 'authenticated' && session) {
+    if (isAuthenticated && session) {
       loadData();
     }
-  }, [status, session, activeTab]);
+  }, [isAuthenticated, session, activeTab]);
 
   const loadData = async () => {
     if (!session) return;
@@ -158,12 +159,8 @@ export default function AdminDashboard() {
     a.click();
   };
 
-  if (status === 'loading') {
-    return (
-      <div className="min-h-screen bg-cream flex items-center justify-center">
-        <div className="text-xl text-midnight-navy">Loading...</div>
-      </div>
-    );
+  if (isLoading) {
+    return <SkeletonLoader />;
   }
 
   if (status === 'unauthenticated') {
@@ -237,7 +234,11 @@ export default function AdminDashboard() {
 
           <div className="p-6">
             {loading ? (
-              <div className="text-center py-8 text-midnight-navy">Loading...</div>
+              <div className="space-y-4 py-8">
+                <Skeleton variant="card" className="h-24 w-full" />
+                <Skeleton variant="card" className="h-24 w-full" />
+                <Skeleton variant="card" className="h-24 w-full" />
+              </div>
             ) : activeTab === 'sellers' ? (
               <div className="space-y-4">
                 {sellers.length === 0 ? (

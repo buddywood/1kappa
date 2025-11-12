@@ -95,19 +95,25 @@ export default function SearchableSelect({
       <div
         className="w-full px-4 py-2 border border-frost-gray rounded-lg focus-within:ring-2 focus-within:ring-crimson focus-within:border-transparent text-midnight-navy cursor-pointer bg-white"
         onClick={() => {
-          setIsOpen(!isOpen);
           if (!isOpen) {
-            setTimeout(() => inputRef.current?.focus(), 0);
+            setSearchTerm(''); // Clear search term when opening
+            setIsOpen(true);
+            setTimeout(() => {
+              inputRef.current?.focus();
+              inputRef.current?.select(); // Select text so user can immediately type
+            }, 0);
+          } else {
+            setIsOpen(false);
           }
         }}
       >
         {!isOpen && selectedOption ? (
-          <div className="text-midnight-navy">{selectedOption.label}</div>
+          <div className="text-midnight-navy pointer-events-none">{selectedOption.label}</div>
         ) : (
           <input
             ref={inputRef}
             type="text"
-            value={isOpen ? searchTerm : (selectedOption?.label || '')}
+            value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
               setHighlightedIndex(-1);
@@ -116,11 +122,9 @@ export default function SearchableSelect({
             onKeyDown={handleKeyDown}
             onFocus={() => {
               setIsOpen(true);
-              if (!searchTerm && !selectedOption) {
-                setSearchTerm('');
-              }
+              setSearchTerm(''); // Clear when focusing to allow fresh search
             }}
-            placeholder={selectedOption ? selectedOption.label : placeholder}
+            placeholder={placeholder}
             className="w-full outline-none bg-transparent placeholder-gray-400"
             required={required}
           />

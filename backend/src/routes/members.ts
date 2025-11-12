@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import pool from '../db/connection';
 import { uploadToS3 } from '../services/s3';
+import { sendWelcomeEmail } from '../services/email';
 import { z } from 'zod';
 import { CognitoIdentityProviderClient, SignUpCommand, ConfirmSignUpCommand, ForgotPasswordCommand, ConfirmForgotPasswordCommand, AdminGetUserCommand, ResendConfirmationCodeCommand } from '@aws-sdk/client-cognito-identity-provider';
 import { getUserByCognitoSub, createUser, linkUserToMember, updateUserOnboardingStatusByCognitoSub } from '../db/queries';
@@ -12,7 +13,16 @@ const router = Router();
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
+    fileSize: 2 * 1024 * 1024, // 2MB limit for headshots
+  },
+  fileFilter: (req, file, cb) => {
+    // Only allow image files
+    const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG, PNG, and WebP images are allowed.'));
+    }
   },
 });
 
@@ -103,9 +113,16 @@ router.post('/cognito/verify', async (req: Request, res: Response) => {
           // Update existing user status
           await updateUserOnboardingStatusByCognitoSub(cognito_sub, 'COGNITO_CONFIRMED');
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error creating/updating user onboarding status:', err);
+        console.error('Error details:', {
+          message: err.message,
+          code: err.code,
+          detail: err.detail,
+          constraint: err.constraint,
+        });
         // Continue anyway - user creation is not critical for verification
+        // But log the error so we can debug
       }
     }
     
@@ -253,15 +270,38 @@ router.post('/draft', upload.single('headshot'), async (req: Request, res: Respo
       return res.status(400).json({ error: 'Cognito sub is required' });
     }
 
-    // Check if draft already exists
+    // Check if draft already exists by cognito_sub or email
     const existingDraft = await pool.query(
-      'SELECT id FROM members WHERE cognito_sub = $1',
-      [cognito_sub]
+      'SELECT id, cognito_sub FROM members WHERE cognito_sub = $1 OR email = $2',
+      [cognito_sub, email]
     );
 
     // Upload headshot to S3 if provided
     let headshotUrl: string | undefined;
     if (req.file) {
+      // Validate image dimensions
+      try {
+        // Use dynamic import for image-size
+        const { default: sizeOf } = await import('image-size');
+        const dimensions = sizeOf(req.file.buffer);
+        const MIN_DIMENSION = 200;
+        const MAX_DIMENSION = 2000;
+
+        if (dimensions.width < MIN_DIMENSION || dimensions.height < MIN_DIMENSION) {
+          return res.status(400).json({ 
+            error: `Image is too small. Minimum dimensions are ${MIN_DIMENSION}x${MIN_DIMENSION} pixels.` 
+          });
+        }
+
+        if (dimensions.width > MAX_DIMENSION || dimensions.height > MAX_DIMENSION) {
+          return res.status(400).json({ 
+            error: `Image is too large. Maximum dimensions are ${MAX_DIMENSION}x${MAX_DIMENSION} pixels.` 
+          });
+        }
+      } catch (err) {
+        return res.status(400).json({ error: 'Invalid image file. Please upload a valid image.' });
+      }
+
       const uploadResult = await uploadToS3(
         req.file.buffer,
         req.file.originalname,
@@ -277,107 +317,131 @@ router.post('/draft', upload.single('headshot'), async (req: Request, res: Respo
       initiated_chapter_id: req.body.initiated_chapter_id ? parseInt(req.body.initiated_chapter_id) : null,
       initiated_season: req.body.initiated_season || null,
       initiated_year: req.body.initiated_year ? parseInt(req.body.initiated_year) : null,
-      address_is_private: req.body.address_is_private === 'true' || req.body.address_is_private === true,
-      phone_is_private: req.body.phone_is_private === 'true' || req.body.phone_is_private === true,
+      // Convert string 'true'/'false' to boolean, or keep boolean as-is, or undefined if not provided
+      address_is_private: req.body.address_is_private !== undefined 
+        ? (req.body.address_is_private === 'true' || req.body.address_is_private === true)
+        : undefined,
+      phone_is_private: req.body.phone_is_private !== undefined
+        ? (req.body.phone_is_private === 'true' || req.body.phone_is_private === true)
+        : undefined,
       social_links: req.body.social_links ? JSON.parse(req.body.social_links) : {},
     };
 
     if (existingDraft.rows.length > 0) {
       // Update existing draft
+      const existingMember = existingDraft.rows[0];
       const updateFields: string[] = [];
-      const values: any[] = [cognito_sub];
+      const values: any[] = [];
       let paramCount = 1;
+      
+      // Use the existing member's ID for the WHERE clause
+      const whereId = existingMember.id;
+      
+      // If cognito_sub doesn't match, update it
+      if (existingMember.cognito_sub !== cognito_sub) {
+        updateFields.push(`cognito_sub = $${paramCount}`);
+        values.push(cognito_sub);
+        paramCount++;
+      }
 
       if (parsedData.name) {
-        paramCount++;
         updateFields.push(`name = $${paramCount}`);
         values.push(parsedData.name);
+        paramCount++;
       }
       if (parsedData.membership_number) {
-        paramCount++;
         updateFields.push(`membership_number = $${paramCount}`);
         values.push(parsedData.membership_number);
+        paramCount++;
       }
       if (parsedData.initiated_chapter_id) {
-        paramCount++;
         updateFields.push(`initiated_chapter_id = $${paramCount}`);
         values.push(parsedData.initiated_chapter_id);
+        paramCount++;
       }
       if (parsedData.initiated_season !== undefined) {
-        paramCount++;
         updateFields.push(`initiated_season = $${paramCount}`);
         values.push(parsedData.initiated_season);
+        paramCount++;
       }
       if (parsedData.initiated_year !== undefined) {
-        paramCount++;
         updateFields.push(`initiated_year = $${paramCount}`);
         values.push(parsedData.initiated_year);
+        paramCount++;
       }
       if (parsedData.ship_name !== undefined) {
-        paramCount++;
         updateFields.push(`ship_name = $${paramCount}`);
         values.push(parsedData.ship_name);
+        paramCount++;
       }
       if (parsedData.line_name !== undefined) {
-        paramCount++;
         updateFields.push(`line_name = $${paramCount}`);
         values.push(parsedData.line_name);
+        paramCount++;
       }
       if (parsedData.location !== undefined) {
-        paramCount++;
         updateFields.push(`location = $${paramCount}`);
         values.push(parsedData.location);
+        paramCount++;
       }
       if (parsedData.address !== undefined) {
-        paramCount++;
         updateFields.push(`address = $${paramCount}`);
         values.push(parsedData.address);
-      }
-      if (parsedData.address_is_private !== undefined) {
         paramCount++;
+      }
+      // Always update address_is_private if provided (handles both true and false)
+      if (parsedData.address_is_private !== undefined) {
         updateFields.push(`address_is_private = $${paramCount}`);
         values.push(parsedData.address_is_private);
+        paramCount++;
       }
       if (parsedData.phone_number !== undefined) {
-        paramCount++;
         updateFields.push(`phone_number = $${paramCount}`);
         values.push(parsedData.phone_number);
-      }
-      if (parsedData.phone_is_private !== undefined) {
         paramCount++;
+      }
+      // Always update phone_is_private if provided (handles both true and false)
+      if (parsedData.phone_is_private !== undefined) {
         updateFields.push(`phone_is_private = $${paramCount}`);
         values.push(parsedData.phone_is_private);
+        paramCount++;
       }
       if (parsedData.industry !== undefined) {
-        paramCount++;
         updateFields.push(`industry = $${paramCount}`);
         values.push(parsedData.industry);
+        paramCount++;
       }
       if (parsedData.job_title !== undefined) {
-        paramCount++;
         updateFields.push(`job_title = $${paramCount}`);
         values.push(parsedData.job_title);
+        paramCount++;
       }
       if (parsedData.bio !== undefined) {
-        paramCount++;
         updateFields.push(`bio = $${paramCount}`);
         values.push(parsedData.bio);
+        paramCount++;
       }
       if (headshotUrl) {
-        paramCount++;
         updateFields.push(`headshot_url = $${paramCount}`);
         values.push(headshotUrl);
+        paramCount++;
       }
       if (parsedData.social_links) {
-        paramCount++;
-        updateFields.push(`social_links = $${paramCount}`);
+        updateFields.push(`social_links = $${paramCount}::jsonb`);
         values.push(JSON.stringify(parsedData.social_links));
+        paramCount++;
       }
 
       updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
 
+      // Use ID for WHERE clause to ensure we update the correct record
+      // Note: paramCount is already at the next available parameter number
+      values.push(whereId);
+      const whereClause = `WHERE id = $${paramCount}`;
+      paramCount++; // Increment after using it (for consistency, though not needed for WHERE)
+
       const result = await pool.query(
-        `UPDATE members SET ${updateFields.join(', ')} WHERE cognito_sub = $1 RETURNING *`,
+        `UPDATE members SET ${updateFields.join(', ')} ${whereClause} RETURNING *`,
         values
       );
 
@@ -495,8 +559,44 @@ router.post('/draft', upload.single('headshot'), async (req: Request, res: Respo
       res.json(result.rows[0]);
     }
   } catch (error: any) {
-    console.error('Error saving draft:', error);
-    res.status(500).json({ error: 'Failed to save draft' });
+    // Log technical details to console
+    console.error('Error saving draft:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      stack: error.stack,
+      body: req.body,
+    });
+
+    // Provide user-friendly error messages
+    let userMessage = 'Unable to save your progress. Please try again.';
+    let statusCode = 500;
+
+    if (error.code === '23505') {
+      // Unique constraint violation
+      userMessage = 'This email is already registered. Please use a different email or contact support if you believe this is an error.';
+      statusCode = 409;
+    } else if (error.code === '23503') {
+      // Foreign key constraint violation
+      userMessage = 'Invalid information provided. Please check your chapter selection and try again.';
+      statusCode = 400;
+    } else if (error.code === '23502') {
+      // Not null constraint violation
+      userMessage = 'Some required information is missing. Please fill in all required fields.';
+      statusCode = 400;
+    } else if (error.code === '42P18') {
+      // Could not determine data type
+      userMessage = 'There was an issue processing your information. Please refresh the page and try again.';
+      statusCode = 400;
+    } else if (error.message?.includes('duplicate key')) {
+      userMessage = 'This information is already in use. Please check your details and try again.';
+      statusCode = 409;
+    } else if (error.message?.includes('constraint')) {
+      userMessage = 'Some of the information provided is invalid. Please review your entries and try again.';
+      statusCode = 400;
+    }
+
+    res.status(statusCode).json({ error: userMessage });
   }
 });
 
@@ -549,34 +649,110 @@ const memberRegistrationSchema = z.object({
 
 router.post('/register', upload.single('headshot'), async (req: Request, res: Response) => {
   try {
+    // Helper to convert empty strings to null
+    const toNullIfEmpty = (value: any) => {
+      if (value === undefined || value === null || value === '') return null;
+      return value;
+    };
+
     // Parse form data first
     const parsedBody = {
       ...req.body,
       initiated_chapter_id: parseInt(req.body.initiated_chapter_id),
-      initiated_season: req.body.initiated_season || null,
-      initiated_year: req.body.initiated_year ? parseInt(req.body.initiated_year) : null,
+      initiated_season: toNullIfEmpty(req.body.initiated_season),
+      initiated_year: req.body.initiated_year && req.body.initiated_year !== '' 
+        ? parseInt(req.body.initiated_year) 
+        : null,
+      ship_name: toNullIfEmpty(req.body.ship_name),
+      line_name: toNullIfEmpty(req.body.line_name),
+      location: toNullIfEmpty(req.body.location),
+      address: toNullIfEmpty(req.body.address),
+      phone_number: toNullIfEmpty(req.body.phone_number),
+      industry: toNullIfEmpty(req.body.industry),
+      job_title: toNullIfEmpty(req.body.job_title),
+      bio: toNullIfEmpty(req.body.bio),
       address_is_private: req.body.address_is_private === 'true' || req.body.address_is_private === true,
       phone_is_private: req.body.phone_is_private === 'true' || req.body.phone_is_private === true,
       social_links: req.body.social_links ? JSON.parse(req.body.social_links) : {},
-      cognito_sub: req.body.cognito_sub || null,
+      cognito_sub: toNullIfEmpty(req.body.cognito_sub),
     };
 
     // Validate request body
     const body = memberRegistrationSchema.parse(parsedBody);
 
-    // Check if member already exists
-    const existingMember = await pool.query(
-      'SELECT id FROM sellers WHERE email = $1 OR membership_number = $2 UNION SELECT id FROM promoters WHERE email = $1 OR membership_number = $2 UNION SELECT id FROM members WHERE email = $1 OR membership_number = $2',
-      [body.email, body.membership_number]
-    );
+    // Check if draft exists first (before duplicate check)
+    // Only check if cognito_sub is provided
+    let existingDraft = { rows: [] };
+    let existingHeadshotUrl: string | null = null;
+    if (body.cognito_sub) {
+      existingDraft = await pool.query(
+        'SELECT id, registration_status, headshot_url FROM members WHERE cognito_sub = $1',
+        [body.cognito_sub]
+      );
+      if (existingDraft.rows.length > 0) {
+        existingHeadshotUrl = existingDraft.rows[0].headshot_url;
+      }
+    }
+
+    // Check if member already exists (excluding DRAFT records and the current user's draft)
+    // This prevents duplicate registrations while allowing users to complete their own drafts
+    let existingMemberQuery;
+    let existingMemberParams;
+    
+    if (body.cognito_sub) {
+      // If cognito_sub exists, exclude this user's draft from the check
+      existingMemberQuery = `SELECT id FROM sellers WHERE email = $1 OR membership_number = $2 
+       UNION 
+       SELECT id FROM promoters WHERE email = $1 OR membership_number = $2 
+       UNION 
+       SELECT id FROM members 
+       WHERE (email = $1 OR membership_number = $2) 
+       AND registration_status != 'DRAFT' 
+       AND (cognito_sub IS NULL OR cognito_sub != $3)`;
+      existingMemberParams = [body.email, body.membership_number, body.cognito_sub];
+    } else {
+      // If no cognito_sub, check all non-DRAFT records
+      existingMemberQuery = `SELECT id FROM sellers WHERE email = $1 OR membership_number = $2 
+       UNION 
+       SELECT id FROM promoters WHERE email = $1 OR membership_number = $2 
+       UNION 
+       SELECT id FROM members 
+       WHERE (email = $1 OR membership_number = $2) 
+       AND registration_status != 'DRAFT'`;
+      existingMemberParams = [body.email, body.membership_number];
+    }
+    
+    const existingMember = await pool.query(existingMemberQuery, existingMemberParams);
 
     if (existingMember.rows.length > 0) {
       return res.status(400).json({ error: 'A member with this email or membership number already exists' });
     }
 
-    // Upload headshot to S3
-    let headshotUrl: string | undefined;
+    // Upload headshot to S3 if new file provided, otherwise preserve existing
+    let headshotUrl: string | null = null;
     if (req.file) {
+      // Validate image dimensions
+      try {
+        const { default: sizeOf } = await import('image-size');
+        const dimensions = sizeOf(req.file.buffer);
+        const MIN_DIMENSION = 200;
+        const MAX_DIMENSION = 2000;
+
+        if (dimensions.width < MIN_DIMENSION || dimensions.height < MIN_DIMENSION) {
+          return res.status(400).json({ 
+            error: `Image is too small. Minimum dimensions are ${MIN_DIMENSION}x${MIN_DIMENSION} pixels.` 
+          });
+        }
+
+        if (dimensions.width > MAX_DIMENSION || dimensions.height > MAX_DIMENSION) {
+          return res.status(400).json({ 
+            error: `Image is too large. Maximum dimensions are ${MAX_DIMENSION}x${MAX_DIMENSION} pixels.` 
+          });
+        }
+      } catch (err) {
+        return res.status(400).json({ error: 'Invalid image file. Please upload a valid image.' });
+      }
+
       const uploadResult = await uploadToS3(
         req.file.buffer,
         req.file.originalname,
@@ -584,14 +760,12 @@ router.post('/register', upload.single('headshot'), async (req: Request, res: Re
         'headshots'
       );
       headshotUrl = uploadResult.url;
+    } else if (existingHeadshotUrl) {
+      // Preserve existing headshot URL if no new file uploaded
+      headshotUrl = existingHeadshotUrl;
     }
 
-    // Check if draft exists and update it, or create new complete registration
-    const existingDraft = await pool.query(
-      'SELECT id FROM members WHERE cognito_sub = $1',
-      [body.cognito_sub]
-    );
-
+    // Use existingDraft from earlier check
     let result;
     if (existingDraft.rows.length > 0) {
       // Update existing draft to complete
@@ -609,19 +783,19 @@ router.post('/register', upload.single('headshot'), async (req: Request, res: Re
           body.email,
           body.membership_number,
           body.initiated_chapter_id,
-          body.initiated_season || null,
-          body.initiated_year || null,
-          body.ship_name || null,
-          body.line_name || null,
-          body.location || null,
-          body.address || null,
+          body.initiated_season, // Already converted to null if empty by toNullIfEmpty
+          body.initiated_year, // Already converted to null if empty by toNullIfEmpty
+          body.ship_name, // Already converted to null if empty by toNullIfEmpty
+          body.line_name, // Already converted to null if empty by toNullIfEmpty
+          body.location, // Already converted to null if empty by toNullIfEmpty
+          body.address, // Already converted to null if empty by toNullIfEmpty
           body.address_is_private,
-          body.phone_number || null,
+          body.phone_number, // Already converted to null if empty by toNullIfEmpty
           body.phone_is_private,
-          body.industry || null,
-          body.job_title || null,
-          body.bio || null,
-          headshotUrl || null,
+          body.industry, // Already converted to null if empty by toNullIfEmpty
+          body.job_title, // Already converted to null if empty by toNullIfEmpty
+          body.bio, // Already converted to null if empty by toNullIfEmpty
+          headshotUrl,
           JSON.stringify(body.social_links || {}),
           body.cognito_sub,
         ]
@@ -642,19 +816,19 @@ router.post('/register', upload.single('headshot'), async (req: Request, res: Re
           body.membership_number,
           body.cognito_sub || null,
           body.initiated_chapter_id,
-          body.initiated_season || null,
-          body.initiated_year || null,
-          body.ship_name || null,
-          body.line_name || null,
-          body.location || null,
-          body.address || null,
+          body.initiated_season, // Already converted to null if empty by toNullIfEmpty
+          body.initiated_year, // Already converted to null if empty by toNullIfEmpty
+          body.ship_name, // Already converted to null if empty by toNullIfEmpty
+          body.line_name, // Already converted to null if empty by toNullIfEmpty
+          body.location, // Already converted to null if empty by toNullIfEmpty
+          body.address, // Already converted to null if empty by toNullIfEmpty
           body.address_is_private,
-          body.phone_number || null,
+          body.phone_number, // Already converted to null if empty by toNullIfEmpty
           body.phone_is_private,
-          body.industry || null,
-          body.job_title || null,
-          body.bio || null,
-          headshotUrl || null,
+          body.industry, // Already converted to null if empty by toNullIfEmpty
+          body.job_title, // Already converted to null if empty by toNullIfEmpty
+          body.bio, // Already converted to null if empty by toNullIfEmpty
+          headshotUrl,
           JSON.stringify(body.social_links || {}),
         ]
       );
@@ -684,6 +858,14 @@ router.post('/register', upload.single('headshot'), async (req: Request, res: Re
         console.error('Error creating/linking user record:', userError);
         // Don't fail the registration if user creation fails
       }
+    }
+
+    // Send welcome email (don't fail registration if email fails)
+    try {
+      await sendWelcomeEmail(body.email, body.name);
+    } catch (emailError) {
+      console.error('Error sending welcome email:', emailError);
+      // Continue - email failure shouldn't break registration
     }
 
     res.status(201).json(member);

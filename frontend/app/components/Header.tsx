@@ -1,16 +1,20 @@
 'use client';
 
 import Link from 'next/link';
-import { useSession, signOut } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import { fetchTotalDonations } from '@/lib/api';
+import { useAuth } from '@/lib/auth';
 import Logo from './Logo';
 
 export default function Header() {
-  const { data: session, status } = useSession();
-  const isAuthenticated = status === 'authenticated' && session?.user;
+  const { session, isAuthenticated } = useAuth();
+  const { data: nextAuthSession, status: sessionStatus } = useSession();
   const [totalDonations, setTotalDonations] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Show authenticated menu for any authenticated user (not just fully onboarded)
+  const showAuthenticatedMenu = sessionStatus === 'authenticated' && nextAuthSession?.user;
   
   // Get first name from user's name
   const getUserFirstName = () => {
@@ -66,9 +70,9 @@ export default function Header() {
         <nav className="hidden md:flex gap-6 text-sm font-medium items-center absolute left-1/2 transform -translate-x-1/2">
           <a href="#shop" className="hover:text-crimson transition">Shop</a>
           <Link href="/collections" className="hover:text-crimson transition">Collections</Link>
-          <Link href="/apply" className="hover:text-crimson transition">Connect</Link>
+          <Link href="/connect" className="hover:text-crimson transition">Connect</Link>
           <a href="#events" className="hover:text-crimson transition">Events</a>
-          {isAuthenticated ? (
+          {showAuthenticatedMenu ? (
             <>
               <Link 
                 href="/admin" 

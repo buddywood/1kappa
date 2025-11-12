@@ -76,9 +76,27 @@ export interface Order {
   chapter_name?: string;
 }
 
+export interface Industry {
+  id: number;
+  name: string;
+  display_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export async function fetchChapters(): Promise<Chapter[]> {
   const res = await fetch(`${API_URL}/api/chapters`);
   if (!res.ok) throw new Error('Failed to fetch chapters');
+  return res.json();
+}
+
+export async function fetchIndustries(includeInactive: boolean = false): Promise<Industry[]> {
+  const url = includeInactive 
+    ? `${API_URL}/api/industries?includeInactive=true`
+    : `${API_URL}/api/industries`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Failed to fetch industries');
   return res.json();
 }
 
@@ -137,9 +155,17 @@ export async function submitSellerApplication(formData: FormData): Promise<Selle
 async function getAuthHeaders(): Promise<HeadersInit> {
   const session = await fetch('/api/auth/session').then(res => res.json());
   const idToken = (session as any)?.idToken;
+  const onboardingStatus = (session as any)?.user?.onboarding_status;
+  
   if (!idToken) {
     throw new Error('Not authenticated');
   }
+  
+  // Check if user has completed onboarding
+  if (onboardingStatus !== 'ONBOARDING_FINISHED') {
+    throw new Error('Registration incomplete. Please complete your registration to access this feature.');
+  }
+  
   return {
     'Authorization': `Bearer ${idToken}`,
     'Content-Type': 'application/json',
@@ -252,5 +278,59 @@ export async function fetchSellersWithProducts(): Promise<SellerWithProducts[]> 
   const res = await fetch(`${API_URL}/api/sellers/collections`);
   if (!res.ok) throw new Error('Failed to fetch sellers');
   return res.json();
+}
+
+// Social/Connect API functions
+export interface Post {
+  id: number;
+  author_id: number;
+  author_name: string;
+  author_avatar?: string;
+  content: string;
+  image_url?: string;
+  likes_count: number;
+  comments_count: number;
+  shares_count: number;
+  is_liked: boolean;
+  created_at: string;
+  hashtags?: string[];
+}
+
+export async function fetchPosts(): Promise<Post[]> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/connect/posts`, {
+    headers,
+  });
+  if (!res.ok) throw new Error('Failed to fetch posts');
+  return res.json();
+}
+
+export async function createPost(content: string, imageUrl?: string): Promise<Post> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/connect/posts`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ content, image_url: imageUrl }),
+  });
+  if (!res.ok) throw new Error('Failed to create post');
+  return res.json();
+}
+
+export async function likePost(postId: number): Promise<void> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/connect/posts/${postId}/like`, {
+    method: 'POST',
+    headers,
+  });
+  if (!res.ok) throw new Error('Failed to like post');
+}
+
+export async function unlikePost(postId: number): Promise<void> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/connect/posts/${postId}/like`, {
+    method: 'DELETE',
+    headers,
+  });
+  if (!res.ok) throw new Error('Failed to unlike post');
 }
 
