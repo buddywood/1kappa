@@ -1,8 +1,9 @@
 import { Router, Request, Response } from 'express';
+import type { Router as ExpressRouter } from 'express';
 import { getActiveEvents, getAllEvents, getEventById } from '../db/queries';
 import pool from '../db/connection';
 
-const router = Router();
+const router: ExpressRouter = Router();
 
 router.get('/', async (req: Request, res: Response) => {
   try {
@@ -46,4 +47,6 @@ router.get('/:id', async (req: Request, res: Response) => {
 });
 
 export default router;
+
+
 

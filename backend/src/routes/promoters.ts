@@ -1,10 +1,11 @@
 import { Router, Request, Response } from 'express';
+import type { Router as ExpressRouter } from 'express';
 import multer from 'multer';
 import { createPromoter } from '../db/queries';
 import { uploadToS3 } from '../services/s3';
 import { z } from 'zod';
 
-const router = Router();
+const router: ExpressRouter = Router();
 
 // Configure multer for memory storage
 const upload = multer({
@@ -64,4 +65,6 @@ router.post('/apply', upload.single('headshot'), async (req: Request, res: Respo
 });
 
 export default router;
+
+
 

@@ -1,11 +1,17 @@
 import { CognitoUserPool, CognitoUser, AuthenticationDetails, CognitoUserAttribute, CognitoRefreshToken } from 'amazon-cognito-identity-js';
 
-const poolData = {
-  UserPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID || '',
-  ClientId: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID || '',
-};
+let userPoolInstance: CognitoUserPool | null = null;
 
-export const userPool = new CognitoUserPool(poolData);
+function getUserPool(): CognitoUserPool {
+  if (!userPoolInstance) {
+    const poolData = {
+      UserPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID || '',
+      ClientId: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID || '',
+    };
+    userPoolInstance = new CognitoUserPool(poolData);
+  }
+  return userPoolInstance;
+}
 
 export interface SignInResult {
   accessToken: string;
@@ -30,7 +36,7 @@ export function signIn(email: string, password: string): Promise<SignInResult> {
 
     const cognitoUser = new CognitoUser({
       Username: email,
-      Pool: userPool,
+      Pool: getUserPool(),
     });
 
     cognitoUser.authenticateUser(authenticationDetails, {
@@ -118,7 +124,7 @@ export function completeNewPasswordChallenge(
  * Sign out the current user
  */
 export function signOut(): void {
-  const cognitoUser = userPool.getCurrentUser();
+  const cognitoUser = getUserPool().getCurrentUser();
   if (cognitoUser) {
     cognitoUser.signOut();
   }
@@ -129,7 +135,7 @@ export function signOut(): void {
  */
 export function getCurrentUser(): Promise<CognitoUser | null> {
   return new Promise((resolve) => {
-    const cognitoUser = userPool.getCurrentUser();
+    const cognitoUser = getUserPool().getCurrentUser();
     if (cognitoUser) {
       cognitoUser.getSession((err: Error | null, session: any) => {
         if (err || !session || !session.isValid()) {
@@ -149,7 +155,7 @@ export function getCurrentUser(): Promise<CognitoUser | null> {
  */
 export function getCurrentSession(): Promise<SignInResult | null> {
   return new Promise((resolve) => {
-    const cognitoUser = userPool.getCurrentUser();
+    const cognitoUser = getUserPool().getCurrentUser();
     if (!cognitoUser) {
       resolve(null);
       return;
@@ -187,7 +193,7 @@ export function refreshTokens(refreshToken: string, email: string): Promise<Sign
   return new Promise((resolve, reject) => {
     const cognitoUser = new CognitoUser({
       Username: email,
-      Pool: userPool,
+      Pool: getUserPool(),
     });
 
     const cognitoRefreshToken = new CognitoRefreshToken({
@@ -226,7 +232,7 @@ export function forgotPassword(email: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const cognitoUser = new CognitoUser({
       Username: email,
-      Pool: userPool,
+      Pool: getUserPool(),
     });
 
     cognitoUser.forgotPassword({
@@ -251,7 +257,7 @@ export function confirmForgotPassword(
   return new Promise((resolve, reject) => {
     const cognitoUser = new CognitoUser({
       Username: email,
-      Pool: userPool,
+      Pool: getUserPool(),
     });
 
     cognitoUser.confirmPassword(code, newPassword, {

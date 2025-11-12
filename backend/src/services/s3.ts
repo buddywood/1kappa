@@ -27,7 +27,7 @@ export async function uploadToS3(
   file: Buffer,
   filename: string,
   contentType: string,
-  folder: 'headshots' | 'products' = 'products'
+  folder: 'headshots' | 'products' | 'store-logos' | 'steward-listings' = 'products'
 ): Promise<UploadResult> {
   const key = `${folder}/${uuidv4()}-${filename}`;
 

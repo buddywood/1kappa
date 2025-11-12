@@ -8,7 +8,7 @@ import Link from 'next/link';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import SearchableSelect from '../components/SearchableSelect';
-import { SkeletonLoader } from '../components/Skeleton';
+import Skeleton, { SkeletonLoader } from '../components/Skeleton';
 import VerificationStatusBadge from '../components/VerificationStatusBadge';
 import Image from 'next/image';
 
@@ -224,10 +224,10 @@ export default function ProfilePage() {
       <div className="min-h-screen bg-cream">
         <Header />
         <main className="max-w-4xl mx-auto px-4 py-12">
-          <SkeletonLoader variant="text" className="h-10 w-64 mb-8" />
-          <SkeletonLoader variant="rect" className="h-64 w-full mb-6" />
-          <SkeletonLoader variant="text" className="h-6 w-full mb-4" />
-          <SkeletonLoader variant="text" className="h-6 w-3/4" />
+          <Skeleton variant="text" className="h-10 w-64 mb-8" />
+          <Skeleton variant="card" className="h-64 w-full mb-6" />
+          <Skeleton variant="text" className="h-6 w-full mb-4" />
+          <Skeleton variant="text" className="h-6 w-3/4" />
         </main>
         <Footer />
       </div>

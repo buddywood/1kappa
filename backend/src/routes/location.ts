@@ -1,8 +1,9 @@
 import { Router, Request, Response } from 'express';
+import type { Router as ExpressRouter } from 'express';
 import { reverseGeocode } from '../services/location';
 import { z } from 'zod';
 
-const router = Router();
+const router: ExpressRouter = Router();
 
 const reverseGeocodeSchema = z.object({
   latitude: z.number().min(-90).max(90),

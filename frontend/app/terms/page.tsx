@@ -16,7 +16,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-2xl font-display font-bold text-crimson mb-4">1. Acceptance of Terms</h2>
             <p className="mb-4">
-              By accessing and using 1Kappa ("the Platform"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
+              By accessing and using 1Kappa (&quot;the Platform&quot;), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
             </p>
           </section>
 
@@ -33,7 +33,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-2xl font-display font-bold text-crimson mb-4">3. Marketplace Rules</h2>
             <p className="mb-4">
-              1Kappa operates as a marketplace platform connecting verified Kappa Alpha Psi members ("Sellers") with buyers. The Platform facilitates transactions but is not a party to any transaction between buyers and sellers.
+              1Kappa operates as a marketplace platform connecting verified Kappa Alpha Psi members (&quot;Sellers&quot;) with buyers. The Platform facilitates transactions but is not a party to any transaction between buyers and sellers.
             </p>
             <ul className="list-disc pl-6 mb-4 space-y-2">
               <li>All sellers must be verified members of Kappa Alpha Psi Fraternity, Inc.</li>
@@ -46,7 +46,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-2xl font-display font-bold text-crimson mb-4">4. Payment Terms</h2>
             <p className="mb-4">
-              All payments are processed through Stripe, a third-party payment processor. By making a purchase, you agree to Stripe's terms of service and privacy policy.
+              All payments are processed through Stripe, a third-party payment processor. By making a purchase, you agree to Stripe&apos;s terms of service and privacy policy.
             </p>
             <p className="mb-4">
               Prices are displayed in USD. All sales are final unless otherwise stated. Refunds and returns are subject to individual seller policies and applicable consumer protection laws.
@@ -97,7 +97,7 @@ export default function TermsPage() {
               <li>Infringe upon the rights of others</li>
               <li>Transmit any viruses, malware, or harmful code</li>
               <li>Attempt to gain unauthorized access to the Platform or its systems</li>
-              <li>Interfere with or disrupt the Platform's operation</li>
+              <li>Interfere with or disrupt the Platform&apos;s operation</li>
               <li>Use automated systems to access the Platform without permission</li>
             </ul>
           </section>
@@ -125,7 +125,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-2xl font-display font-bold text-crimson mb-4">10. Modifications to Terms</h2>
             <p className="mb-4">
-              We reserve the right to modify these terms at any time. We will notify users of any material changes by posting the new terms on this page and updating the "Last updated" date. Your continued use of the Platform after such modifications constitutes acceptance of the updated terms.
+              We reserve the right to modify these terms at any time. We will notify users of any material changes by posting the new terms on this page and updating the &quot;Last updated&quot; date. Your continued use of the Platform after such modifications constitutes acceptance of the updated terms.
             </p>
           </section>
 
@@ -146,7 +146,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-2xl font-display font-bold text-crimson mb-4">13. Contact Information</h2>
             <p className="mb-4">
-              If you have any questions about these Terms & Conditions, please contact us through the Platform's contact methods.
+              If you have any questions about these Terms & Conditions, please contact us through the Platform&apos;s contact methods.
             </p>
           </section>
         </div>

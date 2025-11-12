@@ -1,10 +1,11 @@
 import { Router, Request, Response } from 'express';
+import type { Router as ExpressRouter } from 'express';
 import { authenticate } from '../middleware/auth';
 import { getUserById, upsertUserOnLogin } from '../db/queries';
 import { verifyCognitoToken, extractUserInfoFromToken } from '../services/cognito';
 import pool from '../db/connection';
 
-const router = Router();
+const router: ExpressRouter = Router();
 
 // Get current user info
 router.get('/me', authenticate, async (req: Request, res: Response) => {

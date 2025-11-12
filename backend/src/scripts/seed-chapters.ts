@@ -100,14 +100,15 @@ async function scrapeChapters(): Promise<void> {
   console.log('\n=== All section headings found ===');
   $elements.find('h2, h3').each((_, heading) => {
     const $heading = $(heading);
-    console.log(`Heading: "${$heading.text()}" (${heading.tagName})`);
+    const tagName = (heading as any).tagName || 'unknown';
+    console.log(`Heading: "${$heading.text()}" (${tagName})`);
   });
   console.log('================================\n');
   
   // Iterate through headings and tables in document order
   $elements.find('h2, h3, table.wikitable').each((_, elem) => {
     const $elem = $(elem);
-    const tagName = elem.tagName?.toLowerCase() || '';
+    const tagName = (elem as any).tagName?.toLowerCase() || '';
     
     // Check if this is a section heading
     if (tagName === 'h2' || tagName === 'h3') {

@@ -73,14 +73,14 @@ export default function MemberSetupPage() {
                   <div>
                     <h3 className="font-semibold text-midnight-navy mb-1">Get Verified</h3>
                     <p className="text-sm text-midnight-navy/70">
-                      Once verified, you'll have full access to all features including the Steward Marketplace, seller applications, and event promotions.
+                      Once verified, you&apos;ll have full access to all features including the Steward Marketplace, seller applications, and event promotions.
                     </p>
                   </div>
                 </div>
               </div>
               <div className="mt-4 p-4 bg-white rounded border border-blue-200">
                 <p className="text-sm text-midnight-navy/70">
-                  <strong>Verification Timeline:</strong> Verification typically takes 24-48 hours. You'll receive an email notification once your membership has been verified.
+                  <strong>Verification Timeline:</strong> Verification typically takes 24-48 hours. You&apos;ll receive an email notification once your membership has been verified.
                 </p>
               </div>
             </div>

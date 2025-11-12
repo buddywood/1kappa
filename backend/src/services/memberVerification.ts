@@ -102,7 +102,7 @@ export async function recordManualLogin(page: Page): Promise<void> {
   for (const iframe of iframes) {
     try {
       const frame = await iframe.contentFrame();
-      if (frame) frames.push(frame);
+      if (frame) frames.push(frame as any);
     } catch (e) {
       // Cross-origin iframe, skip
     }
@@ -189,7 +189,7 @@ export async function createBrowser(headless: boolean = true): Promise<Browser> 
   }
 
   return await puppeteer.launch({
-    headless: headless ? 'new' : false,
+    headless: headless ? true : false,
     args,
     defaultViewport: headless ? undefined : { width: 1280, height: 720 },
   });
@@ -303,12 +303,16 @@ async function debugFormElements(page: Page): Promise<void> {
   
   // Get page HTML structure around form
   const formInfo = await page.evaluate(() => {
-    const form = document.querySelector('form');
-    const allForms = document.querySelectorAll('form');
+    // @ts-expect-error - document is available in browser context
+    const form = document.querySelector('form') as HTMLFormElement | null;
+    // @ts-expect-error - document is available in browser context
+    const allForms = document.querySelectorAll('form') as NodeListOf<HTMLFormElement>;
     return {
       formCount: allForms.length,
+      // @ts-expect-error - outerHTML is available in browser context
       formHTML: form ? form.outerHTML.substring(0, 2000) : 'No form element found',
-      bodyHTML: document.body.innerHTML.substring(0, 1000),
+      // @ts-expect-error - document is available in browser context
+      bodyHTML: document.body ? document.body.innerHTML.substring(0, 1000) : '',
     };
   });
   
@@ -319,9 +323,12 @@ async function debugFormElements(page: Page): Promise<void> {
   
   // Check for Salesforce Community login (common pattern)
   const isSalesforce = await page.evaluate(() => {
+    // @ts-expect-error - window is available in browser context
     return window.location.href.includes('salesforce.com') || 
-           document.body.innerHTML.includes('salesforce') ||
-           document.querySelector('[id*="salesforce"], [class*="salesforce"]') !== null;
+           // @ts-expect-error - document is available in browser context
+           (document.body ? document.body.innerHTML.includes('salesforce') : false) ||
+           // @ts-expect-error - document is available in browser context
+           (document.querySelector('[id*="salesforce"], [class*="salesforce"]') !== null);
   });
   
   if (isSalesforce) {
@@ -525,7 +532,7 @@ export async function loginToKappaPortal(page: Page, debugMode: boolean = false)
       
       // Try to get all inputs on the page for debugging
       try {
-        const allInputs = await targetPage.$$eval('input', (elements) => 
+        const allInputs = await targetPage.$$eval('input', (elements: HTMLInputElement[]) => 
           elements.map((el: any) => ({
             type: el.type,
             id: el.id,
@@ -977,8 +984,9 @@ export async function searchMember(
     try {
       // Use the frame where we found results (main page or iframe)
       const evaluateTarget = targetFrame || page;
-      resultTextsArray = await evaluateTarget.evaluate((selector) => {
-        const elements = Array.from(document.querySelectorAll(selector));
+      resultTextsArray = await evaluateTarget.evaluate((selector: string) => {
+        // @ts-expect-error - document is available in browser context
+        const elements = Array.from(document.querySelectorAll(selector) as any);
         return elements.map((el: any) => ({
           text: (el.textContent || '').trim(),
           html: (el.innerHTML || '').trim(),

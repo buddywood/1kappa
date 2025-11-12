@@ -5,7 +5,7 @@ import { fetchProducts, fetchChapters, fetchSellersWithProducts, type Product, t
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import VerificationBadge from '../components/VerificationBadge';
-import { SkeletonLoader } from '../components/Skeleton';
+import Skeleton, { SkeletonLoader } from '../components/Skeleton';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -235,10 +235,10 @@ export default function ShopPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
               <div key={i} className="bg-white rounded-xl shadow overflow-hidden">
-                <SkeletonLoader variant="rect" className="w-full aspect-square" />
+                <Skeleton variant="card" className="w-full aspect-square" />
                 <div className="p-3 space-y-2">
-                  <SkeletonLoader variant="text" className="h-4 w-3/4" />
-                  <SkeletonLoader variant="text" className="h-4 w-1/2" />
+                  <Skeleton variant="text" className="h-4 w-3/4" />
+                  <Skeleton variant="text" className="h-4 w-1/2" />
                 </div>
               </div>
             ))}

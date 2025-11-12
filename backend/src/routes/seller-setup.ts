@@ -1,9 +1,10 @@
 import { Router, Request, Response } from 'express';
+import type { Router as ExpressRouter } from 'express';
 import { CognitoIdentityProviderClient, AdminCreateUserCommand, AdminSetUserPasswordCommand, AdminGetUserCommand } from '@aws-sdk/client-cognito-identity-provider';
 import { z } from 'zod';
 import { getSellerByInvitationToken, createUser, linkUserToSeller, updateSellerInvitationToken, getUserByEmail } from '../db/queries';
 
-const router = Router();
+const router: ExpressRouter = Router();
 
 const cognitoClient = new CognitoIdentityProviderClient({
   region: process.env.AWS_REGION || 'us-east-1',

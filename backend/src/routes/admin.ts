@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import type { Router as ExpressRouter } from 'express';
 import { 
   getPendingSellers, 
   updateSellerStatus, 
@@ -29,7 +30,7 @@ import { z } from 'zod';
 import { authenticate, requireAdmin } from '../middleware/auth';
 import pool from '../db/connection';
 
-const router = Router();
+const router: ExpressRouter = Router();
 
 // Use Cognito authentication middleware
 router.use(authenticate);

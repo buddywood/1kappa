@@ -49,7 +49,7 @@ export default async function CollectionsPage({ searchParams }: CollectionsPageP
         <div className="max-w-7xl mx-auto text-center">
           <h1 className="text-4xl md:text-5xl font-display font-bold mb-4">Brotherhood Collections</h1>
           <p className="text-lg max-w-2xl mx-auto opacity-90">
-            Shop authentic merchandise from verified Kappa brothers. Each collection represents a unique brother's curated selection.
+            Shop authentic merchandise from verified Kappa brothers. Each collection represents a unique brother&apos;s curated selection.
           </p>
           {sellerIdParam && (
             <div className="mt-6">
@@ -73,7 +73,7 @@ export default async function CollectionsPage({ searchParams }: CollectionsPageP
                 Collection Not Found
               </h2>
               <p className="text-midnight-navy/70 mb-6">
-                The collection you're looking for doesn't exist or has been removed.
+                The collection you&apos;re looking for doesn&apos;t exist or has been removed.
               </p>
               <Link
                 href="/collections"
@@ -136,20 +136,20 @@ export default async function CollectionsPage({ searchParams }: CollectionsPageP
                         
                         {/* Brother Details */}
                         <div className="flex flex-wrap items-center gap-4 mt-3 mb-2">
-                          {seller.membership_number && (
+                          {seller.member_id && (
                             <div className="flex items-center gap-1.5 text-sm text-midnight-navy/70">
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                               </svg>
-                              <span>Membership: {seller.membership_number}</span>
+                              <span>Verified Member</span>
                             </div>
                           )}
-                          {getChapterName(seller.initiated_chapter_id) && (
+                          {getChapterName(seller.sponsoring_chapter_id) && (
                             <div className="flex items-center gap-1.5 text-sm text-midnight-navy/70">
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                               </svg>
-                              <span>Initiated: {getChapterName(seller.initiated_chapter_id)}</span>
+                              <span>Sponsored by: {getChapterName(seller.sponsoring_chapter_id)}</span>
                             </div>
                           )}
                         </div>

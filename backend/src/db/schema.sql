@@ -29,6 +29,33 @@ BEGIN
   END IF;
 END $$;
 
+-- Members table - must be created before sellers/promoters that reference it
+CREATE TABLE IF NOT EXISTS members (
+  id SERIAL PRIMARY KEY,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  name VARCHAR(255),
+  membership_number VARCHAR(100) UNIQUE,
+  cognito_sub VARCHAR(255) UNIQUE, -- AWS Cognito user ID
+  registration_status VARCHAR(20) DEFAULT 'DRAFT' CHECK (registration_status IN ('DRAFT', 'COMPLETE')), -- Track registration completion
+  initiated_chapter_id INTEGER REFERENCES chapters(id), -- Nullable for drafts, required for COMPLETE registrations
+  initiated_season VARCHAR(50),
+  initiated_year INTEGER,
+  ship_name VARCHAR(255),
+  line_name VARCHAR(255),
+  location VARCHAR(255),
+  address TEXT,
+  address_is_private BOOLEAN DEFAULT false,
+  phone_number VARCHAR(50),
+  phone_is_private BOOLEAN DEFAULT false,
+  industry VARCHAR(255),
+  job_title VARCHAR(255),
+  bio TEXT,
+  headshot_url TEXT,
+  social_links JSONB DEFAULT '{}',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Sellers table
 CREATE TABLE IF NOT EXISTS sellers (
   id SERIAL PRIMARY KEY,
@@ -311,16 +338,20 @@ BEGIN
     ALTER TABLE members ALTER COLUMN membership_number DROP NOT NULL;
   END IF;
 
-  -- Add onboarding_status to users table if it doesn't exist
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
-                 WHERE table_name='users' AND column_name='onboarding_status') THEN
-    ALTER TABLE users ADD COLUMN onboarding_status VARCHAR(50) DEFAULT 'PRE_COGNITO' CHECK (onboarding_status IN ('PRE_COGNITO', 'COGNITO_CONFIRMED', 'ONBOARDING_STARTED', 'ONBOARDING_FINISHED'));
+  -- Add onboarding_status to users table if it doesn't exist (only if users table exists)
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='users') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='users' AND column_name='onboarding_status') THEN
+      ALTER TABLE users ADD COLUMN onboarding_status VARCHAR(50) DEFAULT 'PRE_COGNITO' CHECK (onboarding_status IN ('PRE_COGNITO', 'COGNITO_CONFIRMED', 'ONBOARDING_STARTED', 'ONBOARDING_FINISHED'));
+    END IF;
   END IF;
 
-  -- Add last_login to users table if it doesn't exist
-  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
-                 WHERE table_name='users' AND column_name='last_login') THEN
-    ALTER TABLE users ADD COLUMN last_login TIMESTAMP;
+  -- Add last_login to users table if it doesn't exist (only if users table exists)
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='users') THEN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='users' AND column_name='last_login') THEN
+      ALTER TABLE users ADD COLUMN last_login TIMESTAMP;
+    END IF;
   END IF;
 
   -- Add verification fields to members table
@@ -394,33 +425,6 @@ CREATE TABLE IF NOT EXISTS orders (
   stripe_session_id VARCHAR(255) UNIQUE,
   status VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'PAID', 'FAILED')),
   chapter_id INTEGER REFERENCES chapters(id),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Members table - for brothers who register but haven't applied to be sellers/promoters yet
-CREATE TABLE IF NOT EXISTS members (
-  id SERIAL PRIMARY KEY,
-  email VARCHAR(255) NOT NULL UNIQUE,
-  name VARCHAR(255),
-  membership_number VARCHAR(100) UNIQUE,
-  cognito_sub VARCHAR(255) UNIQUE, -- AWS Cognito user ID
-  registration_status VARCHAR(20) DEFAULT 'DRAFT' CHECK (registration_status IN ('DRAFT', 'COMPLETE')), -- Track registration completion
-  initiated_chapter_id INTEGER REFERENCES chapters(id), -- Nullable for drafts, required for COMPLETE registrations
-  initiated_season VARCHAR(50),
-  initiated_year INTEGER,
-  ship_name VARCHAR(255),
-  line_name VARCHAR(255),
-  location VARCHAR(255),
-  address TEXT,
-  address_is_private BOOLEAN DEFAULT false,
-  phone_number VARCHAR(50),
-  phone_is_private BOOLEAN DEFAULT false,
-  industry VARCHAR(255),
-  job_title VARCHAR(255),
-  bio TEXT,
-  headshot_url TEXT,
-  social_links JSONB DEFAULT '{}',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

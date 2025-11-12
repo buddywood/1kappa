@@ -1,11 +1,12 @@
 import { Router, Request, Response } from 'express';
+import type { Router as ExpressRouter } from 'express';
 import { verifyWebhookSignature } from '../services/stripe';
 import { getOrderByStripeSessionId, updateOrderStatus } from '../db/queries';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const router = Router();
+const router: ExpressRouter = Router();
 
 // Stripe webhook endpoint (must be raw body for signature verification)
 router.post('/stripe', async (req: Request, res: Response) => {

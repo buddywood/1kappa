@@ -16,7 +16,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-2xl font-display font-bold text-crimson mb-4">1. Introduction</h2>
             <p className="mb-4">
-              At 1Kappa ("we," "our," or "the Platform"), we are committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our marketplace platform.
+              At 1Kappa (&quot;we,&quot; &quot;our,&quot; or &quot;the Platform&quot;), we are committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our marketplace platform.
             </p>
             <p className="mb-4">
               Please read this Privacy Policy carefully. By using the Platform, you consent to the data practices described in this policy.
@@ -70,7 +70,7 @@ export default function PrivacyPage() {
               We use Stripe, a third-party payment processor, to handle all payment transactions. When you make a purchase, your payment information is processed directly by Stripe. We do not store your full credit card details on our servers.
             </p>
             <p className="mb-4">
-              Stripe's collection and use of your information is governed by their Privacy Policy. We encourage you to review Stripe's privacy practices at{' '}
+              Stripe&apos;s collection and use of your information is governed by their Privacy Policy. We encourage you to review Stripe&apos;s privacy practices at{' '}
               <a 
                 href="https://stripe.com/privacy" 
                 target="_blank" 
@@ -142,12 +142,12 @@ export default function PrivacyPage() {
               <li><strong>Account Management:</strong> Update or delete your account through your account settings</li>
             </ul>
             <p className="mb-4">
-              To exercise these rights, please contact us through the Platform's contact methods. We will respond to your request within a reasonable timeframe.
+              To exercise these rights, please contact us through the Platform&apos;s contact methods. We will respond to your request within a reasonable timeframe.
             </p>
           </section>
 
           <section>
-            <h2 className="text-2xl font-display font-bold text-crimson mb-4">9. Children's Privacy</h2>
+            <h2 className="text-2xl font-display font-bold text-crimson mb-4">9. Children&apos;s Privacy</h2>
             <p className="mb-4">
               The Platform is not intended for individuals under the age of 18. We do not knowingly collect personal information from children under 18. If we become aware that we have collected information from a child under 18, we will take steps to delete such information promptly.
             </p>
@@ -170,7 +170,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-2xl font-display font-bold text-crimson mb-4">12. Changes to This Privacy Policy</h2>
             <p className="mb-4">
-              We may update this Privacy Policy from time to time. We will notify you of any material changes by posting the new Privacy Policy on this page and updating the "Last updated" date. We encourage you to review this Privacy Policy periodically.
+              We may update this Privacy Policy from time to time. We will notify you of any material changes by posting the new Privacy Policy on this page and updating the &quot;Last updated&quot; date. We encourage you to review this Privacy Policy periodically.
             </p>
             <p className="mb-4">
               Your continued use of the Platform after any changes to this Privacy Policy constitutes acceptance of those changes.
@@ -180,7 +180,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-2xl font-display font-bold text-crimson mb-4">13. Contact Information</h2>
             <p className="mb-4">
-              If you have any questions, concerns, or requests regarding this Privacy Policy or our data practices, please contact us through the Platform's contact methods.
+              If you have any questions, concerns, or requests regarding this Privacy Policy or our data practices, please contact us through the Platform&apos;s contact methods.
             </p>
           </section>
         </div>

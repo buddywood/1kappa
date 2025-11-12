@@ -955,7 +955,7 @@ export default function RegisterPage() {
                   Welcome Back!
                 </h3>
                 <p className="text-midnight-navy/80 mb-3">
-                  We noticed your registration isn't complete yet. Please finish setting up your profile to enjoy full access to the 1Kappa brotherhood network, including shopping authentic merchandise, connecting with brothers, and participating in events.
+                  We noticed your registration isn&apos;t complete yet. Please finish setting up your profile to enjoy full access to the 1Kappa brotherhood network, including shopping authentic merchandise, connecting with brothers, and participating in events.
                 </p>
                 <p className="text-sm text-midnight-navy/70">
                   Your progress has been saved. You can pick up right where you left off!
@@ -1398,7 +1398,7 @@ export default function RegisterPage() {
                   </button>
                 </div>
                 <p className="text-xs text-midnight-navy/60 mt-1">
-                  Click "Detect" to automatically fill your location using your device's GPS
+                  Click &quot;Detect&quot; to automatically fill your location using your device&apos;s GPS
                 </p>
               </div>
 

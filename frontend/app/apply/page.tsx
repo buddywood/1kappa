@@ -204,8 +204,8 @@ export default function ApplyPage() {
               <strong>What happens next?</strong>
             </p>
             <ul className="text-sm text-blue-700 mt-2 text-left list-disc list-inside space-y-1">
-              <li>We'll review your application and verify your information</li>
-              <li>You'll receive an email when your application is approved</li>
+              <li>We&apos;ll review your application and verify your information</li>
+              <li>You&apos;ll receive an email when your application is approved</li>
               <li>Once approved, you can start listing products in the shop</li>
             </ul>
           </div>
@@ -274,7 +274,7 @@ export default function ApplyPage() {
                 <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                You're logged in as a member. Your membership will be automatically associated with your seller account.
+                You&apos;re logged in as a member. Your membership will be automatically associated with your seller account.
               </p>
             </div>
           )}
@@ -408,7 +408,7 @@ export default function ApplyPage() {
             )}
             {headshotPreview && !headshot && (
               <p className="mt-2 text-xs text-midnight-navy/60">
-                If you don't upload a new photo, your current profile photo will be used.
+                If you don&apos;t upload a new photo, your current profile photo will be used.
               </p>
             )}
           </div>

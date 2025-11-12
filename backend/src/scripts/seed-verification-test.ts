@@ -196,8 +196,6 @@ async function seedTestSellers(): Promise<void> {
         const newSeller = await createSeller({
           email: sellerData.email,
           name: sellerData.name,
-          membership_number: sellerData.membership_number,
-          initiated_chapter_id: randomChapter.id,
           sponsoring_chapter_id: randomChapter.id,
           business_name: sellerData.business_name,
           vendor_license_number: sellerData.vendor_license_number,
@@ -274,8 +272,6 @@ async function seedTestPromoters(): Promise<void> {
         const newPromoter = await createPromoter({
           email: promoterData.email,
           name: promoterData.name,
-          membership_number: promoterData.membership_number,
-          initiated_chapter_id: randomChapter.id,
           sponsoring_chapter_id: randomChapter.id,
           social_links: {},
         });

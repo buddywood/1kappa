@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import type { Router as ExpressRouter } from 'express';
 import multer from 'multer';
 import { 
   createSteward, 
@@ -19,7 +20,7 @@ import { z } from 'zod';
 import { authenticate, requireSteward, requireVerifiedMember } from '../middleware/auth';
 import pool from '../db/connection';
 
-const router = Router();
+const router: ExpressRouter = Router();
 
 // Configure multer for memory storage
 const upload = multer({

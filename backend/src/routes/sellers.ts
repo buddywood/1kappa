@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import type { Router as ExpressRouter } from 'express';
 import multer from 'multer';
 import { createSeller, getActiveProducts } from '../db/queries';
 import pool from '../db/connection';
@@ -7,7 +8,7 @@ import { z } from 'zod';
 import { authenticate } from '../middleware/auth';
 import { sendSellerApplicationSubmittedEmail } from '../services/email';
 
-const router = Router();
+const router: ExpressRouter = Router();
 
 // Configure multer for memory storage
 const upload = multer({
@@ -73,6 +74,7 @@ const optionalAuthenticate = async (req: Request, res: Response, next: any) => {
           memberId: user.member_id,
           sellerId: user.seller_id,
           promoterId: user.promoter_id,
+          stewardId: user.steward_id,
           features: user.features,
         };
       }

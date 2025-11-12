@@ -275,8 +275,6 @@ async function seedProducts(): Promise<void> {
         const newSeller = await createSeller({
           email: sellerData.email,
           name: sellerData.name,
-          membership_number: sellerData.membership_number,
-          initiated_chapter_id: randomChapter.id,
           sponsoring_chapter_id: randomChapter.id,
           business_name: sellerData.business_name,
           vendor_license_number: sellerData.vendor_license_number,
@@ -384,11 +382,11 @@ async function seedPromoters(): Promise<void> {
       const promoter = await createPromoter({
         email: promoterData.email,
         name: promoterData.name,
-        membership_number: promoterData.membership_number,
-        initiated_chapter_id: randomChapter.id,
         sponsoring_chapter_id: randomChapter.id,
         headshot_url: undefined,
-        social_links: promoterData.social_links || {},
+        social_links: Object.fromEntries(
+          Object.entries(promoterData.social_links || {}).filter(([_, v]) => v !== undefined)
+        ) as Record<string, string>,
       });
       
       // Update status if not PENDING

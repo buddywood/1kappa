@@ -685,7 +685,7 @@ export default function LoginPage() {
             Return to homepage
           </Link>
           <p className="text-xs text-midnight-navy/60">
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <Link href="/register" className="text-crimson hover:underline font-medium">
               Become a Member
             </Link>

@@ -1,7 +1,8 @@
 import { Router, Request, Response } from 'express';
+import type { Router as ExpressRouter } from 'express';
 import { getAllChapters, getActiveCollegiateChapters } from '../db/queries';
 
-const router = Router();
+const router: ExpressRouter = Router();
 
 router.get('/', async (req: Request, res: Response) => {
   try {

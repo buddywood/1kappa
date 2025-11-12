@@ -5,9 +5,9 @@ import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import { getStewardListing, claimStewardListing, createStewardCheckoutSession } from '@/lib/api';
 import type { StewardListing } from '@/lib/api';
-import Header from '../components/Header';
-import Footer from '../components/Footer';
-import VerificationBadge from '../components/VerificationBadge';
+import Header from '../../components/Header';
+import Footer from '../../components/Footer';
+import VerificationBadge from '../../components/VerificationBadge';
 
 export default function StewardListingPage() {
   const router = useRouter();
@@ -176,7 +176,7 @@ export default function StewardListingPage() {
 
               <div className="bg-cream p-4 rounded-lg mb-6">
                 <p className="text-sm text-midnight-navy/70 mb-4">
-                  <strong>This item is FREE!</strong> You only pay shipping, platform fees, and a donation to the steward's chapter.
+                  <strong>This item is FREE!</strong> You only pay shipping, platform fees, and a donation to the steward&apos;s chapter.
                 </p>
                 
                 <div className="space-y-2 text-sm">

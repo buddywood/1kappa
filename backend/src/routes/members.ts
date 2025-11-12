@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import type { Router as ExpressRouter } from 'express';
 import multer from 'multer';
 import pool from '../db/connection';
 import { uploadToS3 } from '../services/s3';
@@ -8,7 +9,7 @@ import { z } from 'zod';
 import { CognitoIdentityProviderClient, SignUpCommand, ConfirmSignUpCommand, ForgotPasswordCommand, ConfirmForgotPasswordCommand, AdminGetUserCommand, ResendConfirmationCodeCommand } from '@aws-sdk/client-cognito-identity-provider';
 import { getUserByCognitoSub, createUser, linkUserToMember, updateUserOnboardingStatusByCognitoSub } from '../db/queries';
 
-const router = Router();
+const router: ExpressRouter = Router();
 
 // Configure multer for memory storage
 const upload = multer({
@@ -691,7 +692,7 @@ router.post('/register', upload.single('headshot'), async (req: Request, res: Re
         [body.cognito_sub]
       );
       if (existingDraft.rows.length > 0) {
-        existingHeadshotUrl = existingDraft.rows[0].headshot_url;
+        existingHeadshotUrl = (existingDraft.rows[0] as { headshot_url: string | null }).headshot_url;
       }
     }
 

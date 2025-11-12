@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import type { Router as ExpressRouter } from 'express';
 import { 
   getStewardListingById, 
   createStewardClaim,
@@ -11,7 +12,7 @@ import { createStewardCheckoutSession, calculateStewardPlatformFee } from '../se
 import { authenticate, requireVerifiedMember } from '../middleware/auth';
 import { z } from 'zod';
 
-const router = Router();
+const router: ExpressRouter = Router();
 
 // Create checkout session for claiming a steward listing
 router.post('/:listingId', authenticate, requireVerifiedMember, async (req: Request, res: Response) => {

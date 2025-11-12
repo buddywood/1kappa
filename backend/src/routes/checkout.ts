@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import type { Router as ExpressRouter } from 'express';
 import { getProductById } from '../db/queries';
 import { createCheckoutSession } from '../services/stripe';
 import { createOrder } from '../db/queries';
@@ -7,7 +8,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const router = Router();
+const router: ExpressRouter = Router();
 
 const checkoutSchema = z.object({
   buyer_email: z.string().email(),

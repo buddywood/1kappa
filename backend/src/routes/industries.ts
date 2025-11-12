@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import type { Router as ExpressRouter } from 'express';
 import { getAllIndustries, getIndustryById, createIndustry, updateIndustry, deleteIndustry } from '../db/queries';
 import { authenticate, requireAdmin } from '../middleware/auth';
 

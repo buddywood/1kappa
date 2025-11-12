@@ -5,7 +5,7 @@ import { fetchEvents, fetchChapters, type Event, type Chapter } from '@/lib/api'
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import EventCard from '../components/EventCard';
-import { SkeletonLoader } from '../components/Skeleton';
+import Skeleton, { SkeletonLoader } from '../components/Skeleton';
 
 type FilterType = 'all' | 'upcoming' | 'past';
 
@@ -184,11 +184,11 @@ export default function EventsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div key={i} className="bg-white rounded-xl shadow overflow-hidden">
-                <SkeletonLoader variant="rect" className="w-full h-48" />
+                <Skeleton variant="card" className="w-full h-48" />
                 <div className="p-4 space-y-2">
-                  <SkeletonLoader variant="text" className="h-6 w-3/4" />
-                  <SkeletonLoader variant="text" className="h-4 w-1/2" />
-                  <SkeletonLoader variant="text" className="h-4 w-2/3" />
+                  <Skeleton variant="text" className="h-6 w-3/4" />
+                  <Skeleton variant="text" className="h-4 w-1/2" />
+                  <Skeleton variant="text" className="h-4 w-2/3" />
                 </div>
               </div>
             ))}

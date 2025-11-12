@@ -122,7 +122,7 @@ export default function PromoterSetupPage() {
               </div>
               <div className="mt-4 p-4 bg-white rounded border border-blue-200">
                 <p className="text-sm text-midnight-navy/70">
-                  <strong>Review Timeline:</strong> Applications are typically reviewed within 1-3 business days. You'll receive an email notification once a decision has been made.
+                  <strong>Review Timeline:</strong> Applications are typically reviewed within 1-3 business days. You&apos;ll receive an email notification once a decision has been made.
                 </p>
               </div>
             </div>

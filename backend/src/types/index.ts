@@ -8,6 +8,7 @@ export interface Chapter {
   city: string | null;
   state: string | null;
   contact_email: string | null;
+  stripe_account_id: string | null;
   created_at: Date;
   updated_at: Date;
 }

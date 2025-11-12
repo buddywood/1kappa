@@ -91,7 +91,7 @@ export default function StewardMarketplacePage() {
             Steward Marketplace
           </h1>
           <p className="text-lg text-midnight-navy/70 max-w-2xl mx-auto">
-            Claim legacy fraternity paraphernalia from verified brothers. Items are free - you only pay shipping, platform fees, and a donation to the steward's chapter.
+            Claim legacy fraternity paraphernalia from verified brothers. Items are free - you only pay shipping, platform fees, and a donation to the steward&apos;s chapter.
           </p>
         </div>
 

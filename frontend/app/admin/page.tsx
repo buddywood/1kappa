@@ -356,9 +356,11 @@ export default function AdminDashboard() {
                         <div>
                           <h3 className="font-semibold">{seller.name}</h3>
                           <p className="text-sm text-gray-600">{seller.email}</p>
-                          <p className="text-sm text-gray-600">
-                            Membership #: {seller.membership_number}
-                          </p>
+                          {seller.member_id && (
+                            <p className="text-sm text-gray-600">
+                              Member ID: {seller.member_id}
+                            </p>
+                          )}
                         </div>
                       </div>
                       <div className="flex space-x-2">

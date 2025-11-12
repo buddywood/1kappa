@@ -1,10 +1,11 @@
 import { Router, Request, Response } from 'express';
+import type { Router as ExpressRouter } from 'express';
 import multer from 'multer';
 import { createProduct, getActiveProducts, getProductById } from '../db/queries';
 import { uploadToS3 } from '../services/s3';
 import { z } from 'zod';
 
-const router = Router();
+const router: ExpressRouter = Router();
 
 const upload = multer({
   storage: multer.memoryStorage(),
