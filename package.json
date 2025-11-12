@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "description": "1Kappa monorepo with React frontend and Express backend",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YOUR_USERNAME/1kappa.git"
+  },
   "workspaces": [
     "frontend",
     "backend"

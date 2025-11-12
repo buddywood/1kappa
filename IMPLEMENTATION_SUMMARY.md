@@ -121,7 +121,7 @@ All core features have been implemented according to the build plan.
    - Deploy and run migrations
 
 5. **Deploy Frontend to Vercel**
-   - Connect GitHub repository
+   - Connect GitHub repository (`1kappa`)
    - Set environment variables
    - Deploy
 

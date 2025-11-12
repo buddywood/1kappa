@@ -4,7 +4,7 @@
 
 1. **Connect Repository**
    - Go to [Vercel](https://vercel.com)
-   - Import your GitHub repository
+   - Import your GitHub repository (`1kappa`)
    - Set root directory to `frontend/`
 
 2. **Configure Environment Variables**
