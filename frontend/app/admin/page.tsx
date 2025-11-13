@@ -747,7 +747,7 @@ export default function AdminDashboard() {
                 <div className="flex justify-center">
                   <img
                     src={selectedItem.headshot_url}
-                    alt={selectedItem.name}
+                    alt={selectedItem.name || 'Profile picture'}
                     className="w-32 h-32 rounded-full object-cover border-4 border-frost-gray"
                   />
                 </div>

@@ -16,7 +16,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { data: session, status: sessionStatus } = useSession();
+  const { data: session, status: sessionStatus, update: updateSession } = useSession();
   const [profile, setProfile] = useState<MemberProfile | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [industries, setIndustries] = useState<Industry[]>([]);
@@ -116,7 +116,6 @@ export default function ProfilePage() {
             if (!userData.member_id) {
               console.log('Profile page: Backend has no member_id, refreshing session and redirecting');
               setIsRedirecting(true);
-              const { update: updateSession } = await import('next-auth/react');
               await updateSession();
               window.location.href = '/register';
               return;
@@ -215,7 +214,6 @@ export default function ProfilePage() {
               // If backend cleared member_id, refresh session and redirect
               if (!userData.member_id) {
                 console.log('Profile page: Backend has no member_id, refreshing session and redirecting to register');
-                const { update: updateSession } = await import('next-auth/react');
                 await updateSession();
                 // Use window.location for a hard redirect to prevent loops
                 window.location.href = '/register';
@@ -228,7 +226,6 @@ export default function ProfilePage() {
         } catch (checkError) {
           console.error('Profile page: Error checking user state:', checkError);
           // If check fails, still redirect
-          const { update: updateSession } = await import('next-auth/react');
           await updateSession();
           window.location.href = '/register';
           return;

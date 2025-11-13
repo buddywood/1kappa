@@ -24,7 +24,7 @@ export default function SignOutPage() {
   return (
     <div className="min-h-screen bg-cream flex flex-col items-center justify-center px-6">
       <div className="max-w-md w-full text-center space-y-8">
-        <Logo variant="stacked" showTagline={true} href={null} />
+        <Logo variant="stacked" showTagline={true} />
         
         <div className="space-y-4">
           <h1 className="text-3xl font-display font-bold text-midnight-navy">
