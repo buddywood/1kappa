@@ -1,7 +1,23 @@
 import NextAuth, { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { signIn, refreshTokens } from '@/lib/cognito';
-import jwt from 'jsonwebtoken';
+
+// Simple JWT decode function (doesn't verify, just decodes)
+function decodeJWT(token: string): any {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    return null;
+  }
+}
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
@@ -158,7 +174,7 @@ const authOptions: NextAuthOptions = {
       // Check if token is expired and refresh if needed
       if (token.idToken) {
         try {
-          const decoded = jwt.decode(token.idToken as string) as any;
+          const decoded = decodeJWT(token.idToken as string) as any;
           if (decoded && decoded.exp) {
             const expirationTime = decoded.exp * 1000; // Convert to milliseconds
             const now = Date.now();
