@@ -24,7 +24,10 @@
     "verify:members:debug": "tsx src/scripts/verify-members.ts --visible --debug",
     "verify:members:record": "tsx src/scripts/verify-members.ts --visible --record",
     "grant-admin": "tsx src/scripts/grant-admin-access.ts",
-    "fix:orphaned-member": "tsx src/scripts/fix-orphaned-member.ts"
+    "fix:orphaned-member": "tsx src/scripts/fix-orphaned-member.ts",
+    "delete:seller": "tsx src/scripts/delete-seller.ts",
+    "delete:promoter": "tsx src/scripts/delete-promoter.ts",
+    "delete:steward": "tsx src/scripts/delete-steward.ts"
   },
   "keywords": [],
   "author": "",

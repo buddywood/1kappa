@@ -154,11 +154,13 @@ export default function RegisterPage() {
       
       // If user has cognitoSub (Cognito is verified), skip step 1 and go to step 2
       if (cognitoSub && onboardingStatus !== 'ONBOARDING_FINISHED') {
-        // Set cognitoSub and email in form data
+        // Set cognitoSub, email, and name (if available from session) in form data
+        const userName = (session.user as any)?.name || '';
         setFormData(prev => ({ 
           ...prev, 
           cognitoSub: cognitoSub,
-          email: userEmail || prev.email 
+          email: userEmail || prev.email,
+          name: prev.name || userName // Prepopulate name if not already set and available from session
         }));
         
         // Skip to step 2 (Basic Information)
@@ -1211,7 +1213,7 @@ export default function RegisterPage() {
                   type="text"
                   required
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value.trim() })}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   onInvalid={(e) => {
                     e.preventDefault();
                     setError('Please enter your full name');

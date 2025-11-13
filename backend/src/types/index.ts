@@ -46,7 +46,8 @@ export interface Seller extends Brother {
   sponsoring_chapter_id: number;
   business_name: string | null;
   business_email: string | null;
-  vendor_license_number: string;
+  vendor_license_number: string | null; // Required only for KAPPA merchandise
+  merchandise_type: 'KAPPA' | 'NON_KAPPA' | null;
   website: string | null;
   stripe_account_id: string | null;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';

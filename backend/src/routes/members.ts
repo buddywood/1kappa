@@ -272,11 +272,21 @@ router.post('/draft', upload.single('headshot'), async (req: Request, res: Respo
       return res.status(400).json({ error: 'Cognito sub is required' });
     }
 
-    // Check if draft already exists by cognito_sub or email
-    const existingDraft = await pool.query(
-      'SELECT id, cognito_sub FROM members WHERE cognito_sub = $1 OR email = $2',
-      [cognito_sub, email]
-    );
+    // Check if draft already exists by cognito_sub, email, or membership_number
+    // Parse membership_number from body if available
+    const membershipNumber = req.body.membership_number;
+    let existingDraft;
+    if (membershipNumber) {
+      existingDraft = await pool.query(
+        'SELECT id, cognito_sub, registration_status FROM members WHERE cognito_sub = $1 OR email = $2 OR (membership_number = $3 AND registration_status = \'DRAFT\')',
+        [cognito_sub, email, membershipNumber]
+      );
+    } else {
+      existingDraft = await pool.query(
+        'SELECT id, cognito_sub, registration_status FROM members WHERE cognito_sub = $1 OR email = $2',
+        [cognito_sub, email]
+      );
+    }
 
     // Upload headshot to S3 if provided
     let headshotUrl: string | undefined;
@@ -331,7 +341,11 @@ router.post('/draft', upload.single('headshot'), async (req: Request, res: Respo
 
     if (existingDraft.rows.length > 0) {
       // Update existing draft
-      const existingMember = existingDraft.rows[0];
+      // Filter to only DRAFT records, or if none found, use the first one
+      const draftRecords = existingDraft.rows.filter((row: any) => row.registration_status === 'DRAFT');
+      const existingMember = draftRecords.length > 0 
+        ? (draftRecords.find((row: any) => row.cognito_sub === cognito_sub) || draftRecords.find((row: any) => row.email === email) || draftRecords[0])
+        : existingDraft.rows[0];
       const updateFields: string[] = [];
       const values: any[] = [];
       let paramCount = 1;
@@ -452,6 +466,125 @@ router.post('/draft', upload.single('headshot'), async (req: Request, res: Respo
       // Create new draft (requires at least email and cognito_sub)
       if (!email) {
         return res.status(400).json({ error: 'Email is required for new draft' });
+      }
+
+      // Check if a draft with this membership_number already exists (for a different cognito_sub)
+      // If so, we should update that draft instead of creating a duplicate
+      if (parsedData.membership_number) {
+        const existingDraftByMembership = await pool.query(
+          `SELECT id FROM members 
+           WHERE membership_number = $1 
+           AND registration_status = 'DRAFT'`,
+          [parsedData.membership_number]
+        );
+        
+        if (existingDraftByMembership.rows.length > 0) {
+          // Update the existing draft instead of creating a new one
+          const existingDraftId = existingDraftByMembership.rows[0].id;
+          const updateFields: string[] = [];
+          const values: any[] = [];
+          let paramCount = 1;
+          
+          // Update cognito_sub if provided
+          if (cognito_sub) {
+            updateFields.push(`cognito_sub = $${paramCount}`);
+            values.push(cognito_sub);
+            paramCount++;
+          }
+          
+          // Update email
+          updateFields.push(`email = $${paramCount}`);
+          values.push(email);
+          paramCount++;
+          
+          // Update other fields
+          if (parsedData.name) {
+            updateFields.push(`name = $${paramCount}`);
+            values.push(parsedData.name);
+            paramCount++;
+          }
+          if (parsedData.initiated_chapter_id) {
+            updateFields.push(`initiated_chapter_id = $${paramCount}`);
+            values.push(parsedData.initiated_chapter_id);
+            paramCount++;
+          }
+          if (parsedData.initiated_season) {
+            updateFields.push(`initiated_season = $${paramCount}`);
+            values.push(parsedData.initiated_season);
+            paramCount++;
+          }
+          if (parsedData.initiated_year) {
+            updateFields.push(`initiated_year = $${paramCount}`);
+            values.push(parsedData.initiated_year);
+            paramCount++;
+          }
+          if (parsedData.ship_name) {
+            updateFields.push(`ship_name = $${paramCount}`);
+            values.push(parsedData.ship_name);
+            paramCount++;
+          }
+          if (parsedData.line_name) {
+            updateFields.push(`line_name = $${paramCount}`);
+            values.push(parsedData.line_name);
+            paramCount++;
+          }
+          if (parsedData.location) {
+            updateFields.push(`location = $${paramCount}`);
+            values.push(parsedData.location);
+            paramCount++;
+          }
+          if (parsedData.address !== undefined && parsedData.address !== null && parsedData.address !== '') {
+            updateFields.push(`address = $${paramCount}`);
+            values.push(parsedData.address);
+            paramCount++;
+          }
+          updateFields.push(`address_is_private = $${paramCount}`);
+          values.push(parsedData.address_is_private || false);
+          paramCount++;
+          if (parsedData.phone_number) {
+            updateFields.push(`phone_number = $${paramCount}`);
+            values.push(parsedData.phone_number);
+            paramCount++;
+          }
+          updateFields.push(`phone_is_private = $${paramCount}`);
+          values.push(parsedData.phone_is_private || false);
+          paramCount++;
+          if (parsedData.industry) {
+            updateFields.push(`industry = $${paramCount}`);
+            values.push(parsedData.industry);
+            paramCount++;
+          }
+          if (parsedData.job_title) {
+            updateFields.push(`job_title = $${paramCount}`);
+            values.push(parsedData.job_title);
+            paramCount++;
+          }
+          if (parsedData.bio) {
+            updateFields.push(`bio = $${paramCount}`);
+            values.push(parsedData.bio);
+            paramCount++;
+          }
+          if (headshotUrl) {
+            updateFields.push(`headshot_url = $${paramCount}`);
+            values.push(headshotUrl);
+            paramCount++;
+          }
+          updateFields.push(`social_links = $${paramCount}::jsonb`);
+          values.push(JSON.stringify(parsedData.social_links || {}));
+          paramCount++;
+          updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
+          
+          values.push(existingDraftId);
+          const whereClause = `WHERE id = $${paramCount}`;
+          
+          const result = await pool.query(
+            `UPDATE members SET ${updateFields.join(', ')} ${whereClause} RETURNING *`,
+            values
+          );
+          
+          res.json(result.rows[0]);
+          return;
+        }
       }
 
       // Build dynamic INSERT query - only include fields that have values
@@ -703,9 +836,19 @@ router.post('/register', upload.single('headshot'), async (req: Request, res: Re
     
     if (body.cognito_sub) {
       // If cognito_sub exists, exclude this user's draft from the check
-      existingMemberQuery = `SELECT id FROM sellers WHERE email = $1 OR membership_number = $2 
+      // Check sellers and promoters by email, and check members by email or membership_number
+      // Also check if membership_number is used by any seller or promoter through member_id
+      existingMemberQuery = `SELECT id FROM sellers WHERE email = $1 
        UNION 
-       SELECT id FROM promoters WHERE email = $1 OR membership_number = $2 
+       SELECT id FROM promoters WHERE email = $1 
+       UNION 
+       SELECT s.id FROM sellers s 
+       INNER JOIN members m ON s.member_id = m.id 
+       WHERE m.membership_number = $2
+       UNION
+       SELECT p.id FROM promoters p 
+       INNER JOIN members m ON p.member_id = m.id 
+       WHERE m.membership_number = $2
        UNION 
        SELECT id FROM members 
        WHERE (email = $1 OR membership_number = $2) 
@@ -714,9 +857,17 @@ router.post('/register', upload.single('headshot'), async (req: Request, res: Re
       existingMemberParams = [body.email, body.membership_number, body.cognito_sub];
     } else {
       // If no cognito_sub, check all non-DRAFT records
-      existingMemberQuery = `SELECT id FROM sellers WHERE email = $1 OR membership_number = $2 
+      existingMemberQuery = `SELECT id FROM sellers WHERE email = $1 
        UNION 
-       SELECT id FROM promoters WHERE email = $1 OR membership_number = $2 
+       SELECT id FROM promoters WHERE email = $1 
+       UNION 
+       SELECT s.id FROM sellers s 
+       INNER JOIN members m ON s.member_id = m.id 
+       WHERE m.membership_number = $2
+       UNION
+       SELECT p.id FROM promoters p 
+       INNER JOIN members m ON p.member_id = m.id 
+       WHERE m.membership_number = $2
        UNION 
        SELECT id FROM members 
        WHERE (email = $1 OR membership_number = $2) 
@@ -810,7 +961,7 @@ router.post('/register', upload.single('headshot'), async (req: Request, res: Re
           initiated_season, initiated_year, ship_name, line_name,
           location, address, address_is_private, phone_number, phone_is_private,
           industry, job_title, bio, headshot_url, social_links, registration_status
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, 'COMPLETE')
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
         RETURNING *`,
         [
           body.name,
@@ -832,6 +983,7 @@ router.post('/register', upload.single('headshot'), async (req: Request, res: Re
           body.bio, // Already converted to null if empty by toNullIfEmpty
           headshotUrl,
           JSON.stringify(body.social_links || {}),
+          'COMPLETE', // registration_status
         ]
       );
     }

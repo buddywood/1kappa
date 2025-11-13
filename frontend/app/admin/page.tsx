@@ -870,6 +870,15 @@ export default function AdminDashboard() {
                 </div>
               )}
 
+              {'merchandise_type' in selectedItem && selectedItem.merchandise_type && (
+                <div>
+                  <label className="text-sm font-semibold text-gray-600">Merchandise Type</label>
+                  <p className="text-lg">
+                    {selectedItem.merchandise_type === 'KAPPA' ? 'Kappa Merchandise' : 'Non-Kappa Merchandise'}
+                  </p>
+                </div>
+              )}
+
               {'vendor_license_number' in selectedItem && selectedItem.vendor_license_number && (
                 <div>
                   <label className="text-sm font-semibold text-gray-600">Vendor License Number</label>

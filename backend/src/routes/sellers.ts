@@ -24,7 +24,8 @@ const sellerApplicationSchema = z.object({
   sponsoring_chapter_id: z.number().int().positive(),
   business_name: z.string().optional().nullable(),
   business_email: z.string().email().optional().nullable(),
-  vendor_license_number: z.string().min(1),
+  vendor_license_number: z.string().optional().nullable(),
+  merchandise_type: z.enum(['KAPPA', 'NON_KAPPA']),
   website: z.string().optional().nullable(),
   social_links: z.record(z.string()).optional(),
 }).refine((data) => {
@@ -41,6 +42,15 @@ const sellerApplicationSchema = z.object({
 }, {
   message: 'Website must be a valid URL',
   path: ['website'],
+}).refine((data) => {
+  // Vendor license number is required only for KAPPA merchandise
+  if (data.merchandise_type === 'KAPPA') {
+    return data.vendor_license_number && data.vendor_license_number.trim().length > 0;
+  }
+  return true;
+}, {
+  message: 'Vendor license number is required for Kappa merchandise',
+  path: ['vendor_license_number'],
 });
 
 // Optional authentication middleware - doesn't fail if not authenticated
@@ -105,7 +115,8 @@ router.post('/apply', optionalAuthenticate, upload.fields([
       sponsoring_chapter_id: parseInt(req.body.sponsoring_chapter_id),
       business_name: toNullIfEmpty(req.body.business_name),
       business_email: toNullIfEmpty(req.body.business_email),
-      vendor_license_number: req.body.vendor_license_number,
+      vendor_license_number: toNullIfEmpty(req.body.vendor_license_number),
+      merchandise_type: req.body.merchandise_type,
       website: toNullIfEmpty(req.body.website),
       social_links: req.body.social_links ? JSON.parse(req.body.social_links) : {},
     });

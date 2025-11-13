@@ -17,6 +17,7 @@ export default function ApplyPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [isApproved, setIsApproved] = useState(false);
   const [profileLoaded, setProfileLoaded] = useState(false);
   
   // Check for sponsoring_chapter_id in URL params (from setup screen)
@@ -35,6 +36,7 @@ export default function ApplyPage() {
     business_name: '',
     business_email: '',
     vendor_license_number: '',
+    merchandise_type: '' as 'KAPPA' | 'NON_KAPPA' | '',
     website: '',
     social_links: {
       instagram: '',
@@ -156,6 +158,20 @@ export default function ApplyPage() {
       return;
     }
 
+    // Require merchandise type selection
+    if (!formData.merchandise_type) {
+      setError('Please select what type of merchandise you will be selling.');
+      setSubmitting(false);
+      return;
+    }
+
+    // Require vendor license number if selling Kappa merchandise
+    if (formData.merchandise_type === 'KAPPA' && !formData.vendor_license_number.trim()) {
+      setError('Vendor license number is required for selling Kappa merchandise.');
+      setSubmitting(false);
+      return;
+    }
+
     try {
       const formDataToSend = new FormData();
       formDataToSend.append('name', formData.name);
@@ -167,7 +183,10 @@ export default function ApplyPage() {
       if (formData.business_email) {
         formDataToSend.append('business_email', formData.business_email);
       }
-      formDataToSend.append('vendor_license_number', formData.vendor_license_number);
+      formDataToSend.append('merchandise_type', formData.merchandise_type);
+      if (formData.vendor_license_number) {
+        formDataToSend.append('vendor_license_number', formData.vendor_license_number);
+      }
       if (formData.website) {
         formDataToSend.append('website', formData.website);
       }
@@ -191,8 +210,12 @@ export default function ApplyPage() {
 
       // submitSellerApplication will automatically include auth header if user is authenticated
       // Backend will use memberId from authenticated user if available
-      await submitSellerApplication(formDataToSend);
+      const result = await submitSellerApplication(formDataToSend);
       setSuccess(true);
+      // Check if seller was auto-approved (verified members are auto-approved)
+      if (result.status === 'APPROVED') {
+        setIsApproved(true);
+      }
     } catch (err: any) {
       let errorMessage = err.message || 'Failed to submit application';
       
@@ -215,23 +238,48 @@ export default function ApplyPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-display font-bold mb-4 text-midnight-navy">Application Submitted!</h1>
-          <p className="text-midnight-navy/70 mb-4">
-            Thank you for your interest in becoming a seller on 1Kappa. Your application has been successfully submitted and is now under review.
-          </p>
-          <p className="text-midnight-navy/70 mb-6">
-            Our team will review your application and you will receive an email notification once a decision has been made. This typically takes 1-3 business days.
-          </p>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <p className="text-sm text-blue-800">
-              <strong>What happens next?</strong>
-            </p>
-            <ul className="text-sm text-blue-700 mt-2 text-left list-disc list-inside space-y-1">
-              <li>We&apos;ll review your application and verify your information</li>
-              <li>You&apos;ll receive an email when your application is approved</li>
-              <li>Once approved, you can start listing products in the shop</li>
-            </ul>
-          </div>
+          <h1 className="text-2xl font-display font-bold mb-4 text-midnight-navy">
+            {isApproved ? 'Application Approved!' : 'Application Submitted!'}
+          </h1>
+          {isApproved ? (
+            <>
+              <p className="text-midnight-navy/70 mb-4">
+                Congratulations! Your seller application has been <strong className="text-green-600">automatically approved</strong> because you&apos;re a verified member.
+              </p>
+              <p className="text-midnight-navy/70 mb-6">
+                You can now start listing products in the shop. Check your email for setup instructions.
+              </p>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                <p className="text-sm text-green-800">
+                  <strong>What happens next?</strong>
+                </p>
+                <ul className="text-sm text-green-700 mt-2 text-left list-disc list-inside space-y-1">
+                  <li>Check your email for seller account setup instructions</li>
+                  <li>Start adding products to your store</li>
+                  <li>Your products will be visible to all members once published</li>
+                </ul>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-midnight-navy/70 mb-4">
+                Thank you for your interest in becoming a seller on 1Kappa. Your application has been successfully submitted and is now under review.
+              </p>
+              <p className="text-midnight-navy/70 mb-6">
+                Our team will review your application and you will receive an email notification once a decision has been made. This typically takes 1-3 business days.
+              </p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <p className="text-sm text-blue-800">
+                  <strong>What happens next?</strong>
+                </p>
+                <ul className="text-sm text-blue-700 mt-2 text-left list-disc list-inside space-y-1">
+                  <li>We&apos;ll review your application and verify your information</li>
+                  <li>You&apos;ll receive an email when your application is approved</li>
+                  <li>Once approved, you can start listing products in the shop</li>
+                </ul>
+              </div>
+            </>
+          )}
           <Link
             href="/"
             className="inline-block bg-crimson text-white px-6 py-2 rounded-lg hover:bg-crimson/90 transition shadow-md"
@@ -435,16 +483,51 @@ export default function ApplyPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2 text-midnight-navy">Vendor License Number *</label>
-            <input
-              type="text"
-              required
-              value={formData.vendor_license_number}
-              onChange={(e) => setFormData({ ...formData, vendor_license_number: e.target.value })}
-              className="w-full px-4 py-2 border border-frost-gray rounded-lg focus:ring-2 focus:ring-crimson focus:border-transparent text-midnight-navy"
-              placeholder="Enter your vendor license number"
-            />
+            <label className="block text-sm font-medium mb-2 text-midnight-navy">What type of merchandise will you be selling? *</label>
+            <div className="space-y-2">
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="radio"
+                  name="merchandise_type"
+                  value="KAPPA"
+                  checked={formData.merchandise_type === 'KAPPA'}
+                  onChange={(e) => setFormData({ ...formData, merchandise_type: e.target.value as 'KAPPA' | 'NON_KAPPA' })}
+                  className="mr-2 text-crimson focus:ring-crimson"
+                  required
+                />
+                <span className="text-midnight-navy">Kappa merchandise (requires vendor license)</span>
+              </label>
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="radio"
+                  name="merchandise_type"
+                  value="NON_KAPPA"
+                  checked={formData.merchandise_type === 'NON_KAPPA'}
+                  onChange={(e) => setFormData({ ...formData, merchandise_type: e.target.value as 'KAPPA' | 'NON_KAPPA', vendor_license_number: '' })}
+                  className="mr-2 text-crimson focus:ring-crimson"
+                  required
+                />
+                <span className="text-midnight-navy">Non-Kappa merchandise</span>
+              </label>
+            </div>
           </div>
+
+          {formData.merchandise_type === 'KAPPA' && (
+            <div>
+              <label className="block text-sm font-medium mb-2 text-midnight-navy">Vendor License Number *</label>
+              <input
+                type="text"
+                required={formData.merchandise_type === 'KAPPA'}
+                value={formData.vendor_license_number}
+                onChange={(e) => setFormData({ ...formData, vendor_license_number: e.target.value })}
+                className="w-full px-4 py-2 border border-frost-gray rounded-lg focus:ring-2 focus:ring-crimson focus:border-transparent text-midnight-navy"
+                placeholder="Enter your vendor license number"
+              />
+              <p className="text-xs text-midnight-navy/60 mt-1">
+                Required for selling Kappa merchandise
+              </p>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium mb-2 text-midnight-navy">Store Logo *</label>

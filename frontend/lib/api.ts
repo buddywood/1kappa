@@ -30,7 +30,8 @@ export interface Seller {
   member_id?: number | null;
   sponsoring_chapter_id: number;
   business_name: string | null;
-  vendor_license_number: string;
+  vendor_license_number: string | null;
+  merchandise_type: 'KAPPA' | 'NON_KAPPA' | null;
   headshot_url: string | null;
   store_logo_url: string;
   social_links: Record<string, string>;
