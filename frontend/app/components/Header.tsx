@@ -458,7 +458,7 @@ export default function Header() {
               ))}
               
               {/* "Become" buttons - shown on mobile in menu */}
-              <div className="border-t border-gray-200 dark:border-gray-900 pt-2 mt-2">
+              <div className="border-t border-gray-200 dark:border-gray-900 pt-2 mt-2 flex flex-col space-y-2">
                 {finalShowBecomeMember && (
                   <Link
                     href="/member-setup"
