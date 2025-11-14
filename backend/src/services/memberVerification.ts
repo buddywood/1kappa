@@ -309,7 +309,7 @@ async function debugFormElements(page: Page): Promise<void> {
     const allForms = document.querySelectorAll('form') as NodeListOf<HTMLFormElement>;
     return {
       formCount: allForms.length,
-      // @ts-expect-error - outerHTML is available in browser context
+      // outerHTML is available in browser context
       formHTML: form ? form.outerHTML.substring(0, 2000) : 'No form element found',
       // @ts-expect-error - document is available in browser context
       bodyHTML: document.body ? document.body.innerHTML.substring(0, 1000) : '',
@@ -532,7 +532,7 @@ export async function loginToKappaPortal(page: Page, debugMode: boolean = false)
       
       // Try to get all inputs on the page for debugging
       try {
-        const allInputs = await targetPage.$$eval('input', (elements: HTMLInputElement[]) => 
+        const allInputs = await targetPage.$$eval('input', (elements: any[]) => 
           elements.map((el: any) => ({
             type: el.type,
             id: el.id,

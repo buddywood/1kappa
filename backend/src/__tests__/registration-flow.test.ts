@@ -630,7 +630,7 @@ describe('Registration Flow Tests', () => {
       };
 
       // Mock: Authenticated user
-      (authenticate as jest.Mock) = jest.fn((req, res, next) => {
+      mockAuthenticate.mockImplementation((req, res, next) => {
         req.user = { id: 1, email: 'steward@example.com', memberId: 1 };
         next();
       });
