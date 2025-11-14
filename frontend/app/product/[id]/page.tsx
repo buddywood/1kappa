@@ -7,7 +7,8 @@ import { fetchProduct, createCheckoutSession, fetchChapters } from '@/lib/api';
 import type { Product, Chapter } from '@/lib/api';
 import Image from 'next/image';
 import Link from 'next/link';
-import Logo from '../../components/Logo';
+import Header from '../../components/Header';
+import Footer from '../../components/Footer';
 import VerificationBadge from '../../components/VerificationBadge';
 import { SkeletonLoader } from '../../components/Skeleton';
 
@@ -75,27 +76,24 @@ export default function ProductPage() {
 
   if (!product) {
     return (
-      <div className="min-h-screen bg-cream flex items-center justify-center">
+      <div className="min-h-screen bg-cream dark:bg-black flex items-center justify-center">
+        <Header />
         <div className="text-center">
-          <h1 className="text-2xl font-display font-bold text-midnight-navy mb-4">Product not found</h1>
+          <h1 className="text-2xl font-display font-bold text-midnight-navy dark:text-gray-100 mb-4">Product not found</h1>
           <Link href="/" className="text-crimson hover:underline">
             Return to homepage
           </Link>
         </div>
+        <Footer />
       </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-cream">
-      <nav className="bg-white shadow-sm border-b border-frost-gray">
-        <div className="container mx-auto px-4 py-4">
-          <Logo />
-        </div>
-      </nav>
-
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden border border-frost-gray">
+    <div className="min-h-screen bg-cream dark:bg-black">
+      <Header />
+      <main className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto bg-white dark:bg-black rounded-lg shadow-lg dark:shadow-black/50 overflow-hidden border border-frost-gray dark:border-gray-900">
           <div className="md:flex">
             {product.image_url && (
               <div className="md:w-1/2 relative h-64 md:h-auto">
@@ -123,7 +121,7 @@ export default function ProductPage() {
             )}
             <div className="md:w-1/2 p-8">
               <div className="flex items-start justify-between mb-4">
-                <h1 className="text-3xl font-display font-bold text-midnight-navy">{product.name}</h1>
+                <h1 className="text-3xl font-display font-bold text-midnight-navy dark:text-gray-100">{product.name}</h1>
                 {product.seller_name && (
                   <VerificationBadge type="brother" />
                 )}
@@ -136,10 +134,10 @@ export default function ProductPage() {
                   />
                 </div>
               )}
-              <p className="text-midnight-navy/70 mb-6">{product.description}</p>
+              <p className="text-midnight-navy/70 dark:text-gray-300 mb-6">{product.description}</p>
               {product.seller_name && (
                 <div className="mb-4">
-                  <p className="text-sm text-midnight-navy/60 mb-2">Sold by {product.seller_name}</p>
+                  <p className="text-sm text-midnight-navy/60 dark:text-gray-400 mb-2">Sold by {product.seller_name}</p>
                   <Link 
                     href={`/collections?seller=${product.seller_id}`}
                     className="text-sm text-crimson font-medium hover:underline inline-flex items-center gap-1"
@@ -157,7 +155,7 @@ export default function ProductPage() {
 
               <form onSubmit={handleCheckout} className="space-y-4">
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium mb-2 text-midnight-navy">
+                  <label htmlFor="email" className="block text-sm font-medium mb-2 text-midnight-navy dark:text-gray-300">
                     Email Address
                   </label>
                   <input
@@ -166,11 +164,11 @@ export default function ProductPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="w-full px-4 py-2 border border-frost-gray rounded-lg focus:ring-2 focus:ring-crimson focus:border-transparent text-midnight-navy"
+                    className="w-full px-4 py-2 border border-frost-gray dark:border-gray-800 rounded-lg focus:ring-2 focus:ring-crimson focus:border-transparent text-midnight-navy dark:text-gray-100 bg-white dark:bg-black"
                     placeholder="your@email.com"
                   />
                   {sessionStatus === 'authenticated' && session?.user?.email === email && (
-                    <p className="mt-1 text-xs text-midnight-navy/60">
+                    <p className="mt-1 text-xs text-midnight-navy/60 dark:text-gray-400">
                       Using email from your account
                     </p>
                   )}
@@ -191,8 +189,9 @@ export default function ProductPage() {
             </div>
           </div>
         </div>
-      </div>
-    </main>
+      </main>
+      <Footer />
+    </div>
   );
 }
 
