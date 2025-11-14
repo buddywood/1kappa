@@ -144,6 +144,19 @@ CREATE TABLE IF NOT EXISTS industries (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Stewards table - must be created before users table (users references stewards)
+CREATE TABLE IF NOT EXISTS stewards (
+  id SERIAL PRIMARY KEY,
+  member_id INTEGER NOT NULL UNIQUE REFERENCES members(id),
+  sponsoring_chapter_id INTEGER NOT NULL REFERENCES chapters(id),
+  status VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
+  verification_status VARCHAR(20) DEFAULT 'PENDING' CHECK (verification_status IN ('PENDING', 'VERIFIED', 'FAILED', 'MANUAL_REVIEW')),
+  verification_date TIMESTAMP,
+  verification_notes TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Users table - for authentication and role management
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
@@ -175,19 +188,6 @@ CREATE TABLE IF NOT EXISTS users (
     )) OR
     (role = 'ADMIN' AND member_id IS NULL AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL)
   )
-);
-
--- Stewards table
-CREATE TABLE IF NOT EXISTS stewards (
-  id SERIAL PRIMARY KEY,
-  member_id INTEGER NOT NULL UNIQUE REFERENCES members(id),
-  sponsoring_chapter_id INTEGER NOT NULL REFERENCES chapters(id),
-  status VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
-  verification_status VARCHAR(20) DEFAULT 'PENDING' CHECK (verification_status IN ('PENDING', 'VERIFIED', 'FAILED', 'MANUAL_REVIEW')),
-  verification_date TIMESTAMP,
-  verification_notes TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Steward listings table

@@ -16,11 +16,13 @@ BEGIN
       ALTER TABLE users ADD COLUMN last_login TIMESTAMP;
     END IF;
 
-    -- Add steward_id to users table
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
-                   WHERE table_name='users' AND column_name='steward_id') THEN
-      ALTER TABLE users ADD COLUMN steward_id INTEGER REFERENCES stewards(id);
-      CREATE INDEX IF NOT EXISTS idx_users_steward_id ON users(steward_id);
+    -- Add steward_id to users table (only if stewards table exists)
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='stewards') THEN
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                     WHERE table_name='users' AND column_name='steward_id') THEN
+        ALTER TABLE users ADD COLUMN steward_id INTEGER REFERENCES stewards(id);
+        CREATE INDEX IF NOT EXISTS idx_users_steward_id ON users(steward_id);
+      END IF;
     END IF;
 
     -- Update users role enum to include STEWARD
