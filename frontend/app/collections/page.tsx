@@ -8,6 +8,9 @@ import VerificationBadge from '../components/VerificationBadge';
 import ScrollToSeller from './ScrollToSeller';
 import Footer from '../components/Footer';
 
+// Force dynamic rendering to avoid build-time API calls
+export const dynamic = 'force-dynamic';
+
 interface CollectionsPageProps {
   searchParams: { seller?: string };
 }

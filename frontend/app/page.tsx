@@ -8,6 +8,9 @@ import ImpactBanner from './components/ImpactBanner';
 import EventCard from './components/EventCard';
 import Footer from './components/Footer';
 
+// Force dynamic rendering to avoid build-time API calls
+export const dynamic = 'force-dynamic';
+
 export default async function Home() {
   const [products, chapters, events] = await Promise.all([
     fetchProducts().catch((err) => {
