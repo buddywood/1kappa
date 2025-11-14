@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { signOut, useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
-import { fetchTotalDonations } from '@/lib/api';
+import Image from 'next/image';
+import { fetchTotalDonations, fetchMemberProfile } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useTheme } from './ThemeProvider';
 import Logo from './Logo';
@@ -17,6 +18,7 @@ export default function Header() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
   
   // Show authenticated menu for any authenticated user (not just fully onboarded)
   const showAuthenticatedMenu = sessionStatus === 'authenticated' && nextAuthSession?.user;
@@ -43,6 +45,25 @@ export default function Header() {
         setLoading(false);
       });
   }, []);
+
+  // Fetch profile picture when user is authenticated and has a memberId
+  useEffect(() => {
+    const loadProfilePicture = async () => {
+      if (showAuthenticatedMenu && (session?.user as any)?.memberId) {
+        try {
+          const profile = await fetchMemberProfile();
+          if (profile.headshot_url) {
+            setProfilePicture(profile.headshot_url);
+          }
+        } catch (err) {
+          // Silently fail - user might not have a profile yet
+          console.debug('Could not load profile picture:', err);
+        }
+      }
+    };
+
+    loadProfilePicture();
+  }, [showAuthenticatedMenu, session]);
 
   // Close mobile menu when clicking outside
   useEffect(() => {
@@ -181,10 +202,19 @@ export default function Header() {
               <div className="relative user-menu">
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="user-menu-button flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                  className="user-menu-button flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-black transition-colors"
                 >
-                  <div className="w-8 h-8 rounded-full bg-crimson flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
-                    {firstName ? firstName[0].toUpperCase() : 'U'}
+                  <div className="relative w-8 h-8 rounded-full bg-crimson flex items-center justify-center text-white font-semibold text-sm flex-shrink-0 overflow-hidden">
+                    {profilePicture ? (
+                      <Image
+                        src={profilePicture}
+                        alt={firstName || 'User'}
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      <span>{firstName ? firstName[0].toUpperCase() : 'U'}</span>
+                    )}
                   </div>
                 </button>
 
@@ -193,8 +223,17 @@ export default function Header() {
                     {/* Account Info Header */}
                     <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-900">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-crimson flex items-center justify-center text-white font-semibold text-base flex-shrink-0">
-                          {firstName ? firstName[0].toUpperCase() : 'U'}
+                        <div className="relative w-10 h-10 rounded-full bg-crimson flex items-center justify-center text-white font-semibold text-base flex-shrink-0 overflow-hidden">
+                          {profilePicture ? (
+                            <Image
+                              src={profilePicture}
+                              alt={firstName || 'User'}
+                              fill
+                              className="object-cover"
+                            />
+                          ) : (
+                            <span>{firstName ? firstName[0].toUpperCase() : 'U'}</span>
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
@@ -320,9 +359,18 @@ export default function Header() {
               <div className="relative user-menu">
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="user-menu-button w-8 h-8 rounded-full bg-crimson flex items-center justify-center text-white font-semibold text-sm"
+                  className="user-menu-button relative w-8 h-8 rounded-full bg-crimson flex items-center justify-center text-white font-semibold text-sm overflow-hidden"
                 >
-                  {firstName ? firstName[0].toUpperCase() : 'U'}
+                  {profilePicture ? (
+                    <Image
+                      src={profilePicture}
+                      alt={firstName || 'User'}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <span>{firstName ? firstName[0].toUpperCase() : 'U'}</span>
+                  )}
                 </button>
                 {userMenuOpen && (
                   <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">

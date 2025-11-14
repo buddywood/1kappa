@@ -6,7 +6,7 @@ import { uploadToS3 } from '../services/s3';
 import { sendWelcomeEmail } from '../services/email';
 import { authenticate } from '../middleware/auth';
 import { z } from 'zod';
-import { CognitoIdentityProviderClient, SignUpCommand, ConfirmSignUpCommand, ForgotPasswordCommand, ConfirmForgotPasswordCommand, AdminGetUserCommand, ResendConfirmationCodeCommand } from '@aws-sdk/client-cognito-identity-provider';
+import { CognitoIdentityProviderClient, SignUpCommand, ConfirmSignUpCommand, ForgotPasswordCommand, ConfirmForgotPasswordCommand, AdminGetUserCommand, ResendConfirmationCodeCommand, ListUsersCommand } from '@aws-sdk/client-cognito-identity-provider';
 import { getUserByCognitoSub, createUser, linkUserToMember, updateUserOnboardingStatusByCognitoSub } from '../db/queries';
 
 const router: ExpressRouter = Router();
@@ -53,6 +53,54 @@ router.post('/cognito/signup', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Password must be at least 8 characters' });
     }
 
+    // Check if user already exists in Cognito
+    try {
+      const listUsersCommand = new ListUsersCommand({
+        UserPoolId: process.env.COGNITO_USER_POOL_ID,
+        Filter: `email = "${email}"`,
+        Limit: 1,
+      });
+      const existingUsers = await cognitoClient.send(listUsersCommand);
+      
+      if (existingUsers.Users && existingUsers.Users.length > 0) {
+        const existingUser = existingUsers.Users[0];
+        const userStatus = existingUser.UserStatus;
+        
+        // If user exists but is unconfirmed, we can resend the code
+        if (userStatus === 'UNCONFIRMED') {
+          // Try to resend confirmation code
+          try {
+            const resendCommand = new ResendConfirmationCodeCommand({
+              ClientId: COGNITO_CLIENT_ID,
+              Username: email,
+            });
+            const resendResponse = await cognitoClient.send(resendCommand);
+            
+            return res.status(200).json({
+              userSub: existingUser.Username,
+              codeDeliveryDetails: resendResponse.CodeDeliveryDetails,
+              message: 'Verification code resent to your email',
+              existingUser: true,
+            });
+          } catch (resendError: any) {
+            console.error('Error resending confirmation code:', resendError);
+            // Fall through to return error
+          }
+        }
+        
+        // User exists and is confirmed or in another state
+        return res.status(400).json({ 
+          error: 'An account with this email already exists',
+          code: 'USER_ALREADY_EXISTS',
+          userStatus: userStatus,
+        });
+      }
+    } catch (checkError: any) {
+      // If checking fails, continue with signup attempt
+      console.log('Could not check for existing user, proceeding with signup:', checkError.message);
+    }
+
+    // User doesn't exist, proceed with signup
     const command = new SignUpCommand({
       ClientId: COGNITO_CLIENT_ID,
       Username: email,
@@ -71,6 +119,43 @@ router.post('/cognito/signup', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Cognito SignUp error:', error);
     if (error.name === 'UsernameExistsException') {
+      // Double-check the user status
+      try {
+        const listUsersCommand = new ListUsersCommand({
+          UserPoolId: process.env.COGNITO_USER_POOL_ID,
+          Filter: `email = "${req.body.email}"`,
+          Limit: 1,
+        });
+        const existingUsers = await cognitoClient.send(listUsersCommand);
+        
+        if (existingUsers.Users && existingUsers.Users.length > 0) {
+          const existingUser = existingUsers.Users[0];
+          const userStatus = existingUser.UserStatus;
+          
+          if (userStatus === 'UNCONFIRMED') {
+            // Try to resend confirmation code
+            try {
+              const resendCommand = new ResendConfirmationCodeCommand({
+                ClientId: COGNITO_CLIENT_ID,
+                Username: req.body.email,
+              });
+              const resendResponse = await cognitoClient.send(resendCommand);
+              
+              return res.status(200).json({
+                userSub: existingUser.Username,
+                codeDeliveryDetails: resendResponse.CodeDeliveryDetails,
+                message: 'Verification code resent to your email',
+                existingUser: true,
+              });
+            } catch (resendError: any) {
+              console.error('Error resending confirmation code:', resendError);
+            }
+          }
+        }
+      } catch (checkError) {
+        console.error('Error checking user status:', checkError);
+      }
+      
       return res.status(400).json({ 
         error: 'An account with this email already exists',
         code: 'USER_ALREADY_EXISTS'
