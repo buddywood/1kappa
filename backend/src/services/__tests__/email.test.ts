@@ -1,26 +1,32 @@
 import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
+
+// Mock AWS SDK before importing the service
+const mockSend = jest.fn();
+const mockSendEmailCommand = jest.fn().mockImplementation((input) => input);
+jest.mock('@aws-sdk/client-ses', () => ({
+  SESClient: jest.fn().mockImplementation(() => ({
+    send: mockSend,
+  })),
+  SendEmailCommand: jest.fn().mockImplementation((input) => {
+    mockSendEmailCommand(input);
+    return input;
+  }),
+}));
+
+// Import after mocking
 import {
   sendWelcomeEmail,
   sendSellerApplicationSubmittedEmail,
   sendSellerApprovedEmail,
 } from '../email';
 
-// Mock AWS SDK
-jest.mock('@aws-sdk/client-ses');
-
 describe('Email Service', () => {
-  const mockSend = jest.fn();
   let originalEnv: NodeJS.ProcessEnv;
 
   beforeEach(() => {
     jest.clearAllMocks();
     originalEnv = process.env;
     
-    // Mock SESClient
-    (SESClient as jest.Mock).mockImplementation(() => ({
-      send: mockSend,
-    }));
-
     // Set required environment variables
     process.env.FROM_EMAIL = 'noreply@1kappa.com';
     process.env.FRONTEND_URL = 'http://localhost:3000';
@@ -39,14 +45,14 @@ describe('Email Service', () => {
 
       await sendWelcomeEmail(email, name);
 
-      expect(mockSend).toHaveBeenCalledWith(expect.any(SendEmailCommand));
-      const command = mockSend.mock.calls[0][0];
-      expect(command.input.Source).toBe('noreply@1kappa.com');
-      expect(command.input.Destination.ToAddresses).toEqual([email]);
-      expect(command.input.Message.Subject.Data).toBe('Welcome to 1Kappa!');
-      expect(command.input.Message.Body.Html.Data).toContain(name);
-      expect(command.input.Message.Body.Html.Data).toContain('Welcome to 1Kappa');
-      expect(command.input.Message.Body.Text.Data).toContain(name);
+      expect(mockSend).toHaveBeenCalled();
+      const command = mockSendEmailCommand.mock.calls[0][0];
+      expect(command.Source).toBe('noreply@1kappa.com');
+      expect(command.Destination.ToAddresses).toEqual([email]);
+      expect(command.Message.Subject.Data).toBe('Welcome to 1Kappa!');
+      expect(command.Message.Body.Html.Data).toContain(name);
+      expect(command.Message.Body.Html.Data).toContain('Welcome to 1Kappa');
+      expect(command.Message.Body.Text.Data).toContain(name);
     });
 
     it('should throw error when email sending fails', async () => {
@@ -67,8 +73,8 @@ describe('Email Service', () => {
 
       await sendWelcomeEmail(email, name);
 
-      const command = mockSend.mock.calls[0][0];
-      expect(command.input.Message.Body.Html.Data).toContain('http://localhost:3000/horizon-logo.png');
+      const command = mockSendEmailCommand.mock.calls[0][0];
+      expect(command.Message.Body.Html.Data).toContain('http://localhost:3000/horizon-logo.png');
     });
   });
 
@@ -81,14 +87,14 @@ describe('Email Service', () => {
 
       await sendSellerApplicationSubmittedEmail(email, name);
 
-      expect(mockSend).toHaveBeenCalledWith(expect.any(SendEmailCommand));
-      const command = mockSend.mock.calls[0][0];
-      expect(command.input.Source).toBe('noreply@1kappa.com');
-      expect(command.input.Destination.ToAddresses).toEqual([email]);
-      expect(command.input.Message.Subject.Data).toBe('Seller Application Received - 1Kappa');
-      expect(command.input.Message.Body.Html.Data).toContain(name);
-      expect(command.input.Message.Body.Html.Data).toContain('Application Received');
-      expect(command.input.Message.Body.Text.Data).toContain(name);
+      expect(mockSend).toHaveBeenCalled();
+      const command = mockSendEmailCommand.mock.calls[0][0];
+      expect(command.Source).toBe('noreply@1kappa.com');
+      expect(command.Destination.ToAddresses).toEqual([email]);
+      expect(command.Message.Subject.Data).toBe('Seller Application Received - 1Kappa');
+      expect(command.Message.Body.Html.Data).toContain(name);
+      expect(command.Message.Body.Html.Data).toContain('Application Received');
+      expect(command.Message.Body.Text.Data).toContain(name);
     });
 
     it('should not throw error when email sending fails', async () => {
@@ -113,15 +119,15 @@ describe('Email Service', () => {
 
       await sendSellerApprovedEmail(email, name, invitationToken);
 
-      expect(mockSend).toHaveBeenCalledWith(expect.any(SendEmailCommand));
-      const command = mockSend.mock.calls[0][0];
-      expect(command.input.Source).toBe('noreply@1kappa.com');
-      expect(command.input.Destination.ToAddresses).toEqual([email]);
-      expect(command.input.Message.Subject.Data).toBe('Congratulations! Your Seller Application Has Been Approved - 1Kappa');
-      expect(command.input.Message.Body.Html.Data).toContain(name);
-      expect(command.input.Message.Body.Html.Data).toContain('Application Approved');
-      expect(command.input.Message.Body.Html.Data).toContain('invitation-token-123');
-      expect(command.input.Message.Body.Html.Data).toContain('seller-setup?token=');
+      expect(mockSend).toHaveBeenCalled();
+      const command = mockSendEmailCommand.mock.calls[0][0];
+      expect(command.Source).toBe('noreply@1kappa.com');
+      expect(command.Destination.ToAddresses).toEqual([email]);
+      expect(command.Message.Subject.Data).toBe('Congratulations! Your Seller Application Has Been Approved - 1Kappa');
+      expect(command.Message.Body.Html.Data).toContain(name);
+      expect(command.Message.Body.Html.Data).toContain('Application Approved');
+      expect(command.Message.Body.Html.Data).toContain('invitation-token-123');
+      expect(command.Message.Body.Html.Data).toContain('seller-setup?token=');
     });
 
     it('should send seller approved email without invitation token', async () => {
@@ -132,9 +138,9 @@ describe('Email Service', () => {
 
       await sendSellerApprovedEmail(email, name);
 
-      const command = mockSend.mock.calls[0][0];
-      expect(command.input.Message.Body.Html.Data).not.toContain('seller-setup?token=');
-      expect(command.input.Message.Body.Html.Data).toContain('/login');
+      const command = mockSendEmailCommand.mock.calls[0][0];
+      expect(command.Message.Body.Html.Data).not.toContain('seller-setup?token=');
+      expect(command.Message.Body.Html.Data).toContain('/login');
     });
 
     it('should not throw error when email sending fails', async () => {

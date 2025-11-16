@@ -1,36 +1,43 @@
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { v4 as uuidv4 } from 'uuid';
+
+// Mock AWS SDK before importing the service
+const mockSend = jest.fn();
+jest.mock('@aws-sdk/client-s3', () => ({
+  S3Client: jest.fn().mockImplementation(() => ({
+    send: mockSend,
+  })),
+  PutObjectCommand: jest.fn().mockImplementation((input) => ({ input })),
+  GetObjectCommand: jest.fn().mockImplementation((input) => ({ input })),
+}));
+
+const mockGetSignedUrl = jest.fn();
+jest.mock('@aws-sdk/s3-request-presigner', () => ({
+  getSignedUrl: mockGetSignedUrl,
+}));
+
+jest.mock('uuid', () => ({
+  v4: jest.fn(() => 'test-uuid-123'),
+}));
+
+// Import after mocking
 import {
   uploadToS3,
   getPresignedUrl,
   getPresignedUploadUrl,
 } from '../s3';
 
-// Mock AWS SDK
-jest.mock('@aws-sdk/client-s3');
-jest.mock('@aws-sdk/s3-request-presigner');
-jest.mock('uuid');
-
 describe('S3 Service', () => {
-  const mockSend = jest.fn();
   let originalEnv: NodeJS.ProcessEnv;
 
   beforeEach(() => {
     jest.clearAllMocks();
     originalEnv = process.env;
     
-    // Mock S3Client
-    (S3Client as jest.Mock).mockImplementation(() => ({
-      send: mockSend,
-    }));
-
     // Set required environment variables
     process.env.AWS_S3_BUCKET_NAME = 'test-bucket';
     process.env.AWS_REGION = 'us-east-1';
-
-    // Mock uuid
-    (uuidv4 as jest.Mock).mockReturnValue('test-uuid-123');
   });
 
   afterEach(() => {
@@ -47,12 +54,12 @@ describe('S3 Service', () => {
 
       const result = await uploadToS3(file, filename, contentType);
 
-      expect(mockSend).toHaveBeenCalledWith(expect.any(PutObjectCommand));
-      const command = mockSend.mock.calls[0][0];
-      expect(command.input.Bucket).toBe('test-bucket');
-      expect(command.input.Key).toContain('products/test-uuid-123-test.jpg');
-      expect(command.input.Body).toBe(file);
-      expect(command.input.ContentType).toBe(contentType);
+      expect(mockSend).toHaveBeenCalled();
+      const commandInput = (PutObjectCommand as unknown as jest.Mock).mock.calls[0][0];
+      expect(commandInput.Bucket).toBe('test-bucket');
+      expect(commandInput.Key).toContain('products/test-uuid-123-test.jpg');
+      expect(commandInput.Body).toBe(file);
+      expect(commandInput.ContentType).toBe(contentType);
       expect(result.key).toContain('products/test-uuid-123-test.jpg');
       expect(result.url).toContain('test-bucket.s3.us-east-1.amazonaws.com');
     });
@@ -66,8 +73,8 @@ describe('S3 Service', () => {
 
       const result = await uploadToS3(file, filename, contentType, 'headshots');
 
-      const command = mockSend.mock.calls[0][0];
-      expect(command.input.Key).toContain('headshots/');
+      const commandInput = (PutObjectCommand as unknown as jest.Mock).mock.calls[0][0];
+      expect(commandInput.Key).toContain('headshots/');
       expect(result.key).toContain('headshots/');
     });
 
@@ -83,8 +90,8 @@ describe('S3 Service', () => {
       for (const folder of folders) {
         jest.clearAllMocks();
         await uploadToS3(file, filename, contentType, folder);
-        const command = mockSend.mock.calls[0][0];
-        expect(command.input.Key).toContain(`${folder}/`);
+        const commandInput = (PutObjectCommand as unknown as jest.Mock).mock.calls[0][0];
+        expect(commandInput.Key).toContain(`${folder}/`);
       }
     });
 
@@ -106,30 +113,30 @@ describe('S3 Service', () => {
       const expiresIn = 3600;
       const mockPresignedUrl = 'https://test-bucket.s3.amazonaws.com/products/test-file.jpg?signature=abc123';
 
-      (getSignedUrl as jest.Mock).mockResolvedValue(mockPresignedUrl);
+      mockGetSignedUrl.mockResolvedValue(mockPresignedUrl);
 
       const result = await getPresignedUrl(key, expiresIn);
 
       expect(result).toBe(mockPresignedUrl);
-      expect(getSignedUrl).toHaveBeenCalledWith(
+      expect(mockGetSignedUrl).toHaveBeenCalledWith(
         expect.any(S3Client),
         expect.any(GetObjectCommand),
         { expiresIn }
       );
-      const command = (getSignedUrl as jest.Mock).mock.calls[0][1];
-      expect(command.input.Bucket).toBe('test-bucket');
-      expect(command.input.Key).toBe(key);
+      const commandInput = (GetObjectCommand as unknown as jest.Mock).mock.calls[0][0];
+      expect(commandInput.Bucket).toBe('test-bucket');
+      expect(commandInput.Key).toBe(key);
     });
 
     it('should use default expiration time', async () => {
       const key = 'products/test-file.jpg';
       const mockPresignedUrl = 'https://test-bucket.s3.amazonaws.com/products/test-file.jpg?signature=abc123';
 
-      (getSignedUrl as jest.Mock).mockResolvedValue(mockPresignedUrl);
+      mockGetSignedUrl.mockResolvedValue(mockPresignedUrl);
 
       await getPresignedUrl(key);
 
-      expect(getSignedUrl).toHaveBeenCalledWith(
+      expect(mockGetSignedUrl).toHaveBeenCalledWith(
         expect.any(S3Client),
         expect.any(GetObjectCommand),
         { expiresIn: 3600 }
@@ -144,20 +151,20 @@ describe('S3 Service', () => {
       const expiresIn = 3600;
       const mockPresignedUrl = 'https://test-bucket.s3.amazonaws.com/products/test-file.jpg?signature=abc123';
 
-      (getSignedUrl as jest.Mock).mockResolvedValue(mockPresignedUrl);
+      mockGetSignedUrl.mockResolvedValue(mockPresignedUrl);
 
       const result = await getPresignedUploadUrl(key, contentType, expiresIn);
 
       expect(result).toBe(mockPresignedUrl);
-      expect(getSignedUrl).toHaveBeenCalledWith(
+      expect(mockGetSignedUrl).toHaveBeenCalledWith(
         expect.any(S3Client),
         expect.any(PutObjectCommand),
         { expiresIn }
       );
-      const command = (getSignedUrl as jest.Mock).mock.calls[0][1];
-      expect(command.input.Bucket).toBe('test-bucket');
-      expect(command.input.Key).toBe(key);
-      expect(command.input.ContentType).toBe(contentType);
+      const commandInput = (PutObjectCommand as unknown as jest.Mock).mock.calls[0][0];
+      expect(commandInput.Bucket).toBe('test-bucket');
+      expect(commandInput.Key).toBe(key);
+      expect(commandInput.ContentType).toBe(contentType);
     });
 
     it('should use default expiration time', async () => {
@@ -165,11 +172,11 @@ describe('S3 Service', () => {
       const contentType = 'image/jpeg';
       const mockPresignedUrl = 'https://test-bucket.s3.amazonaws.com/products/test-file.jpg?signature=abc123';
 
-      (getSignedUrl as jest.Mock).mockResolvedValue(mockPresignedUrl);
+      mockGetSignedUrl.mockResolvedValue(mockPresignedUrl);
 
       await getPresignedUploadUrl(key, contentType);
 
-      expect(getSignedUrl).toHaveBeenCalledWith(
+      expect(mockGetSignedUrl).toHaveBeenCalledWith(
         expect.any(S3Client),
         expect.any(PutObjectCommand),
         { expiresIn: 3600 }

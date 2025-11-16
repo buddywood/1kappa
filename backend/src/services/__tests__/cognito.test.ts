@@ -1,3 +1,29 @@
+// Mock AWS SDK before importing
+const mockSend = jest.fn();
+jest.mock('@aws-sdk/client-cognito-identity-provider', () => ({
+  CognitoIdentityProviderClient: jest.fn().mockImplementation(() => ({
+    send: mockSend,
+  })),
+  GetUserCommand: jest.fn().mockImplementation((input) => ({ input })),
+  InitiateAuthCommand: jest.fn().mockImplementation((input) => ({ input })),
+  AuthFlowType: {
+    USER_PASSWORD_AUTH: 'USER_PASSWORD_AUTH',
+  },
+}));
+
+jest.mock('jsonwebtoken', () => ({
+  verify: jest.fn(),
+}));
+
+const mockGetSigningKey = jest.fn();
+jest.mock('jwks-rsa', () => {
+  const mockClient = {
+    getSigningKey: jest.fn(),
+  };
+  return jest.fn(() => mockClient);
+});
+
+// Import after mocking
 import {
   CognitoIdentityProviderClient,
   GetUserCommand,
@@ -13,28 +39,9 @@ import {
   type CognitoTokenPayload,
 } from '../cognito';
 
-// Mock AWS SDK
-jest.mock('@aws-sdk/client-cognito-identity-provider');
-jest.mock('jsonwebtoken');
-jest.mock('jwks-rsa');
-
 describe('Cognito Service', () => {
-  const mockSend = jest.fn();
-  const mockGetSigningKey = jest.fn();
-  const mockClient = {
-    getSigningKey: mockGetSigningKey,
-  };
-
   beforeEach(() => {
     jest.clearAllMocks();
-    
-    // Mock CognitoIdentityProviderClient
-    (CognitoIdentityProviderClient as jest.Mock).mockImplementation(() => ({
-      send: mockSend,
-    }));
-
-    // Mock jwksClient
-    (jwksClient as jest.Mock).mockReturnValue(mockClient);
   });
 
   describe('verifyCognitoToken', () => {

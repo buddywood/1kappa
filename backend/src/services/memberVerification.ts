@@ -310,7 +310,7 @@ async function debugFormElements(page: Page): Promise<void> {
     return {
       formCount: allForms.length,
       // outerHTML is available in browser context
-      formHTML: form ? form.outerHTML.substring(0, 2000) : 'No form element found',
+      formHTML: form && 'outerHTML' in form ? (form as any).outerHTML.substring(0, 2000) : 'No form element found',
       // @ts-expect-error - document is available in browser context
       bodyHTML: document.body ? document.body.innerHTML.substring(0, 1000) : '',
     };
