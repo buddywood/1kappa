@@ -145,34 +145,42 @@ export default function ShopPage() {
           {/* Filters Row */}
           <div className="flex flex-col lg:flex-row gap-4">
             {/* Chapter Filter */}
-            <select
-              value={selectedChapter || ''}
-              onChange={(e) => setSelectedChapter(e.target.value ? parseInt(e.target.value) : null)}
-              className="flex-1 px-4 py-2 pr-10 border border-frost-gray rounded-lg focus:ring-2 focus:ring-crimson focus:border-transparent text-midnight-navy bg-white appearance-none bg-[url('data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3Cpath%20fill%3D%22%23121212%22%20d%3D%22M6%209L1%204h10z%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[length:12px_12px] bg-[right_10px_center]"
-            >
-              <option value="">All Chapters</option>
-              {chapters.map((chapter) => (
-                <option key={chapter.id} value={chapter.id}>
-                  {chapter.name}
-                </option>
-              ))}
-            </select>
+            <div className="flex-1">
+              <SearchableSelect
+                options={[
+                  { id: '', label: 'All Chapters', value: '' },
+                  ...chapters.map((chapter) => ({
+                    id: chapter.id,
+                    label: chapter.name,
+                    value: chapter.id,
+                  }))
+                ]}
+                value={selectedChapter ? String(selectedChapter) : ''}
+                onChange={(value) => setSelectedChapter(value ? parseInt(value) : null)}
+                placeholder="All Chapters"
+                className="w-full"
+              />
+            </div>
 
             {/* Seller Filter */}
-            <select
-              value={selectedSeller || ''}
-              onChange={(e) => setSelectedSeller(e.target.value ? parseInt(e.target.value) : null)}
-              className="flex-1 px-4 py-2 pr-10 border border-frost-gray rounded-lg focus:ring-2 focus:ring-crimson focus:border-transparent text-midnight-navy bg-white appearance-none bg-[url('data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3Cpath%20fill%3D%22%23121212%22%20d%3D%22M6%209L1%204h10z%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[length:12px_12px] bg-[right_10px_center]"
-            >
-              <option value="">All Sellers</option>
-              {sellers.map((seller) => (
-                <option key={seller.id} value={seller.id}>
-                  {seller.member_id 
-                    ? `Brother ${seller.name}` 
-                    : (seller.business_name || seller.name)}
-                </option>
-              ))}
-            </select>
+            <div className="flex-1">
+              <SearchableSelect
+                options={[
+                  { id: '', label: 'All Sellers', value: '' },
+                  ...sellers.map((seller) => ({
+                    id: seller.id,
+                    label: seller.member_id 
+                      ? `Brother ${seller.name}` 
+                      : (seller.business_name || seller.name),
+                    value: seller.id,
+                  }))
+                ]}
+                value={selectedSeller ? String(selectedSeller) : ''}
+                onChange={(value) => setSelectedSeller(value ? parseInt(value) : null)}
+                placeholder="All Sellers"
+                className="w-full"
+              />
+            </div>
 
             {/* Sort Options */}
             <select
