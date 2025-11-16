@@ -348,6 +348,124 @@ router.post('/cognito/confirm-forgot-password', async (req: Request, res: Respon
   }
 });
 
+// Helper function to build update fields for draft member updates
+function buildDraftUpdateFields(
+  parsedData: any,
+  headshotUrl: string | undefined,
+  options: { updateCognitoSub?: boolean; cognitoSub?: string; updateEmail?: boolean; email?: string }
+): { updateFields: string[]; values: any[]; paramCount: number } {
+  const updateFields: string[] = [];
+  const values: any[] = [];
+  let paramCount = 1;
+
+  // Update cognito_sub if requested
+  if (options.updateCognitoSub && options.cognitoSub) {
+    updateFields.push(`cognito_sub = $${paramCount}`);
+    values.push(options.cognitoSub);
+    paramCount++;
+  }
+
+  // Update email if requested
+  if (options.updateEmail && options.email) {
+    updateFields.push(`email = $${paramCount}`);
+    values.push(options.email);
+    paramCount++;
+  }
+
+  // Update fields with consistent logic
+  if (parsedData.name) {
+    updateFields.push(`name = $${paramCount}`);
+    values.push(parsedData.name);
+    paramCount++;
+  }
+  if (parsedData.membership_number) {
+    updateFields.push(`membership_number = $${paramCount}`);
+    values.push(parsedData.membership_number);
+    paramCount++;
+  }
+  if (parsedData.initiated_chapter_id) {
+    updateFields.push(`initiated_chapter_id = $${paramCount}`);
+    values.push(parsedData.initiated_chapter_id);
+    paramCount++;
+  }
+  if (parsedData.initiated_season !== undefined) {
+    updateFields.push(`initiated_season = $${paramCount}`);
+    values.push(parsedData.initiated_season);
+    paramCount++;
+  }
+  if (parsedData.initiated_year !== undefined) {
+    updateFields.push(`initiated_year = $${paramCount}`);
+    values.push(parsedData.initiated_year);
+    paramCount++;
+  }
+  if (parsedData.ship_name !== undefined) {
+    updateFields.push(`ship_name = $${paramCount}`);
+    values.push(parsedData.ship_name);
+    paramCount++;
+  }
+  if (parsedData.line_name !== undefined) {
+    updateFields.push(`line_name = $${paramCount}`);
+    values.push(parsedData.line_name);
+    paramCount++;
+  }
+  if (parsedData.location !== undefined) {
+    updateFields.push(`location = $${paramCount}`);
+    values.push(parsedData.location);
+    paramCount++;
+  }
+  if (parsedData.address !== undefined && parsedData.address !== null && parsedData.address !== '') {
+    updateFields.push(`address = $${paramCount}`);
+    values.push(parsedData.address);
+    paramCount++;
+  }
+  // Always update address_is_private if provided (handles both true and false)
+  if (parsedData.address_is_private !== undefined) {
+    updateFields.push(`address_is_private = $${paramCount}`);
+    values.push(parsedData.address_is_private);
+    paramCount++;
+  }
+  if (parsedData.phone_number !== undefined) {
+    updateFields.push(`phone_number = $${paramCount}`);
+    values.push(parsedData.phone_number);
+    paramCount++;
+  }
+  // Always update phone_is_private if provided (handles both true and false)
+  if (parsedData.phone_is_private !== undefined) {
+    updateFields.push(`phone_is_private = $${paramCount}`);
+    values.push(parsedData.phone_is_private);
+    paramCount++;
+  }
+  if (parsedData.industry !== undefined) {
+    updateFields.push(`industry = $${paramCount}`);
+    values.push(parsedData.industry);
+    paramCount++;
+  }
+  if (parsedData.job_title !== undefined) {
+    updateFields.push(`job_title = $${paramCount}`);
+    values.push(parsedData.job_title);
+    paramCount++;
+  }
+  if (parsedData.bio !== undefined) {
+    updateFields.push(`bio = $${paramCount}`);
+    values.push(parsedData.bio);
+    paramCount++;
+  }
+  if (headshotUrl) {
+    updateFields.push(`headshot_url = $${paramCount}`);
+    values.push(headshotUrl);
+    paramCount++;
+  }
+  if (parsedData.social_links) {
+    updateFields.push(`social_links = $${paramCount}::jsonb`);
+    values.push(JSON.stringify(parsedData.social_links));
+    paramCount++;
+  }
+
+  updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
+
+  return { updateFields, values, paramCount };
+}
+
 // Save draft registration progress (incremental saves after Step 1)
 router.post('/draft', upload.single('headshot'), async (req: Request, res: Response) => {
   try {
@@ -431,118 +549,26 @@ router.post('/draft', upload.single('headshot'), async (req: Request, res: Respo
       const existingMember = draftRecords.length > 0 
         ? (draftRecords.find((row: any) => row.cognito_sub === cognito_sub) || draftRecords.find((row: any) => row.email === email) || draftRecords[0])
         : existingDraft.rows[0];
-      const updateFields: string[] = [];
-      const values: any[] = [];
-      let paramCount = 1;
       
       // Use the existing member's ID for the WHERE clause
       const whereId = existingMember.id;
       
-      // If cognito_sub doesn't match, update it
-      if (existingMember.cognito_sub !== cognito_sub) {
-        updateFields.push(`cognito_sub = $${paramCount}`);
-        values.push(cognito_sub);
-        paramCount++;
-      }
-
-      if (parsedData.name) {
-        updateFields.push(`name = $${paramCount}`);
-        values.push(parsedData.name);
-        paramCount++;
-      }
-      if (parsedData.membership_number) {
-        updateFields.push(`membership_number = $${paramCount}`);
-        values.push(parsedData.membership_number);
-        paramCount++;
-      }
-      if (parsedData.initiated_chapter_id) {
-        updateFields.push(`initiated_chapter_id = $${paramCount}`);
-        values.push(parsedData.initiated_chapter_id);
-        paramCount++;
-      }
-      if (parsedData.initiated_season !== undefined) {
-        updateFields.push(`initiated_season = $${paramCount}`);
-        values.push(parsedData.initiated_season);
-        paramCount++;
-      }
-      if (parsedData.initiated_year !== undefined) {
-        updateFields.push(`initiated_year = $${paramCount}`);
-        values.push(parsedData.initiated_year);
-        paramCount++;
-      }
-      if (parsedData.ship_name !== undefined) {
-        updateFields.push(`ship_name = $${paramCount}`);
-        values.push(parsedData.ship_name);
-        paramCount++;
-      }
-      if (parsedData.line_name !== undefined) {
-        updateFields.push(`line_name = $${paramCount}`);
-        values.push(parsedData.line_name);
-        paramCount++;
-      }
-      if (parsedData.location !== undefined) {
-        updateFields.push(`location = $${paramCount}`);
-        values.push(parsedData.location);
-        paramCount++;
-      }
-      if (parsedData.address !== undefined) {
-        updateFields.push(`address = $${paramCount}`);
-        values.push(parsedData.address);
-        paramCount++;
-      }
-      // Always update address_is_private if provided (handles both true and false)
-      if (parsedData.address_is_private !== undefined) {
-        updateFields.push(`address_is_private = $${paramCount}`);
-        values.push(parsedData.address_is_private);
-        paramCount++;
-      }
-      if (parsedData.phone_number !== undefined) {
-        updateFields.push(`phone_number = $${paramCount}`);
-        values.push(parsedData.phone_number);
-        paramCount++;
-      }
-      // Always update phone_is_private if provided (handles both true and false)
-      if (parsedData.phone_is_private !== undefined) {
-        updateFields.push(`phone_is_private = $${paramCount}`);
-        values.push(parsedData.phone_is_private);
-        paramCount++;
-      }
-      if (parsedData.industry !== undefined) {
-        updateFields.push(`industry = $${paramCount}`);
-        values.push(parsedData.industry);
-        paramCount++;
-      }
-      if (parsedData.job_title !== undefined) {
-        updateFields.push(`job_title = $${paramCount}`);
-        values.push(parsedData.job_title);
-        paramCount++;
-      }
-      if (parsedData.bio !== undefined) {
-        updateFields.push(`bio = $${paramCount}`);
-        values.push(parsedData.bio);
-        paramCount++;
-      }
-      if (headshotUrl) {
-        updateFields.push(`headshot_url = $${paramCount}`);
-        values.push(headshotUrl);
-        paramCount++;
-      }
-      if (parsedData.social_links) {
-        updateFields.push(`social_links = $${paramCount}::jsonb`);
-        values.push(JSON.stringify(parsedData.social_links));
-        paramCount++;
-      }
-
-      updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
+      // Build update fields using helper function
+      const { updateFields, values, paramCount } = buildDraftUpdateFields(
+        parsedData,
+        headshotUrl,
+        {
+          updateCognitoSub: existingMember.cognito_sub !== cognito_sub,
+          cognitoSub: cognito_sub,
+        }
+      );
 
       // Use ID for WHERE clause to ensure we update the correct record
-      // Note: paramCount is already at the next available parameter number
       values.push(whereId);
       const whereClause = `WHERE id = $${paramCount}`;
-      paramCount++; // Increment after using it (for consistency, though not needed for WHERE)
 
       const result = await pool.query(
-        `UPDATE members SET ${updateFields.join(', ')} ${whereClause} RETURNING *`,
+        `UPDATE fraternity_members SET ${updateFields.join(', ')} ${whereClause} RETURNING *`,
         values
       );
 
@@ -566,104 +592,24 @@ router.post('/draft', upload.single('headshot'), async (req: Request, res: Respo
         if (existingDraftByMembership.rows.length > 0) {
           // Update the existing draft instead of creating a new one
           const existingDraftId = existingDraftByMembership.rows[0].id;
-          const updateFields: string[] = [];
-          const values: any[] = [];
-          let paramCount = 1;
           
-          // Update cognito_sub if provided
-          if (cognito_sub) {
-            updateFields.push(`cognito_sub = $${paramCount}`);
-            values.push(cognito_sub);
-            paramCount++;
-          }
-          
-          // Update email
-          updateFields.push(`email = $${paramCount}`);
-          values.push(email);
-          paramCount++;
-          
-          // Update other fields
-          if (parsedData.name) {
-            updateFields.push(`name = $${paramCount}`);
-            values.push(parsedData.name);
-            paramCount++;
-          }
-          if (parsedData.initiated_chapter_id) {
-            updateFields.push(`initiated_chapter_id = $${paramCount}`);
-            values.push(parsedData.initiated_chapter_id);
-            paramCount++;
-          }
-          if (parsedData.initiated_season) {
-            updateFields.push(`initiated_season = $${paramCount}`);
-            values.push(parsedData.initiated_season);
-            paramCount++;
-          }
-          if (parsedData.initiated_year) {
-            updateFields.push(`initiated_year = $${paramCount}`);
-            values.push(parsedData.initiated_year);
-            paramCount++;
-          }
-          if (parsedData.ship_name) {
-            updateFields.push(`ship_name = $${paramCount}`);
-            values.push(parsedData.ship_name);
-            paramCount++;
-          }
-          if (parsedData.line_name) {
-            updateFields.push(`line_name = $${paramCount}`);
-            values.push(parsedData.line_name);
-            paramCount++;
-          }
-          if (parsedData.location) {
-            updateFields.push(`location = $${paramCount}`);
-            values.push(parsedData.location);
-            paramCount++;
-          }
-          if (parsedData.address !== undefined && parsedData.address !== null && parsedData.address !== '') {
-            updateFields.push(`address = $${paramCount}`);
-            values.push(parsedData.address);
-            paramCount++;
-          }
-          updateFields.push(`address_is_private = $${paramCount}`);
-          values.push(parsedData.address_is_private || false);
-          paramCount++;
-          if (parsedData.phone_number) {
-            updateFields.push(`phone_number = $${paramCount}`);
-            values.push(parsedData.phone_number);
-            paramCount++;
-          }
-          updateFields.push(`phone_is_private = $${paramCount}`);
-          values.push(parsedData.phone_is_private || false);
-          paramCount++;
-          if (parsedData.industry) {
-            updateFields.push(`industry = $${paramCount}`);
-            values.push(parsedData.industry);
-            paramCount++;
-          }
-          if (parsedData.job_title) {
-            updateFields.push(`job_title = $${paramCount}`);
-            values.push(parsedData.job_title);
-            paramCount++;
-          }
-          if (parsedData.bio) {
-            updateFields.push(`bio = $${paramCount}`);
-            values.push(parsedData.bio);
-            paramCount++;
-          }
-          if (headshotUrl) {
-            updateFields.push(`headshot_url = $${paramCount}`);
-            values.push(headshotUrl);
-            paramCount++;
-          }
-          updateFields.push(`social_links = $${paramCount}::jsonb`);
-          values.push(JSON.stringify(parsedData.social_links || {}));
-          paramCount++;
-          updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
+          // Build update fields using helper function
+          const { updateFields, values, paramCount } = buildDraftUpdateFields(
+            parsedData,
+            headshotUrl,
+            {
+              updateCognitoSub: !!cognito_sub,
+              cognitoSub: cognito_sub,
+              updateEmail: true,
+              email: email,
+            }
+          );
           
           values.push(existingDraftId);
           const whereClause = `WHERE id = $${paramCount}`;
           
           const result = await pool.query(
-            `UPDATE members SET ${updateFields.join(', ')} ${whereClause} RETURNING *`,
+            `UPDATE fraternity_members SET ${updateFields.join(', ')} ${whereClause} RETURNING *`,
             values
           );
           
@@ -760,7 +706,7 @@ router.post('/draft', upload.single('headshot'), async (req: Request, res: Respo
 
       const placeholders = fields.map((_, i) => `$${i + 1}`).join(', ');
       const result = await pool.query(
-        `INSERT INTO members (${fields.join(', ')})
+        `INSERT INTO fraternity_members (${fields.join(', ')})
          VALUES (${placeholders})
          RETURNING *`,
         values
@@ -935,7 +881,7 @@ router.post('/register', upload.single('headshot'), async (req: Request, res: Re
        INNER JOIN fraternity_members m ON p.fraternity_member_id = m.id 
        WHERE m.membership_number = $2
        UNION 
-       SELECT id FROM members 
+       SELECT id FROM fraternity_members 
        WHERE (email = $1 OR membership_number = $2) 
        AND registration_status != 'DRAFT' 
        AND (cognito_sub IS NULL OR cognito_sub != $3)`;
@@ -954,7 +900,7 @@ router.post('/register', upload.single('headshot'), async (req: Request, res: Re
        INNER JOIN fraternity_members m ON p.fraternity_member_id = m.id 
        WHERE m.membership_number = $2
        UNION 
-       SELECT id FROM members 
+       SELECT id FROM fraternity_members 
        WHERE (email = $1 OR membership_number = $2) 
        AND registration_status != 'DRAFT'`;
       existingMemberParams = [body.email, body.membership_number];
@@ -1008,7 +954,7 @@ router.post('/register', upload.single('headshot'), async (req: Request, res: Re
     if (existingDraft.rows.length > 0) {
       // Update existing draft to complete
       result = await pool.query(
-        `UPDATE members SET
+        `UPDATE fraternity_members SET
           name = $1, email = $2, membership_number = $3, initiated_chapter_id = $4,
           initiated_season = $5, initiated_year = $6, ship_name = $7, line_name = $8,
           location = $9, address = $10, address_is_private = $11, phone_number = $12, phone_is_private = $13,
@@ -1041,7 +987,7 @@ router.post('/register', upload.single('headshot'), async (req: Request, res: Re
     } else {
       // Create new complete registration
       result = await pool.query(
-        `INSERT INTO members (
+        `INSERT INTO fraternity_members (
           name, email, membership_number, cognito_sub, initiated_chapter_id,
           initiated_season, initiated_year, ship_name, line_name,
           location, address, address_is_private, phone_number, phone_is_private,
@@ -1456,7 +1402,7 @@ router.put('/profile', authenticate, upload.single('headshot'), async (req: Requ
     const whereClause = `WHERE id = $${paramCount}`;
 
     const result = await pool.query(
-      `UPDATE members SET ${updateFields.join(', ')} ${whereClause}
+      `UPDATE fraternity_members SET ${updateFields.join(', ')} ${whereClause}
        RETURNING *`,
       values
     );

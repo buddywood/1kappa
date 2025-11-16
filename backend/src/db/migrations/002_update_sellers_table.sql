@@ -20,11 +20,20 @@ BEGIN
     ALTER TABLE sellers ALTER COLUMN sponsoring_chapter_id SET NOT NULL;
   END IF;
 
-  -- Add member_id foreign key (sellers can optionally be members)
+  -- Add fraternity_member_id foreign key (sellers can optionally be fraternity members)
+  -- Check for both old and new column names for backward compatibility
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns
-                 WHERE table_name='sellers' AND column_name='member_id') THEN
-    ALTER TABLE sellers ADD COLUMN member_id INTEGER REFERENCES members(id);
-    CREATE INDEX IF NOT EXISTS idx_sellers_member_id ON sellers(member_id);
+                 WHERE table_name='sellers' AND column_name='fraternity_member_id') 
+     AND NOT EXISTS (SELECT 1 FROM information_schema.columns
+                     WHERE table_name='sellers' AND column_name='member_id') THEN
+    -- Check if fraternity_members table exists (after migration 016)
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='fraternity_members') THEN
+      ALTER TABLE sellers ADD COLUMN fraternity_member_id INTEGER REFERENCES fraternity_members(id);
+      CREATE INDEX IF NOT EXISTS idx_sellers_fraternity_member_id ON sellers(fraternity_member_id);
+    ELSIF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='members') THEN
+      ALTER TABLE sellers ADD COLUMN member_id INTEGER REFERENCES members(id);
+      CREATE INDEX IF NOT EXISTS idx_sellers_member_id ON sellers(member_id);
+    END IF;
   END IF;
 
   -- Add store_logo_url column for seller store logos

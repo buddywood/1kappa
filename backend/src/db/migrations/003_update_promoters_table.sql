@@ -21,11 +21,20 @@ BEGIN
       ALTER TABLE promoters DROP COLUMN initiated_chapter_id;
     END IF;
 
-    -- Add member_id foreign key if it doesn't exist
+    -- Add fraternity_member_id foreign key if it doesn't exist
+    -- Check for both old and new column names for backward compatibility
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns
-                   WHERE table_name='promoters' AND column_name='member_id') THEN
-      ALTER TABLE promoters ADD COLUMN member_id INTEGER REFERENCES members(id);
-      CREATE INDEX IF NOT EXISTS idx_promoters_member_id ON promoters(member_id);
+                   WHERE table_name='promoters' AND column_name='fraternity_member_id') 
+       AND NOT EXISTS (SELECT 1 FROM information_schema.columns
+                       WHERE table_name='promoters' AND column_name='member_id') THEN
+      -- Check if fraternity_members table exists (after migration 016)
+      IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='fraternity_members') THEN
+        ALTER TABLE promoters ADD COLUMN fraternity_member_id INTEGER REFERENCES fraternity_members(id);
+        CREATE INDEX IF NOT EXISTS idx_promoters_fraternity_member_id ON promoters(fraternity_member_id);
+      ELSIF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='members') THEN
+        ALTER TABLE promoters ADD COLUMN member_id INTEGER REFERENCES members(id);
+        CREATE INDEX IF NOT EXISTS idx_promoters_member_id ON promoters(member_id);
+      END IF;
     END IF;
 
     -- Drop member-specific columns from promoters if they exist

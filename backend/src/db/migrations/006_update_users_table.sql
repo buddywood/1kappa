@@ -47,21 +47,44 @@ BEGIN
     END IF;
     
     -- Add the new constraint allowing role coexistence for STEWARD
-    ALTER TABLE users ADD CONSTRAINT check_role_foreign_key CHECK (
-      (role = 'CONSUMER' AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL AND (
-        (member_id IS NOT NULL) OR 
-        (member_id IS NULL AND onboarding_status != 'ONBOARDING_FINISHED')
-      )) OR
-      (role = 'SELLER' AND seller_id IS NOT NULL AND member_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
-      (role = 'PROMOTER' AND promoter_id IS NOT NULL AND member_id IS NULL AND seller_id IS NULL AND steward_id IS NULL) OR
-      (role = 'STEWARD' AND steward_id IS NOT NULL AND member_id IS NOT NULL AND (
-        (seller_id IS NULL AND promoter_id IS NULL) OR
-        (seller_id IS NOT NULL AND promoter_id IS NULL) OR
-        (seller_id IS NULL AND promoter_id IS NOT NULL) OR
-        (seller_id IS NOT NULL AND promoter_id IS NOT NULL)
-      )) OR
-      (role = 'ADMIN' AND member_id IS NULL AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL)
-    );
+    -- Check which column name exists (member_id or fraternity_member_id)
+    IF EXISTS (SELECT 1 FROM information_schema.columns 
+               WHERE table_name='users' AND column_name='fraternity_member_id') THEN
+      -- Use fraternity_member_id (after migration 016)
+      ALTER TABLE users ADD CONSTRAINT check_role_foreign_key CHECK (
+        (role = 'CONSUMER' AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL AND (
+          (fraternity_member_id IS NOT NULL) OR 
+          (fraternity_member_id IS NULL AND onboarding_status != 'ONBOARDING_FINISHED')
+        )) OR
+        (role = 'SELLER' AND seller_id IS NOT NULL AND fraternity_member_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
+        (role = 'PROMOTER' AND promoter_id IS NOT NULL AND fraternity_member_id IS NULL AND seller_id IS NULL AND steward_id IS NULL) OR
+        (role = 'STEWARD' AND steward_id IS NOT NULL AND fraternity_member_id IS NOT NULL AND (
+          (seller_id IS NULL AND promoter_id IS NULL) OR
+          (seller_id IS NOT NULL AND promoter_id IS NULL) OR
+          (seller_id IS NULL AND promoter_id IS NOT NULL) OR
+          (seller_id IS NOT NULL AND promoter_id IS NOT NULL)
+        )) OR
+        (role = 'ADMIN' AND fraternity_member_id IS NULL AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL)
+      );
+    ELSIF EXISTS (SELECT 1 FROM information_schema.columns 
+                  WHERE table_name='users' AND column_name='member_id') THEN
+      -- Use member_id (before migration 016)
+      ALTER TABLE users ADD CONSTRAINT check_role_foreign_key CHECK (
+        (role = 'CONSUMER' AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL AND (
+          (member_id IS NOT NULL) OR 
+          (member_id IS NULL AND onboarding_status != 'ONBOARDING_FINISHED')
+        )) OR
+        (role = 'SELLER' AND seller_id IS NOT NULL AND member_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
+        (role = 'PROMOTER' AND promoter_id IS NOT NULL AND member_id IS NULL AND seller_id IS NULL AND steward_id IS NULL) OR
+        (role = 'STEWARD' AND steward_id IS NOT NULL AND member_id IS NOT NULL AND (
+          (seller_id IS NULL AND promoter_id IS NULL) OR
+          (seller_id IS NOT NULL AND promoter_id IS NULL) OR
+          (seller_id IS NULL AND promoter_id IS NOT NULL) OR
+          (seller_id IS NOT NULL AND promoter_id IS NOT NULL)
+        )) OR
+        (role = 'ADMIN' AND member_id IS NULL AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL)
+      );
+    END IF;
   END IF;
 END $$;
 

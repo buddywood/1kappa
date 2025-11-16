@@ -25,6 +25,8 @@
     "verify:members:debug": "tsx src/scripts/verify-members.ts --visible --debug",
     "verify:members:record": "tsx src/scripts/verify-members.ts --visible --record",
     "grant-admin": "tsx src/scripts/grant-admin-access.ts",
+    "approve-member": "tsx src/scripts/approve-member.ts",
+    "update-cognito-emails": "AWS_PROFILE=1kappa_user tsx src/scripts/update-cognito-email-templates.ts",
     "fix:orphaned-member": "tsx src/scripts/fix-orphaned-member.ts",
     "delete:seller": "tsx src/scripts/delete-seller.ts",
     "delete:promoter": "tsx src/scripts/delete-promoter.ts",
