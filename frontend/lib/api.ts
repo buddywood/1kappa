@@ -628,6 +628,12 @@ export interface Steward {
   chapter?: Chapter;
 }
 
+export interface StewardListingImage {
+  id: number;
+  image_url: string;
+  display_order: number;
+}
+
 export interface StewardListing {
   id: number;
   steward_id: number;
@@ -645,6 +651,7 @@ export interface StewardListing {
   updated_at: string;
   steward?: Steward;
   chapter?: Chapter;
+  images?: StewardListingImage[];
 }
 
 export async function applyToBecomeSteward(sponsoringChapterId: number): Promise<Steward> {

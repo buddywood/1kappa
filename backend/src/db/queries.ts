@@ -1256,6 +1256,22 @@ export async function createStewardListing(listing: {
   return result.rows[0];
 }
 
+export async function getStewardListingImages(listingId: number): Promise<Array<{ id: number; image_url: string; display_order: number }>> {
+  const result = await pool.query(
+    'SELECT * FROM steward_listing_images WHERE steward_listing_id = $1 ORDER BY display_order, id',
+    [listingId]
+  );
+  return result.rows;
+}
+
+export async function addStewardListingImage(listingId: number, imageUrl: string, displayOrder: number = 0): Promise<{ id: number; image_url: string; display_order: number }> {
+  const result = await pool.query(
+    'INSERT INTO steward_listing_images (steward_listing_id, image_url, display_order) VALUES ($1, $2, $3) RETURNING *',
+    [listingId, imageUrl, displayOrder]
+  );
+  return result.rows[0];
+}
+
 export async function getStewardListingById(id: number): Promise<StewardListing | null> {
   const result = await pool.query('SELECT * FROM steward_listings WHERE id = $1', [id]);
   return result.rows[0] || null;

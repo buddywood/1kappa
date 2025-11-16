@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { fetchProducts, fetchChapters, fetchSellersWithProducts, fetchProductCategories, getStewardMarketplace, type Product, type Chapter, type SellerWithProducts, type ProductCategory, type StewardListing } from '@/lib/api';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -16,7 +17,10 @@ type SortOption = 'name' | 'price-low' | 'price-high' | 'newest';
 
 function ShopPageContent() {
   const searchParams = useSearchParams();
+  const { data: session } = useSession();
   const roleFilter = searchParams.get('role'); // 'seller', 'steward', or null
+  const stewardParam = searchParams.get('steward'); // steward ID for filtering
+  const is_steward = (session?.user as any)?.is_steward ?? false;
   const [products, setProducts] = useState<Product[]>([]);
   const [stewardListings, setStewardListings] = useState<StewardListing[]>([]);
   const [chapters, setChapters] = useState<Chapter[]>([]);
@@ -27,6 +31,7 @@ function ShopPageContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
   const [selectedSeller, setSelectedSeller] = useState<number | null>(null);
+  const [selectedSteward, setSelectedSteward] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
@@ -229,8 +234,8 @@ function ShopPageContent() {
       };
     } else if (roleFilter === 'steward') {
       return {
-        title: 'Stewards',
-        subtitle: 'Discover exclusive products from our dedicated stewards',
+        title: 'Stewards Market',
+        subtitle: 'Discover exclusive products from our dedicated stewards.  Stewards pass on meaningful items—cardigans, pins, books, keepsakes, and legacy pieces—so they can continue their journey with another Brother. Every Steward listing includes a chapter donation designated by the Steward, ensuring that proceeds directly support undergraduate programs, scholarships, and the development of future leaders.',
         becomeLink: '/steward-setup',
         becomeText: 'Become a Steward'
       };
@@ -250,12 +255,15 @@ function ShopPageContent() {
           <div className="max-w-7xl mx-auto text-center">
             <h1 className="text-4xl md:text-5xl font-display font-bold mb-4">{heroContent.title}</h1>
             <p className="text-lg md:text-xl text-white/90 mb-8 max-w-2xl mx-auto">{heroContent.subtitle}</p>
-            <Link
-              href={heroContent.becomeLink}
-              className="inline-block bg-white text-crimson px-6 py-3 rounded-lg font-semibold hover:bg-cream transition-colors shadow-lg hover:shadow-xl"
-            >
-              {heroContent.becomeText}
-            </Link>
+            {/* Don't show "Become a Steward" button if user is already a steward */}
+            {!(roleFilter === 'steward' && is_steward) && (
+              <Link
+                href={heroContent.becomeLink}
+                className="inline-block bg-white text-crimson px-6 py-3 rounded-lg font-semibold hover:bg-cream transition-colors shadow-lg hover:shadow-xl"
+              >
+                {heroContent.becomeText}
+              </Link>
+            )}
           </div>
         </section>
       )}
@@ -522,52 +530,108 @@ function ShopPageContent() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {roleFilter === 'steward' ? (
               // Display steward listings
-              filteredAndSortedStewardListings.map((listing) => (
-                <Link
-                  key={listing.id}
-                  href={`/steward-listing/${listing.id}`}
-                  className="bg-white rounded-xl overflow-hidden shadow hover:shadow-md transition relative group"
-                >
-                  <div className="aspect-[4/5] relative bg-cream">
-                    {listing.image_url ? (
-                      <Image
-                        src={listing.image_url}
-                        alt={listing.name}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-midnight-navy/30">
-                        <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                      </div>
-                    )}
-                    {listing.chapter && (
-                      <div className="absolute top-2 left-2 z-10">
-                        <VerificationBadge 
-                          type="sponsored-chapter" 
-                          chapterName={getChapterName(listing.sponsoring_chapter_id)}
+              filteredAndSortedStewardListings.map((listing) => {
+                const steward = listing.steward;
+                const stewardMember = steward?.member;
+                const totalCost = (listing.shipping_cost_cents + listing.chapter_donation_cents) / 100;
+                const chapterName = getChapterName(listing.sponsoring_chapter_id);
+                
+                // Debug logging
+                if (!steward || !stewardMember) {
+                  console.warn('Steward listing missing steward/member data:', {
+                    listingId: listing.id,
+                    listingName: listing.name,
+                    hasSteward: !!steward,
+                    hasMember: !!stewardMember,
+                    steward: steward,
+                    listing: listing
+                  });
+                }
+                
+                return (
+                  <Link
+                    key={listing.id}
+                    href={`/steward-listing/${listing.id}`}
+                    className="bg-white rounded-xl overflow-hidden shadow hover:shadow-md transition relative group"
+                  >
+                    <div className="aspect-[4/5] relative bg-cream">
+                      {listing.image_url ? (
+                        <Image
+                          src={listing.image_url}
+                          alt={listing.name}
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-300"
                         />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-midnight-navy/30">
+                          <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-3">
+                      <p className="font-semibold text-sm text-midnight-navy line-clamp-2 mb-1 group-hover:text-crimson transition">
+                        {listing.name}
+                      </p>
+                      {/* Verification badges under title */}
+                      <div className="flex flex-col items-start gap-2 mb-2">
+                        {(stewardMember || steward) && (
+                          <VerificationBadge type="brother" className="text-xs" />
+                        )}
+                        {listing.sponsoring_chapter_id && chapterName && (
+                          <VerificationBadge 
+                            type="sponsored-chapter" 
+                            chapterName={chapterName}
+                            className="text-xs"
+                          />
+                        )}
                       </div>
-                    )}
-                    <div className="absolute top-2 right-2 z-10">
-                      <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full font-semibold">
-                        FREE
-                      </span>
+                      {/* Steward info with role badges */}
+                      {stewardMember ? (
+                        <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+                          <p className="text-xs text-midnight-navy/60">
+                            Stewarded by Brother {stewardMember.name}
+                          </p>
+                          <UserRoleBadges
+                            is_member={true}
+                            is_seller={false}
+                            is_promoter={false}
+                            is_steward={true}
+                            size="sm"
+                          />
+                        </div>
+                      ) : steward ? (
+                        <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+                          <p className="text-xs text-midnight-navy/60">
+                            Stewarded by a verified brother
+                          </p>
+                          <UserRoleBadges
+                            is_member={false}
+                            is_seller={false}
+                            is_promoter={false}
+                            is_steward={true}
+                            size="sm"
+                          />
+                        </div>
+                      ) : null}
+                      {/* Donation info */}
+                      {listing.sponsoring_chapter_id && chapterName && (
+                        <p className="text-xs text-midnight-navy/60 mb-2">
+                          Donation to: <span className="font-medium">{chapterName}</span>
+                        </p>
+                      )}
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs text-midnight-navy/60">
+                          <div>Shipping: ${(listing.shipping_cost_cents / 100).toFixed(2)}</div>
+                          <div>Donation: ${(listing.chapter_donation_cents / 100).toFixed(2)}</div>
+                        </div>
+                        <p className="text-crimson font-bold text-sm">${totalCost.toFixed(2)}</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="p-3">
-                    <p className="font-semibold text-sm text-midnight-navy line-clamp-2 mb-1 group-hover:text-crimson transition">
-                      {listing.name}
-                    </p>
-                    <div className="text-xs text-midnight-navy/60 space-y-0.5">
-                      <div>Shipping: ${(listing.shipping_cost_cents / 100).toFixed(2)}</div>
-                      <div>Donation: ${(listing.chapter_donation_cents / 100).toFixed(2)}</div>
-                    </div>
-                  </div>
-                </Link>
-              ))
+                  </Link>
+                );
+              })
             ) : (
               // Display products
               filteredAndSortedProducts.map((product) => (

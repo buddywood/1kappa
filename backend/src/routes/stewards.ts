@@ -13,7 +13,9 @@ import {
   deleteStewardListing,
   claimStewardListing,
   getMemberById,
-  linkUserToSteward
+  linkUserToSteward,
+  getStewardListingImages,
+  addStewardListingImage
 } from '../db/queries';
 import { uploadToS3 } from '../services/s3';
 import { z } from 'zod';
@@ -209,7 +211,7 @@ router.get('/profile', authenticate, requireSteward, async (req: Request, res: R
 });
 
 // Create a new listing
-router.post('/listings', authenticate, requireSteward, upload.single('image'), async (req: Request, res: Response) => {
+router.post('/listings', authenticate, requireSteward, upload.array('images', 10), async (req: Request, res: Response) => {
   try {
     if (!req.user || !req.user.stewardId) {
       return res.status(403).json({ error: 'Steward access required' });
@@ -227,13 +229,17 @@ router.post('/listings', authenticate, requireSteward, upload.single('image'), a
       category_id: req.body.category_id ? parseInt(req.body.category_id) : null,
     });
 
-    // Upload image if provided
+    // Upload images to S3
     let imageUrl: string | null = null;
-    if (req.file) {
+    const imageFiles = req.files as Express.Multer.File[];
+    
+    if (imageFiles && imageFiles.length > 0) {
+      // Use first image as the primary image_url (for backward compatibility)
+      const firstImage = imageFiles[0];
       const uploadResult = await uploadToS3(
-        req.file.buffer,
-        req.file.originalname,
-        req.file.mimetype,
+        firstImage.buffer,
+        firstImage.originalname,
+        firstImage.mimetype,
         'steward-listings'
       );
       imageUrl = uploadResult.url;
@@ -250,7 +256,28 @@ router.post('/listings', authenticate, requireSteward, upload.single('image'), a
       category_id: body.category_id || null,
     });
 
-    res.status(201).json(listing);
+    // Upload additional images to steward_listing_images table
+    if (imageFiles && imageFiles.length > 0) {
+      await Promise.all(
+        imageFiles.map(async (file, index) => {
+          const uploadResult = await uploadToS3(
+            file.buffer,
+            file.originalname,
+            file.mimetype,
+            'steward-listings'
+          );
+          await addStewardListingImage(listing.id, uploadResult.url, index);
+        })
+      );
+    }
+
+    // Fetch the listing with images
+    const images = await getStewardListingImages(listing.id);
+
+    res.status(201).json({
+      ...listing,
+      images,
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
       res.status(400).json({ error: 'Validation error', details: error.errors });
@@ -288,13 +315,18 @@ router.get('/listings/:id', authenticate, requireVerifiedMember, async (req: Req
 
     // Get steward and chapter info
     const steward = await getStewardById(listing.steward_id);
+    const member = steward && steward.fraternity_member_id ? await getMemberById(steward.fraternity_member_id) : null;
     const chapterResult = await pool.query('SELECT * FROM chapters WHERE id = $1', [listing.sponsoring_chapter_id]);
     const chapter = chapterResult.rows[0];
 
+    // Get listing images
+    const images = await getStewardListingImages(listingId);
+
     res.json({
       ...listing,
-      steward,
+      steward: steward ? { ...steward, member } : null,
       chapter,
+      images,
     });
   } catch (error) {
     console.error('Error fetching steward listing:', error);
@@ -380,7 +412,7 @@ router.get('/marketplace', authenticate, requireVerifiedMember, async (req: Requ
     const enrichedListings = await Promise.all(
       listings.map(async (listing) => {
         const steward = await getStewardById(listing.steward_id);
-        const member = steward ? await getMemberById(steward.fraternity_member_id) : null;
+        const member = steward && steward.fraternity_member_id ? await getMemberById(steward.fraternity_member_id) : null;
         const chapterResult = await pool.query('SELECT * FROM chapters WHERE id = $1', [listing.sponsoring_chapter_id]);
         const chapter = chapterResult.rows[0];
 

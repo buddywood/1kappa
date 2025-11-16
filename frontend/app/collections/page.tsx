@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
-import { fetchSellersWithProducts, fetchChapters } from '@/lib/api';
-import type { SellerWithProducts } from '@/lib/api';
+import { fetchSellersWithProducts, fetchChapters, getStewardMarketplace } from '@/lib/api';
+import type { SellerWithProducts, StewardListing } from '@/lib/api';
 import Image from 'next/image';
 import Header from '../components/Header';
 import VerificationBadge from '../components/VerificationBadge';
@@ -13,10 +13,180 @@ import Footer from '../components/Footer';
 export const dynamic = 'force-dynamic';
 
 interface CollectionsPageProps {
-  searchParams: { seller?: string };
+  searchParams: { seller?: string; steward?: string };
 }
 
 export default async function CollectionsPage({ searchParams }: CollectionsPageProps) {
+  const stewardIdParam = searchParams.steward ? parseInt(searchParams.steward) : null;
+  
+  // If steward param is provided, fetch steward listings instead of seller products
+  if (stewardIdParam) {
+    const [stewardListings, chapters] = await Promise.all([
+      getStewardMarketplace().catch((err) => {
+        console.error('Error fetching steward listings:', err);
+        return [];
+      }),
+      fetchChapters().catch((err) => {
+        console.error('Error fetching chapters:', err);
+        return [];
+      }),
+    ]);
+
+    // Filter to specific steward
+    const filteredListings = stewardListings.filter(l => l.steward_id === stewardIdParam);
+    const steward = filteredListings.length > 0 ? filteredListings[0].steward : null;
+    const stewardMember = steward?.member;
+
+    const getChapterName = (chapterId: number | null) => {
+      if (!chapterId) return null;
+      const chapter = chapters.find(c => c.id === chapterId);
+      return chapter?.name || null;
+    };
+
+    return (
+      <div className="min-h-screen bg-cream text-midnight-navy">
+        <Header />
+
+        {/* Page Header */}
+        <section className="bg-gradient-to-br from-crimson to-midnight-navy text-white py-16 px-6">
+          <div className="max-w-7xl mx-auto text-center">
+            <h1 className="text-4xl md:text-5xl font-display font-bold mb-4">
+              {stewardMember ? `Brother ${stewardMember.name}'s Collection` : 'Steward Collection'}
+            </h1>
+            <p className="text-lg max-w-2xl mx-auto opacity-90">
+              Browse items from this steward&apos;s collection. All proceeds support the sponsored chapter.
+            </p>
+            <div className="mt-6">
+              <Link
+                href="/shop?role=steward"
+                className="inline-block bg-white/20 hover:bg-white/30 text-white px-6 py-2 rounded-full font-semibold transition backdrop-blur-sm"
+              >
+                View All Steward Listings
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* Steward Collection */}
+        <section className="max-w-7xl mx-auto py-12 px-4">
+          {filteredListings.length > 0 ? (
+            <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-frost-gray">
+              {/* Steward Header */}
+              <div className="bg-cream border-b border-frost-gray p-6 md:p-8">
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+                  {/* Steward Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <h2 className="text-2xl md:text-3xl font-display font-bold text-midnight-navy">
+                        {stewardMember ? `Brother ${stewardMember.name}` : 'Steward Collection'}
+                      </h2>
+                      {stewardMember && (
+                        <UserRoleBadges
+                          is_member={true}
+                          is_seller={false}
+                          is_promoter={false}
+                          is_steward={true}
+                          size="md"
+                        />
+                      )}
+                    </div>
+                    {steward && steward.sponsoring_chapter_id && (
+                      <p className="text-midnight-navy/70 text-sm md:text-base mb-2">
+                        Supporting: {getChapterName(steward.sponsoring_chapter_id)}
+                      </p>
+                    )}
+                    <p className="text-midnight-navy/60 text-sm mt-3">
+                      {filteredListings.length} {filteredListings.length === 1 ? 'item' : 'items'} available
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Listings Grid */}
+              <div className="p-6 md:p-8">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+                  {filteredListings.map((listing) => {
+                    const chapterName = getChapterName(listing.sponsoring_chapter_id);
+                    const totalCost = (listing.shipping_cost_cents + listing.chapter_donation_cents) / 100;
+                    
+                    return (
+                      <Link
+                        key={listing.id}
+                        href={`/steward-listing/${listing.id}`}
+                        className="group bg-cream rounded-xl overflow-hidden shadow hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
+                      >
+                        <div className="aspect-[4/5] relative bg-white">
+                          {listing.image_url ? (
+                            <Image
+                              src={listing.image_url}
+                              alt={listing.name}
+                              fill
+                              className="object-cover group-hover:scale-105 transition-transform duration-200"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-midnight-navy/30">
+                              <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+                        <div className="p-3">
+                          <p className="font-semibold text-sm text-midnight-navy line-clamp-2 mb-1 group-hover:text-crimson transition">
+                            {listing.name}
+                          </p>
+                          {/* Verification badges under title */}
+                          <div className="flex flex-col items-start gap-2 mb-2">
+                            {stewardMember && (
+                              <VerificationBadge type="brother" className="text-xs" />
+                            )}
+                            {chapterName && (
+                              <VerificationBadge 
+                                type="sponsored-chapter" 
+                                chapterName={chapterName}
+                                className="text-xs"
+                              />
+                            )}
+                          </div>
+                          <p className="text-crimson font-bold text-sm">
+                            ${totalCost.toFixed(2)}
+                          </p>
+                          <p className="text-xs text-midnight-navy/60 mt-1">
+                            Item: FREE
+                          </p>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-16">
+              <div className="max-w-md mx-auto">
+                <h2 className="text-2xl font-display font-bold text-midnight-navy mb-3">
+                  Collection Not Found
+                </h2>
+                <p className="text-midnight-navy/70 mb-6">
+                  The steward collection you&apos;re looking for doesn&apos;t exist or has been removed.
+                </p>
+                <Link
+                  href="/shop?role=steward"
+                  className="inline-block bg-crimson text-white px-6 py-3 rounded-full font-semibold hover:bg-crimson/90 transition shadow-md hover:shadow-lg"
+                >
+                  View All Steward Listings
+                </Link>
+              </div>
+            </div>
+          )}
+        </section>
+
+        <Footer />
+      </div>
+    );
+  }
+
+  // Original seller collections logic
   const [sellers, chapters] = await Promise.all([
     fetchSellersWithProducts().catch((err) => {
       console.error('Error fetching sellers:', err);
