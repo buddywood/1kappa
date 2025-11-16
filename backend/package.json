@@ -27,13 +27,15 @@
     "grant-admin": "tsx src/scripts/grant-admin-access.ts",
     "approve-member": "tsx src/scripts/approve-member.ts",
     "update-cognito-emails": "AWS_PROFILE=1kappa_user tsx src/scripts/update-cognito-email-templates.ts",
+    "check-cognito-user": "tsx src/scripts/check-cognito-user-status.ts",
     "fix:orphaned-member": "tsx src/scripts/fix-orphaned-member.ts",
     "delete:seller": "tsx src/scripts/delete-seller.ts",
     "delete:promoter": "tsx src/scripts/delete-promoter.ts",
     "delete:steward": "tsx src/scripts/delete-steward.ts",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "test:stripe:integration": "STRIPE_INTEGRATION_TEST=true jest stripe-integration.test.ts"
   },
   "keywords": [],
   "author": "",

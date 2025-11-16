@@ -18,6 +18,7 @@ export default function ApplyPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [isApproved, setIsApproved] = useState(false);
+  const [warning, setWarning] = useState('');
   const [profileLoaded, setProfileLoaded] = useState(false);
   
   // Check for sponsoring_chapter_id in URL params (from setup screen)
@@ -216,6 +217,10 @@ export default function ApplyPage() {
       if (result.status === 'APPROVED') {
         setIsApproved(true);
       }
+      // Check for warning (e.g., Stripe setup issue)
+      if ((result as any).warning) {
+        setWarning((result as any).warning);
+      }
     } catch (err: any) {
       let errorMessage = err.message || 'Failed to submit application';
       
@@ -249,6 +254,12 @@ export default function ApplyPage() {
               <p className="text-midnight-navy/70 mb-6">
                 You can now start listing products in the shop. Check your email for setup instructions.
               </p>
+              {warning && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+                  <p className="text-sm font-medium text-amber-800 mb-1">⚠️ Important Notice</p>
+                  <p className="text-sm text-amber-700">{warning}</p>
+                </div>
+              )}
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
                 <p className="text-sm text-green-800">
                   <strong>What happens next?</strong>

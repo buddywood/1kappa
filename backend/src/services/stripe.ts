@@ -3,7 +3,14 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+// Validate that we're using a secret key, not a publishable key
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY || '';
+if (stripeSecretKey && !stripeSecretKey.startsWith('sk_')) {
+  console.error('⚠️  ERROR: STRIPE_SECRET_KEY appears to be a publishable key (starts with "pk_") instead of a secret key (should start with "sk_").');
+  console.error('   Please check your .env file and ensure STRIPE_SECRET_KEY is set to your Stripe secret key.');
+}
+
+export const stripe = new Stripe(stripeSecretKey, {
   apiVersion: '2023-10-16',
 });
 

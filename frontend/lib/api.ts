@@ -637,6 +637,7 @@ export interface StewardListing {
   shipping_cost_cents: number;
   chapter_donation_cents: number;
   sponsoring_chapter_id: number;
+  category_id: number | null;
   status: 'ACTIVE' | 'CLAIMED' | 'REMOVED';
   claimed_by_fraternity_member_id: number | null;
   claimed_at: string | null;

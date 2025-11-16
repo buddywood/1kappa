@@ -39,6 +39,7 @@ const stewardListingSchema = z.object({
   description: z.string().optional().nullable(),
   shipping_cost_cents: z.number().int().min(0),
   chapter_donation_cents: z.number().int().min(0),
+  category_id: z.number().int().positive().optional().nullable(),
 });
 
 // Apply to become a steward
@@ -77,6 +78,31 @@ router.post('/apply', authenticate, async (req: Request, res: Response) => {
 
     // Auto-approve verified members (they're already verified, so we can auto-approve)
     if (member.verification_status === 'VERIFIED') {
+      // Check if Stripe is configured
+      const stripeKey = process.env.STRIPE_SECRET_KEY;
+      if (!stripeKey || stripeKey.trim() === '' || stripeKey.includes('here')) {
+        console.warn('⚠️  Stripe not configured - auto-approving steward without Stripe account. Stripe setup will be required later.');
+        // Approve steward without Stripe account - admin can set it up later
+        await pool.query(
+          'UPDATE stewards SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+          ['APPROVED', steward.id]
+        );
+
+        // Link user to steward
+        if (req.user?.id) {
+          await linkUserToSteward(req.user.id, steward.id);
+        }
+
+        console.log(`Auto-approved verified member steward (without Stripe): ${member.name || 'Unknown'} (fraternity_member_id: ${member.id})`);
+
+        // Fetch updated steward to return correct status
+        const updatedSteward = await getStewardById(steward.id);
+        return res.status(201).json({
+          ...updatedSteward,
+          warning: 'Your steward application was approved, but Stripe payment setup is required before you can receive payments. An admin will help you complete Stripe setup.',
+        } || { ...steward, warning: 'Your steward application was approved, but Stripe payment setup is required before you can receive payments. An admin will help you complete Stripe setup.' });
+      }
+
       try {
         // Create Stripe Connect account for steward to receive shipping reimbursements
         const { createConnectAccount } = await import('../services/stripe');
@@ -107,7 +133,39 @@ router.post('/apply', authenticate, async (req: Request, res: Response) => {
         return res.status(201).json(updatedSteward || steward);
       } catch (error: any) {
         console.error('Error auto-approving verified member steward:', error);
-        // Don't fail the request - steward is still created, just needs manual approval
+        
+        // Check for specific Stripe key errors
+        let warningMessage = 'Your steward application was approved, but Stripe payment setup failed. An admin will help you complete Stripe setup before you can receive payments.';
+        
+        if (error.type === 'StripePermissionError' || error.code === 'secret_key_required' || error.message?.includes('publishable API key')) {
+          console.error('❌ CRITICAL: STRIPE_SECRET_KEY is set to a publishable key instead of a secret key!');
+          console.error('   Secret keys start with "sk_" (e.g., sk_test_...)');
+          console.error('   Publishable keys start with "pk_" (e.g., pk_test_...)');
+          console.error('   Please update your .env file with the correct STRIPE_SECRET_KEY.');
+          warningMessage = 'Your steward application was approved, but Stripe payment setup failed because the server is configured with a publishable key instead of a secret key. Please contact an administrator to fix the Stripe configuration.';
+        } else if (error.type === 'StripeAuthenticationError' || error.message?.includes('Invalid API Key')) {
+          warningMessage = 'Your steward application was approved, but Stripe payment setup failed due to an invalid API key. An admin will help you complete Stripe setup before you can receive payments.';
+        }
+        
+        // If Stripe fails for any reason, still approve the steward but without Stripe account
+        // Verified members should always be auto-approved, even if Stripe setup fails
+        // Admin can set up Stripe later
+        console.warn('⚠️  Stripe setup failed - approving steward without Stripe account');
+        await pool.query(
+          'UPDATE stewards SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+          ['APPROVED', steward.id]
+        );
+
+        // Link user to steward
+        if (req.user?.id) {
+          await linkUserToSteward(req.user.id, steward.id);
+        }
+
+        const updatedSteward = await getStewardById(steward.id);
+        return res.status(201).json({
+          ...updatedSteward,
+          warning: warningMessage,
+        } || { ...steward, warning: warningMessage });
       }
     }
 
@@ -166,6 +224,7 @@ router.post('/listings', authenticate, requireSteward, upload.single('image'), a
       ...req.body,
       shipping_cost_cents: parseInt(req.body.shipping_cost_cents),
       chapter_donation_cents: parseInt(req.body.chapter_donation_cents),
+      category_id: req.body.category_id ? parseInt(req.body.category_id) : null,
     });
 
     // Upload image if provided
@@ -188,6 +247,7 @@ router.post('/listings', authenticate, requireSteward, upload.single('image'), a
       shipping_cost_cents: body.shipping_cost_cents,
       chapter_donation_cents: body.chapter_donation_cents,
       sponsoring_chapter_id: steward.sponsoring_chapter_id,
+      category_id: body.category_id || null,
     });
 
     res.status(201).json(listing);

@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createStewardListing, getStewardProfile, type Steward } from '@/lib/api';
+import { createStewardListing, getStewardProfile, fetchProductCategories, type Steward, type ProductCategory } from '@/lib/api';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
+import SearchableSelect from '../../components/SearchableSelect';
 
 export default function CreateStewardListingPage() {
   const router = useRouter();
@@ -12,6 +13,8 @@ export default function CreateStewardListingPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [categories, setCategories] = useState<ProductCategory[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -44,7 +47,18 @@ export default function CreateStewardListingPage() {
       }
     }
 
+    async function loadCategories() {
+      try {
+        const categoriesData = await fetchProductCategories();
+        setCategories(categoriesData);
+      } catch (err) {
+        console.error('Error loading categories:', err);
+        // Don't fail the page if categories fail to load
+      }
+    }
+
     loadSteward();
+    loadCategories();
   }, [router]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,6 +84,10 @@ export default function CreateStewardListingPage() {
       formDataToSend.append('description', formData.description);
       formDataToSend.append('shipping_cost_cents', (parseFloat(formData.shipping_cost_cents) * 100).toString());
       formDataToSend.append('chapter_donation_cents', (parseFloat(formData.chapter_donation_cents) * 100).toString());
+      
+      if (selectedCategoryId) {
+        formDataToSend.append('category_id', selectedCategoryId.toString());
+      }
       
       if (imageFile) {
         formDataToSend.append('image', imageFile);
@@ -166,6 +184,22 @@ export default function CreateStewardListingPage() {
             </div>
 
             <div>
+              <label htmlFor="category" className="block text-sm font-medium text-midnight-navy mb-2">
+                Category
+              </label>
+              <SearchableSelect
+                options={categories.map(cat => ({ id: cat.id, value: cat.id.toString(), label: cat.name }))}
+                value={selectedCategoryId?.toString() || ''}
+                onChange={(value) => setSelectedCategoryId(value ? parseInt(value) : null)}
+                placeholder="Select a category (optional)"
+                className="w-full"
+              />
+              <p className="mt-1 text-xs text-midnight-navy/60">
+                Choose a category to help members find your listing
+              </p>
+            </div>
+
+            <div>
               <label htmlFor="image" className="block text-sm font-medium text-midnight-navy mb-2">
                 Image
               </label>
@@ -218,7 +252,7 @@ export default function CreateStewardListingPage() {
                 />
                 {steward?.chapter && (
                   <p className="mt-1 text-xs text-midnight-navy/60">
-                    Donation goes to: {steward.chapter.name}
+                    Donation goes to: {steward.chapter.name} chapter.
                   </p>
                 )}
               </div>

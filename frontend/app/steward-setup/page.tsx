@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-import { fetchActiveCollegiateChapters, applyToBecomeSteward, type Chapter } from '@/lib/api';
+import { fetchActiveCollegiateChapters, applyToBecomeSteward, getStewardProfile, type Chapter } from '@/lib/api';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import SearchableSelect from '../components/SearchableSelect';
 
 export default function StewardSetupPage() {
   const router = useRouter();
@@ -15,6 +17,9 @@ export default function StewardSetupPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [warning, setWarning] = useState('');
+  const [isAlreadySteward, setIsAlreadySteward] = useState(false);
+  const [stewardStatus, setStewardStatus] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadChapters() {
@@ -29,8 +34,24 @@ export default function StewardSetupPage() {
       }
     }
 
+    // Check if user is already a steward
+    async function checkStewardStatus() {
+      if (sessionStatus === 'authenticated' && (session?.user as any)?.memberId) {
+        try {
+          const stewardProfile = await getStewardProfile();
+          setIsAlreadySteward(true);
+          setStewardStatus(stewardProfile.status);
+        } catch (err: any) {
+          // Not a steward or error fetching - that's okay, show the form
+          setIsAlreadySteward(false);
+          setStewardStatus(null);
+        }
+      }
+    }
+
     loadChapters();
-  }, []);
+    checkStewardStatus();
+  }, [sessionStatus, session]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,7 +65,16 @@ export default function StewardSetupPage() {
     setError('');
 
     try {
-      await applyToBecomeSteward(selectedChapterId);
+      const result = await applyToBecomeSteward(selectedChapterId);
+      
+      // Check if there's a warning (e.g., Stripe setup issue)
+      if ((result as any).warning) {
+        setWarning((result as any).warning);
+        // Still redirect but with warning parameter
+        router.push('/profile?steward_applied=true&warning=' + encodeURIComponent((result as any).warning));
+        return;
+      }
+      
       router.push('/profile?steward_applied=true');
     } catch (err: any) {
       console.error('Error applying to become steward:', err);
@@ -69,6 +99,63 @@ export default function StewardSetupPage() {
         <Header />
         <main className="max-w-4xl mx-auto px-4 py-12">
           <div className="text-center">Loading...</div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // If user is already a steward, show status message
+  if (isAlreadySteward) {
+    return (
+      <div className="min-h-screen bg-cream text-midnight-navy">
+        <Header />
+        <main className="max-w-4xl mx-auto px-4 py-12">
+          <div className="bg-white rounded-xl shadow-lg p-8">
+            <h1 className="text-3xl font-display font-bold text-midnight-navy mb-4">
+              Steward Application Status
+            </h1>
+            {stewardStatus === 'APPROVED' ? (
+              <>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
+                  <p className="text-green-800 font-medium mb-2">✅ You are an approved Steward!</p>
+                  <p className="text-green-700 mb-4">
+                    Your steward application has been approved. You can now start listing legacy items for verified members.
+                  </p>
+                  <Link
+                    href="/steward-dashboard"
+                    className="inline-block bg-crimson text-white px-6 py-3 rounded-full font-semibold hover:bg-crimson/90 transition"
+                  >
+                    Go to Steward Dashboard
+                  </Link>
+                </div>
+              </>
+            ) : stewardStatus === 'PENDING' ? (
+              <>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+                  <p className="text-blue-800 font-medium mb-2">⏳ Application Pending</p>
+                  <p className="text-blue-700">
+                    Your steward application is currently under review. You will receive an email notification once a decision has been made.
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-6">
+                  <p className="text-red-800 font-medium mb-2">❌ Application Rejected</p>
+                  <p className="text-red-700">
+                    Your steward application was not approved. Please contact support if you have questions.
+                  </p>
+                </div>
+              </>
+            )}
+            <Link
+              href="/profile"
+              className="text-crimson hover:underline"
+            >
+              ← Back to Profile
+            </Link>
+          </div>
         </main>
         <Footer />
       </div>
@@ -218,25 +305,37 @@ export default function StewardSetupPage() {
                 {error}
               </div>
             )}
+            {warning && (
+              <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg">
+                <p className="font-medium mb-1">⚠️ Application Submitted with Warning</p>
+                <p className="text-sm">{warning}</p>
+              </div>
+            )}
 
             <div>
               <label htmlFor="sponsoring_chapter" className="block text-sm font-medium text-midnight-navy mb-2">
                 Select Your Sponsoring Chapter *
               </label>
-              <select
-                id="sponsoring_chapter"
-                value={selectedChapterId || ''}
-                onChange={(e) => setSelectedChapterId(parseInt(e.target.value))}
-                className="w-full px-4 py-2 border border-frost-gray rounded-lg focus:ring-2 focus:ring-crimson focus:border-transparent text-midnight-navy bg-white"
+              <SearchableSelect
                 required
-              >
-                <option value="">Choose a chapter...</option>
-                {chapters.map((chapter) => (
-                  <option key={chapter.id} value={chapter.id}>
-                    {chapter.name}
-                  </option>
-                ))}
-              </select>
+                value={selectedChapterId?.toString() || ''}
+                onChange={(value) => setSelectedChapterId(value ? parseInt(value) : null)}
+                placeholder="Search for an active collegiate chapter..."
+                options={chapters.map((chapter) => {
+                  const locationParts = [];
+                  if (chapter.city) locationParts.push(chapter.city);
+                  if (chapter.state) locationParts.push(chapter.state);
+                  const location = locationParts.length > 0 ? locationParts.join(', ') : '';
+                  const displayName = location 
+                    ? `${chapter.name} - ${location}${chapter.province ? ` (${chapter.province})` : ''}`
+                    : chapter.name;
+                  return {
+                    id: chapter.id.toString(),
+                    value: chapter.id.toString(),
+                    label: displayName,
+                  };
+                })}
+              />
               <p className="mt-2 text-sm text-midnight-navy/60">
                 This chapter will receive donations from your listings. You can only have one sponsoring chapter at a time.
               </p>

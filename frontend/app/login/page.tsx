@@ -28,8 +28,9 @@ function LoginPageContent() {
     const errorParam = searchParams.get('error');
     if (errorParam) {
       console.log('Error from URL:', errorParam);
-      // Check if it's a user not confirmed error
-      if (errorParam.includes('UserNotConfirmedException') || errorParam.includes('not confirmed')) {
+      // Check if it's a user not confirmed error - be specific
+      if (errorParam === 'UserNotConfirmedException' || errorParam.includes('UserNotConfirmedException')) {
+        console.log('🔍 URL error param indicates UserNotConfirmedException');
         setNeedsVerification(true);
       }
     }
@@ -53,6 +54,9 @@ function LoginPageContent() {
       
       const checkResult = await checkResponse.json();
       
+      // Debug logging to see what error we're actually getting
+      console.log('🔍 Cognito check result:', JSON.stringify(checkResult, null, 2));
+      
       if (!checkResult.success) {
         // Check if it's a password change requirement
         const errorMessage = checkResult.error || '';
@@ -65,14 +69,13 @@ function LoginPageContent() {
           checkResult.name === 'NEW_PASSWORD_REQUIRED' ||
           errorString.includes('newPasswordRequired');
         
-        // Check if user is not confirmed
+        // Check if user is not confirmed - be more specific to avoid false positives
+        // Only check for the exact error code/name, not generic "not confirmed" strings
         const isUserNotConfirmed = 
           checkResult.code === 'UserNotConfirmedException' ||
           errorCode === 'UserNotConfirmedException' ||
           checkResult.name === 'UserNotConfirmedException' ||
-          errorString.includes('UserNotConfirmedException') ||
-          errorString.includes('User is not confirmed') ||
-          errorString.includes('not confirmed');
+          (errorString.includes('UserNotConfirmedException') && !errorString.includes('UserNotConfirmedException is not'));
         
         if (isPasswordChangeRequired) {
           console.log('✅ Password change required detected, showing form and preventing NextAuth call');
@@ -83,14 +86,16 @@ function LoginPageContent() {
         }
         
         if (isUserNotConfirmed) {
-          console.log('✅ User not confirmed detected in Cognito check, showing verification form');
+          console.log('✅ UserNotConfirmedException detected in Cognito check, showing verification form');
+          console.log('Error details:', { code: checkResult.code, name: checkResult.name, error: errorString });
           setNeedsVerification(true);
           setLoading(false);
           return; // Exit early, don't call NextAuth
         }
         
         // If it's a different Cognito error, we'll try NextAuth anyway
-        console.log('Not a password change or verification error, will try NextAuth. Error:', errorString);
+        console.log('⚠️ Not a password change or verification error, will try NextAuth. Error:', errorString);
+        console.log('Error code:', errorCode, 'Error name:', checkResult.name);
       } else {
         console.log('Cognito signIn succeeded, proceeding to NextAuth');
       }
@@ -124,14 +129,11 @@ function LoginPageContent() {
             return;
           }
           
-          // Check if user is not confirmed - check multiple ways
+          // Check if user is not confirmed - be more specific to avoid false positives
+          // Only check for the exact error code/name
           const isUserNotConfirmed = 
-            errorString.includes('UserNotConfirmedException') || 
-            errorString.includes('User is not confirmed') ||
-            errorString.includes('not confirmed') ||
-            errorLower.includes('user is not confirmed') ||
-            errorString.includes('Please verify your email') ||
-            errorString.includes('verify your email');
+            errorString === 'UserNotConfirmedException' ||
+            errorString.includes('UserNotConfirmedException') && !errorString.includes('UserNotConfirmedException is not');
           
           console.log('isUserNotConfirmed check result:', isUserNotConfirmed);
           
@@ -168,20 +170,20 @@ function LoginPageContent() {
     } catch (err: any) {
       console.error('Unexpected error:', err); // Debug log
       
-      // Check for UserNotConfirmedException in the catch block too
+      // Check for UserNotConfirmedException in the catch block too - be specific
       const errorMessage = err?.message || err?.toString() || '';
       const errorCode = err?.code || err?.name || '';
       const errorString = String(errorMessage);
       
+      console.log('🔍 Catch block error:', { message: errorMessage, code: errorCode, name: err?.name });
+      
       const isUserNotConfirmed = 
-        errorString.includes('UserNotConfirmedException') ||
         errorCode === 'UserNotConfirmedException' ||
         err?.name === 'UserNotConfirmedException' ||
-        errorString.includes('User is not confirmed') ||
-        errorString.includes('not confirmed');
+        (errorString.includes('UserNotConfirmedException') && !errorString.includes('UserNotConfirmedException is not'));
       
       if (isUserNotConfirmed) {
-        console.log('✅ User not confirmed detected in catch block, showing verification form');
+        console.log('✅ UserNotConfirmedException detected in catch block, showing verification form');
         setNeedsVerification(true);
         setLoading(false);
         return;

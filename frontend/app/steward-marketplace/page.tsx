@@ -25,6 +25,7 @@ export default function StewardMarketplacePage() {
           getStewardMarketplace(),
           fetchChapters(),
         ]);
+        console.log('Steward Marketplace - Loaded listings:', listingsData.length, listingsData);
         setListings(listingsData);
         setChapters(chaptersData);
       } catch (err: any) {
@@ -47,6 +48,7 @@ export default function StewardMarketplacePage() {
 
   const filteredListings = useMemo(() => {
     let filtered = [...listings];
+    console.log('Steward Marketplace - Filtering listings. Total:', listings.length, 'Search:', searchQuery, 'Chapter:', selectedChapter);
 
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
@@ -60,6 +62,7 @@ export default function StewardMarketplacePage() {
       filtered = filtered.filter(listing => listing.sponsoring_chapter_id === selectedChapter);
     }
 
+    console.log('Steward Marketplace - Filtered results:', filtered.length, filtered);
     return filtered;
   }, [listings, searchQuery, selectedChapter]);
 

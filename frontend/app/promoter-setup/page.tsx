@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import { fetchActiveCollegiateChapters, type Chapter } from '@/lib/api';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import SearchableSelect from '../components/SearchableSelect';
 
 export default function PromoterSetupPage() {
   const router = useRouter();
@@ -200,20 +201,26 @@ export default function PromoterSetupPage() {
               <label htmlFor="sponsoring_chapter" className="block text-sm font-medium text-midnight-navy dark:text-gray-200 mb-2">
                 Select Your Sponsoring Chapter *
               </label>
-              <select
-                id="sponsoring_chapter"
-                value={selectedChapterId || ''}
-                onChange={(e) => setSelectedChapterId(parseInt(e.target.value))}
-                className="w-full px-4 py-2 border border-frost-gray dark:border-gray-800 rounded-lg focus:ring-2 focus:ring-crimson focus:border-transparent text-midnight-navy dark:text-gray-100 bg-white dark:bg-gray-900"
+              <SearchableSelect
                 required
-              >
-                <option value="">Choose a chapter...</option>
-                {chapters.map((chapter) => (
-                  <option key={chapter.id} value={chapter.id}>
-                    {chapter.name}
-                  </option>
-                ))}
-              </select>
+                value={selectedChapterId?.toString() || ''}
+                onChange={(value) => setSelectedChapterId(value ? parseInt(value) : null)}
+                placeholder="Search for an active collegiate chapter..."
+                options={chapters.map((chapter) => {
+                  const locationParts = [];
+                  if (chapter.city) locationParts.push(chapter.city);
+                  if (chapter.state) locationParts.push(chapter.state);
+                  const location = locationParts.length > 0 ? locationParts.join(', ') : '';
+                  const displayName = location 
+                    ? `${chapter.name} - ${location}${chapter.province ? ` (${chapter.province})` : ''}`
+                    : chapter.name;
+                  return {
+                    id: chapter.id.toString(),
+                    value: chapter.id.toString(),
+                    label: displayName,
+                  };
+                })}
+              />
               <p className="mt-2 text-sm text-midnight-navy/60 dark:text-gray-400">
                 This chapter will receive a portion of revenue from your events.
               </p>

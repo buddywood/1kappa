@@ -191,46 +191,82 @@ router.post('/apply', optionalAuthenticate, upload.fields([
       
       if (memberResult.rows[0]?.verification_status === 'VERIFIED') {
         // Auto-approve verified members
-        // Note: We don't create Stripe account here - that happens when admin approves
-        // But we can set status to APPROVED and let admin handle Stripe setup
-        // OR we could create Stripe account here too - let's do it for consistency
-        const { createConnectAccount } = await import('../services/stripe');
         const { generateInvitationToken } = await import('../utils/tokens');
         const { updateSellerInvitationToken, linkUserToSeller, getUserByEmail } = await import('../db/queries');
         
-        try {
-          // Check if seller already has a Cognito account
-          const existingUser = await getUserByEmail(seller.email);
-          
-          let invitationToken: string | undefined;
-          if (existingUser) {
-            // Seller already has an account - link it to seller role
-            await linkUserToSeller(existingUser.id, seller.id);
-          } else {
-            // Generate invitation token for new seller account
-            invitationToken = generateInvitationToken();
-            await updateSellerInvitationToken(seller.id, invitationToken);
+        // Check if Stripe is configured
+        const stripeKey = process.env.STRIPE_SECRET_KEY;
+        let stripeWarning: string | undefined;
+        
+        // Check if seller already has a Cognito account
+        const existingUser = await getUserByEmail(seller.email);
+        
+        let invitationToken: string | undefined;
+        if (existingUser) {
+          // Seller already has an account - link it to seller role
+          await linkUserToSeller(existingUser.id, seller.id);
+        } else {
+          // Generate invitation token for new seller account
+          invitationToken = generateInvitationToken();
+          await updateSellerInvitationToken(seller.id, invitationToken);
+        }
+
+        // Try to create Stripe Connect account if configured
+        if (stripeKey && stripeKey.trim() !== '' && !stripeKey.includes('here')) {
+          try {
+            const { createConnectAccount } = await import('../services/stripe');
+            const account = await createConnectAccount(seller.email);
+            
+            // Update seller status to APPROVED with Stripe account
+            await pool.query(
+              'UPDATE sellers SET status = $1, stripe_account_id = $2 WHERE id = $3',
+              ['APPROVED', account.id, seller.id]
+            );
+
+            console.log(`Auto-approved verified member seller: ${seller.name} (${seller.email})`);
+          } catch (error: any) {
+            console.error('Error creating Stripe account for seller:', error);
+            
+            // If Stripe fails, still approve but without Stripe account
+            if (error.type === 'StripeAuthenticationError' || error.message?.includes('Invalid API Key')) {
+              console.warn('⚠️  Stripe authentication failed - approving seller without Stripe account');
+              await pool.query(
+                'UPDATE sellers SET status = $1 WHERE id = $2',
+                ['APPROVED', seller.id]
+              );
+              stripeWarning = 'Your seller application was approved, but Stripe payment setup failed. An admin will help you complete Stripe setup before you can receive payments.';
+            } else {
+              // For other errors, still approve but warn
+              await pool.query(
+                'UPDATE sellers SET status = $1 WHERE id = $2',
+                ['APPROVED', seller.id]
+              );
+              stripeWarning = 'Your seller application was approved, but Stripe payment setup encountered an issue. An admin will help you complete Stripe setup before you can receive payments.';
+            }
           }
-
-          // Create Stripe Connect account
-          const account = await createConnectAccount(seller.email);
-          
-          // Update seller status to APPROVED
+        } else {
+          // Stripe not configured - approve without Stripe account
+          console.warn('⚠️  Stripe not configured - auto-approving seller without Stripe account. Stripe setup will be required later.');
           await pool.query(
-            'UPDATE sellers SET status = $1, stripe_account_id = $2 WHERE id = $3',
-            ['APPROVED', account.id, seller.id]
+            'UPDATE sellers SET status = $1 WHERE id = $2',
+            ['APPROVED', seller.id]
           );
+          stripeWarning = 'Your seller application was approved, but Stripe payment setup is required before you can receive payments. An admin will help you complete Stripe setup.';
+        }
 
-          // Send approval email
-          const { sendSellerApprovedEmail } = await import('../services/email');
-          sendSellerApprovedEmail(seller.email, seller.name, invitationToken).catch(error => {
-            console.error('Failed to send seller approved email:', error);
-          });
+        // Send approval email
+        const { sendSellerApprovedEmail } = await import('../services/email');
+        sendSellerApprovedEmail(seller.email, seller.name, invitationToken).catch(error => {
+          console.error('Failed to send seller approved email:', error);
+        });
 
-          console.log(`Auto-approved verified member seller: ${seller.name} (${seller.email})`);
-        } catch (error: any) {
-          console.error('Error auto-approving verified member seller:', error);
-          // Don't fail the request - seller is still created, just needs manual approval
+        // If there's a warning, include it in the response
+        if (stripeWarning) {
+          const updatedSeller = await getSellerById(seller.id);
+          return res.status(201).json({
+            ...updatedSeller,
+            warning: stripeWarning,
+          } || { ...seller, warning: stripeWarning });
         }
       }
     }

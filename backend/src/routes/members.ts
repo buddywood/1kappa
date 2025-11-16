@@ -6,7 +6,7 @@ import { uploadToS3 } from '../services/s3';
 import { sendWelcomeEmail } from '../services/email';
 import { authenticate } from '../middleware/auth';
 import { z } from 'zod';
-import { CognitoIdentityProviderClient, SignUpCommand, ConfirmSignUpCommand, ForgotPasswordCommand, ConfirmForgotPasswordCommand, AdminGetUserCommand, ResendConfirmationCodeCommand, ListUsersCommand } from '@aws-sdk/client-cognito-identity-provider';
+import { CognitoIdentityProviderClient, SignUpCommand, ConfirmSignUpCommand, ForgotPasswordCommand, ConfirmForgotPasswordCommand, AdminGetUserCommand, AdminConfirmSignUpCommand, ResendConfirmationCodeCommand, ListUsersCommand } from '@aws-sdk/client-cognito-identity-provider';
 import { getUserByCognitoSub, createUser, linkUserToMember, updateUserOnboardingStatusByCognitoSub } from '../db/queries';
 
 const router: ExpressRouter = Router();
@@ -176,13 +176,148 @@ router.post('/cognito/verify', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Email and verification code are required' });
     }
 
+    // First, check if user is already confirmed
+    let userStatus = 'UNKNOWN';
+    try {
+      const getUserCommand = new AdminGetUserCommand({
+        UserPoolId: COGNITO_USER_POOL_ID,
+        Username: email,
+      });
+      const userDetails = await cognitoClient.send(getUserCommand);
+      userStatus = userDetails.UserStatus || 'UNKNOWN';
+      console.log(`📋 User ${email} current status: ${userStatus}`);
+      
+      // If already confirmed, we can skip the confirmation step
+      if (userStatus === 'CONFIRMED') {
+        console.log(`✅ User ${email} is already confirmed, skipping confirmation`);
+        // Still update our database status
+        if (cognito_sub) {
+          try {
+            let user = await getUserByCognitoSub(cognito_sub);
+            if (!user) {
+              await createUser({
+                cognito_sub: cognito_sub,
+                email: email,
+                role: 'CONSUMER',
+                onboarding_status: 'COGNITO_CONFIRMED',
+              });
+            } else {
+              await updateUserOnboardingStatusByCognitoSub(cognito_sub, 'COGNITO_CONFIRMED');
+            }
+          } catch (err: any) {
+            console.error('Error updating user onboarding status:', err);
+          }
+        }
+        return res.json({ success: true, alreadyConfirmed: true });
+      }
+    } catch (statusError: any) {
+      if (statusError.name !== 'UserNotFoundException') {
+        console.error('Error checking user status before confirmation:', statusError);
+      }
+      // Continue with confirmation attempt
+    }
+
+    // Attempt to confirm with the verification code
     const command = new ConfirmSignUpCommand({
       ClientId: COGNITO_CLIENT_ID,
       Username: email,
       ConfirmationCode: code,
     });
 
-    const response = await cognitoClient.send(command);
+    console.log(`🔐 Attempting to confirm Cognito user: ${email}`);
+    let confirmationSucceeded = false;
+    try {
+      const response = await cognitoClient.send(command);
+      console.log(`✅ ConfirmSignUpCommand succeeded for: ${email}`, response);
+      confirmationSucceeded = true;
+    } catch (confirmError: any) {
+      // If the error is that the user is already confirmed, that's okay
+      if (confirmError.name === 'NotAuthorizedException' && confirmError.message?.includes('already confirmed')) {
+        console.log(`ℹ️ User ${email} is already confirmed (from error message)`);
+        confirmationSucceeded = true;
+        userStatus = 'CONFIRMED';
+      } else if (confirmError.name === 'CodeMismatchException') {
+        console.error(`❌ Invalid verification code for ${email}`);
+        return res.status(400).json({ 
+          error: 'Invalid verification code. Please check your email and try again.',
+          code: 'CodeMismatchException'
+        });
+      } else if (confirmError.name === 'ExpiredCodeException') {
+        console.error(`❌ Expired verification code for ${email}`);
+        return res.status(400).json({ 
+          error: 'Verification code has expired. Please request a new code.',
+          code: 'ExpiredCodeException'
+        });
+      } else {
+        // For other errors, check if user is actually confirmed
+        console.error(`⚠️ ConfirmSignUpCommand failed for ${email}:`, confirmError.name, confirmError.message);
+        try {
+          const getUserCommand = new AdminGetUserCommand({
+            UserPoolId: COGNITO_USER_POOL_ID,
+            Username: email,
+          });
+          const userDetails = await cognitoClient.send(getUserCommand);
+          userStatus = userDetails.UserStatus || 'UNKNOWN';
+          if (userStatus === 'CONFIRMED') {
+            console.log(`✅ User ${email} is actually confirmed despite error`);
+            confirmationSucceeded = true;
+          }
+        } catch (checkError: any) {
+          // If we can't check, throw the original error
+          throw confirmError;
+        }
+        
+        if (!confirmationSucceeded) {
+          throw confirmError;
+        }
+      }
+    }
+    
+    // Verify the user is actually confirmed by checking their status
+    if (confirmationSucceeded) {
+      try {
+        const getUserCommand = new AdminGetUserCommand({
+          UserPoolId: COGNITO_USER_POOL_ID,
+          Username: email,
+        });
+        const userDetails = await cognitoClient.send(getUserCommand);
+        userStatus = userDetails.UserStatus || 'UNKNOWN';
+        console.log(`📋 User status after confirmation: ${userStatus} for ${email}`);
+        
+        if (userStatus !== 'CONFIRMED') {
+          console.warn(`⚠️ Warning: User ${email} status is ${userStatus}, not CONFIRMED after verification`);
+          // Use AdminConfirmSignUpCommand as a fallback to force confirmation
+          console.log(`🔄 Attempting to force confirm user ${email} using AdminConfirmSignUpCommand`);
+          try {
+            const adminConfirmCommand = new AdminConfirmSignUpCommand({
+              UserPoolId: COGNITO_USER_POOL_ID,
+              Username: email,
+            });
+            await cognitoClient.send(adminConfirmCommand);
+            console.log(`✅ Successfully force-confirmed user ${email}`);
+            
+            // Verify again
+            const verifyCommand = new AdminGetUserCommand({
+              UserPoolId: COGNITO_USER_POOL_ID,
+              Username: email,
+            });
+            const verifiedUser = await cognitoClient.send(verifyCommand);
+            if (verifiedUser.UserStatus === 'CONFIRMED') {
+              console.log(`✅ Verified: User ${email} is now CONFIRMED`);
+            }
+          } catch (adminConfirmError: any) {
+            console.error(`❌ Failed to force-confirm user ${email}:`, adminConfirmError.message);
+            return res.status(500).json({ 
+              error: 'Account verification completed but status check failed. Please try logging in or contact support.',
+              code: 'VERIFICATION_STATUS_ERROR'
+            });
+          }
+        }
+      } catch (statusError: any) {
+        console.error('Error checking user status after confirmation:', statusError);
+        // Continue anyway - the confirmation might have succeeded
+      }
+    }
     
     // Create or update user onboarding status to COGNITO_CONFIRMED if cognito_sub is provided
     if (cognito_sub) {

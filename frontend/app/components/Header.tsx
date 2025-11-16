@@ -30,21 +30,43 @@ export default function Header() {
   };
   
   const firstName = getUserFirstName();
-  const userRole = (session?.user as any)?.role;
-  const memberId = (session?.user as any)?.memberId;
-  const sellerId = (session?.user as any)?.sellerId;
-  const promoterId = (session?.user as any)?.promoterId;
+  // Get user data from session - check both session sources
+  const userRole = (session?.user as any)?.role ?? (nextAuthSession?.user as any)?.role;
+  const memberId = (session?.user as any)?.memberId ?? (nextAuthSession?.user as any)?.memberId;
+  const sellerId = (session?.user as any)?.sellerId ?? (nextAuthSession?.user as any)?.sellerId;
+  const promoterId = (session?.user as any)?.promoterId ?? (nextAuthSession?.user as any)?.promoterId;
+  const stewardId = (session?.user as any)?.stewardId ?? (nextAuthSession?.user as any)?.stewardId;
+  // Get role flags from session - check both session sources
+  const is_fraternity_member = (session?.user as any)?.is_fraternity_member ?? (nextAuthSession?.user as any)?.is_fraternity_member ?? false;
+  const is_seller = (session?.user as any)?.is_seller ?? (nextAuthSession?.user as any)?.is_seller ?? false;
+  const is_promoter = (session?.user as any)?.is_promoter ?? (nextAuthSession?.user as any)?.is_promoter ?? false;
+  const is_steward = (session?.user as any)?.is_steward ?? (nextAuthSession?.user as any)?.is_steward ?? false;
   const { theme, toggleTheme } = useTheme();
+
+  // Debug: Log role flags to console
+  useEffect(() => {
+    if (showAuthenticatedMenu) {
+      console.log('Header - Role flags:', {
+        is_fraternity_member,
+        is_seller,
+        is_promoter,
+        is_steward,
+        userRole,
+        stewardId,
+        shouldShowStewardDashboard: is_steward || stewardId,
+      });
+    }
+  }, [showAuthenticatedMenu, is_fraternity_member, is_seller, is_promoter, is_steward, userRole, stewardId]);
   
-  // Determine which "Become" buttons to show (same logic as HeroBanner)
-  const showBecomeSeller = !showAuthenticatedMenu || (userRole !== 'SELLER');
-  const showBecomePromoter = !showAuthenticatedMenu || (userRole !== 'PROMOTER');
-  const showBecomeSteward = !showAuthenticatedMenu || userRole !== 'STEWARD';
+  // Determine which "Become" buttons to show (using role flags)
+  const showBecomeSeller = !showAuthenticatedMenu || !is_seller;
+  const showBecomePromoter = !showAuthenticatedMenu || !is_promoter;
+  const showBecomeSteward = !showAuthenticatedMenu || !is_steward;
   const finalShowBecomeMember = (!showAuthenticatedMenu || 
-    (userRole === 'SELLER' && !memberId)) && 
-    userRole !== 'PROMOTER' && 
-    !(userRole === 'CONSUMER' && memberId) &&
-    !(userRole === 'SELLER' && memberId);
+    (is_seller && !is_fraternity_member)) && 
+    !is_promoter && 
+    !(is_fraternity_member && !is_seller && !is_promoter && !is_steward) &&
+    !(is_seller && is_fraternity_member);
 
   useEffect(() => {
     fetchTotalDonations()
@@ -259,9 +281,10 @@ export default function Header() {
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                             {userRole === 'ADMIN' ? 'Administrator' : 
-                             userRole === 'STEWARD' ? 'Steward' :
-                             userRole === 'SELLER' ? 'Seller' :
-                             userRole === 'PROMOTER' ? 'Promoter' : 'Member'}
+                             is_steward ? 'Steward' :
+                             is_seller ? 'Seller' :
+                             is_promoter ? 'Promoter' : 
+                             is_fraternity_member ? 'Member' : 'Member'}
                           </p>
                         </div>
                       </div>
@@ -279,7 +302,7 @@ export default function Header() {
                         </svg>
                         Profile
                       </Link>
-                      {userRole === 'STEWARD' && (
+                      {(is_steward || stewardId) && (
                         <Link 
                           href="/steward-dashboard" 
                           onClick={() => setUserMenuOpen(false)}
@@ -396,13 +419,13 @@ export default function Header() {
                     >
                       Profile
                     </Link>
-                    {userRole === 'STEWARD' && (
+                    {(is_steward || stewardId) && (
                       <Link
                         href="/steward-dashboard"
                         onClick={() => { setUserMenuOpen(false); setMobileMenuOpen(false); }}
                         className="block px-4 py-2 text-sm text-midnight-navy hover:bg-gray-50 transition-colors"
-                >
-                  Steward Dashboard
+                      >
+                        Steward Dashboard
                       </Link>
                     )}
                     {userRole === 'ADMIN' && (

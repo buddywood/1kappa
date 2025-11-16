@@ -1236,10 +1236,11 @@ export async function createStewardListing(listing: {
   shipping_cost_cents: number;
   chapter_donation_cents: number;
   sponsoring_chapter_id: number;
+  category_id?: number | null;
 }): Promise<StewardListing> {
   const result = await pool.query(
-    `INSERT INTO steward_listings (steward_id, name, description, image_url, shipping_cost_cents, chapter_donation_cents, sponsoring_chapter_id, status)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, 'ACTIVE')
+    `INSERT INTO steward_listings (steward_id, name, description, image_url, shipping_cost_cents, chapter_donation_cents, sponsoring_chapter_id, category_id, status)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'ACTIVE')
      RETURNING *`,
     [
       listing.steward_id,
@@ -1249,6 +1250,7 @@ export async function createStewardListing(listing: {
       listing.shipping_cost_cents,
       listing.chapter_donation_cents,
       listing.sponsoring_chapter_id,
+      listing.category_id || null,
     ]
   );
   return result.rows[0];

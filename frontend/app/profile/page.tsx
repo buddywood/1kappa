@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { fetchMemberProfile, updateMemberProfile, fetchChapters, fetchIndustries, getStewardProfile, type MemberProfile, type Chapter, type Industry } from '@/lib/api';
 import Link from 'next/link';
@@ -14,8 +14,9 @@ import Image from 'next/image';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-export default function ProfilePage() {
+function ProfilePageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session, status: sessionStatus, update: updateSession } = useSession();
   const [profile, setProfile] = useState<MemberProfile | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]);
@@ -24,12 +25,14 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [warning, setWarning] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [headshotFile, setHeadshotFile] = useState<File | null>(null);
   const [headshotPreview, setHeadshotPreview] = useState<string | null>(null);
   const [isSteward, setIsSteward] = useState(false);
   const [stewardStatus, setStewardStatus] = useState<string | null>(null);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [hasVerifiedSession, setHasVerifiedSession] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -60,6 +63,10 @@ export default function ProfilePage() {
       console.log('Profile page: Already redirecting, skipping...');
       return; // Prevent multiple redirects
     }
+    if (hasVerifiedSession) {
+      console.log('Profile page: Already verified session, skipping...');
+      return; // Prevent re-verification
+    }
     
     console.log('Profile page: Session status:', sessionStatus, 'User:', session?.user?.email, 'MemberId:', (session?.user as any)?.memberId);
     
@@ -79,26 +86,10 @@ export default function ProfilePage() {
       return;
     }
 
-    // Check if user has memberId
-    const memberId = (session.user as any)?.memberId;
+    // Check if user has memberId in session
+    let memberId = (session.user as any)?.memberId;
     
-    // If no memberId, redirect to register (unless they're a seller/promoter)
-    if (!memberId && userRole === 'CONSUMER') {
-      console.log('Profile page: No memberId in session, redirecting to register');
-      setIsRedirecting(true);
-      router.push('/register');
-      return;
-    }
-    
-    // Sellers and promoters don't have member profiles either
-    if (!memberId && (userRole === 'SELLER' || userRole === 'PROMOTER')) {
-      console.log(`Profile page: User is ${userRole}, no member profile needed`);
-      setError('Member profile not available for sellers/promoters');
-      setLoading(false);
-      return;
-    }
-
-    // Verify memberId exists in backend before loading profile
+    // If no memberId in session, check backend first before redirecting
     const verifyAndLoad = async () => {
       try {
         const sessionData = await fetch('/api/auth/session').then(res => res.json());
@@ -113,27 +104,59 @@ export default function ProfilePage() {
           
           if (verifyResponse.ok) {
             const userData = await verifyResponse.json();
-            if (!userData.fraternity_member_id) {
-              console.log('Profile page: Backend has no fraternity_member_id, refreshing session and redirecting');
-              setIsRedirecting(true);
+            
+            // Update memberId from backend if it exists there but not in session
+            if (!memberId && userData.fraternity_member_id) {
+              console.log('Profile page: Found fraternity_member_id in backend, updating session');
+              memberId = userData.fraternity_member_id;
+              // Update session to include memberId - but don't trigger re-render
               await updateSession();
-              window.location.href = '/register';
-              return;
+              // Mark as verified to prevent loop
+              setHasVerifiedSession(true);
+            }
+            
+            // If still no memberId after checking backend, redirect based on role
+            if (!userData.fraternity_member_id) {
+              if (userRole === 'CONSUMER') {
+                console.log('Profile page: Backend has no fraternity_member_id, redirecting to register');
+                setIsRedirecting(true);
+                router.push('/register');
+                return;
+              } else if (userRole === 'SELLER' || userRole === 'PROMOTER') {
+                console.log(`Profile page: User is ${userRole}, no member profile needed`);
+                setError('Member profile not available for sellers/promoters');
+                setLoading(false);
+                return;
+              }
+            } else {
+              // Mark as verified
+              setHasVerifiedSession(true);
             }
           }
         }
         
-        console.log('Profile page: MemberId verified, loading profile...');
-        loadProfile();
+        // If we have memberId (from session or backend), proceed
+        if (memberId || (sessionData as any)?.user?.memberId) {
+          console.log('Profile page: MemberId verified, loading profile...');
+          loadProfile();
+        } else if (userRole === 'CONSUMER') {
+          console.log('Profile page: No memberId found, redirecting to register');
+          setIsRedirecting(true);
+          router.push('/register');
+        } else {
+          setError('Unable to load profile');
+          setLoading(false);
+        }
       } catch (verifyError) {
         console.error('Profile page: Error verifying member_id:', verifyError);
         // Continue anyway - will fail in loadProfile if there's an issue
+        setHasVerifiedSession(true);
         loadProfile();
       }
     };
 
     verifyAndLoad();
-  }, [sessionStatus, session, router, isRedirecting]);
+  }, [sessionStatus, router, isRedirecting, hasVerifiedSession]);
 
   const loadProfile = async () => {
     try {
@@ -186,6 +209,21 @@ export default function ProfilePage() {
 
       if (profileData.headshot_url) {
         setHeadshotPreview(profileData.headshot_url);
+      }
+
+      // Check for warning in URL params (from steward/seller application)
+      const warningParam = searchParams.get('warning');
+      if (warningParam) {
+        setWarning(decodeURIComponent(warningParam));
+        // Clear the warning from URL after displaying
+        router.replace('/profile', { scroll: false });
+      }
+
+      // Check for success message
+      if (searchParams.get('steward_applied') === 'true') {
+        setSuccess('Steward application submitted successfully!');
+        // Clear the success param from URL
+        router.replace('/profile', { scroll: false });
       }
     } catch (err: any) {
       console.error('Profile page: Error loading profile:', err.message);
@@ -382,10 +420,16 @@ export default function ProfilePage() {
           )}
         </div>
 
-        {/* Success/Error Messages */}
+        {/* Success/Error/Warning Messages */}
         {success && (
           <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg text-green-800">
             {success}
+          </div>
+        )}
+        {warning && (
+          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800">
+            <p className="font-medium mb-1">⚠️ Important Notice</p>
+            <p className="text-sm">{warning}</p>
           </div>
         )}
         {error && (
@@ -813,6 +857,14 @@ export default function ProfilePage() {
 
       <Footer />
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={<SkeletonLoader />}>
+      <ProfilePageContent />
+    </Suspense>
   );
 }
 

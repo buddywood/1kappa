@@ -114,24 +114,20 @@ export default function ConnectPage() {
             {/* Chapter Filter */}
             <div className="flex-1 min-w-[200px]">
               <SearchableSelect
-                id="chapter-filter"
-                options={chapters.map(c => ({ value: c.id, label: c.name }))}
-                selectedValue={selectedChapter}
-                onSelect={setSelectedChapter}
+                options={chapters.map(c => ({ id: c.id, value: c.id, label: c.name }))}
+                value={selectedChapter ? String(selectedChapter) : ''}
+                onChange={(value) => setSelectedChapter(value ? parseInt(value) : null)}
                 placeholder="Filter by Chapter"
-                noOptionsMessage="No chapters found"
               />
             </div>
 
             {/* Industry Filter */}
             <div className="flex-1 min-w-[200px]">
               <SearchableSelect
-                id="industry-filter"
-                options={industries.map(i => ({ value: i.name, label: i.name }))}
-                selectedValue={selectedIndustry}
-                onSelect={setSelectedIndustry}
+                options={industries.map(i => ({ id: i.name, value: i.name, label: i.name }))}
+                value={selectedIndustry || ''}
+                onChange={(value) => setSelectedIndustry(value || null)}
                 placeholder="Filter by Industry"
-                noOptionsMessage="No industries found"
               />
             </div>
           </div>

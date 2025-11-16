@@ -95,6 +95,10 @@ const authOptions: NextAuthOptions = {
             features: userData.features,
             name: userData.name,
             onboarding_status: userData.onboarding_status || 'PRE_COGNITO',
+            is_fraternity_member: userData.is_fraternity_member || false,
+            is_seller: userData.is_seller || false,
+            is_promoter: userData.is_promoter || false,
+            is_steward: userData.is_steward || false,
           };
         } catch (error: any) {
           console.error('Authentication error:', error);
@@ -168,6 +172,10 @@ const authOptions: NextAuthOptions = {
         token.features = (user as any).features || {};
         token.name = (user as any).name;
         token.onboarding_status = (user as any).onboarding_status;
+        token.is_fraternity_member = (user as any).is_fraternity_member || false;
+        token.is_seller = (user as any).is_seller || false;
+        token.is_promoter = (user as any).is_promoter || false;
+        token.is_steward = (user as any).is_steward || false;
         return token;
       }
 
@@ -211,6 +219,11 @@ const authOptions: NextAuthOptions = {
                     token.features = userData.features || {};
                     token.name = userData.name;
                     token.onboarding_status = userData.onboarding_status;
+                    // Include role flags
+                    token.is_fraternity_member = userData.is_fraternity_member || false;
+                    token.is_seller = userData.is_seller || false;
+                    token.is_promoter = userData.is_promoter || false;
+                    token.is_steward = userData.is_steward || false;
                   }
                 } catch (err) {
                   console.error('Error refreshing user data:', err);
@@ -243,6 +256,11 @@ const authOptions: NextAuthOptions = {
         (session.user as any).features = token.features as Record<string, any>;
         (session.user as any).name = token.name as string | null;
         (session.user as any).onboarding_status = token.onboarding_status as string;
+        // Role flags - use token values or default to false
+        (session.user as any).is_fraternity_member = (token.is_fraternity_member as boolean) || false;
+        (session.user as any).is_seller = (token.is_seller as boolean) || false;
+        (session.user as any).is_promoter = (token.is_promoter as boolean) || false;
+        (session.user as any).is_steward = (token.is_steward as boolean) || false;
         (session as any).accessToken = token.accessToken as string;
         (session as any).idToken = token.idToken as string;
       }

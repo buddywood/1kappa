@@ -19,25 +19,31 @@ router.get('/me', authenticate, async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Get name based on role
+    // Get name and role flags based on role
     let name: string | null = null;
-    if (user.member_id) {
-      const memberResult = await pool.query('SELECT name FROM members WHERE id = $1', [user.member_id]);
+    let is_fraternity_member = false;
+    let is_seller = false;
+    let is_promoter = false;
+    let is_steward = false;
+
+    if (user.fraternity_member_id) {
+      const memberResult = await pool.query('SELECT name FROM fraternity_members WHERE id = $1', [user.fraternity_member_id]);
       if (memberResult.rows.length === 0) {
-        // Orphaned member_id detected - clear it
-        console.warn(`Orphaned member_id detected for user ${user.id}: member_id ${user.member_id} doesn't exist`);
+        // Orphaned fraternity_member_id detected - clear it
+        console.warn(`Orphaned fraternity_member_id detected for user ${user.id}: fraternity_member_id ${user.fraternity_member_id} doesn't exist`);
         await pool.query(
           `UPDATE users 
-           SET member_id = NULL, 
+           SET fraternity_member_id = NULL, 
                onboarding_status = 'ONBOARDING_STARTED',
                updated_at = CURRENT_TIMESTAMP 
            WHERE id = $1`,
           [user.id]
         );
-        user.member_id = null;
+        user.fraternity_member_id = null;
         user.onboarding_status = 'ONBOARDING_STARTED';
       } else {
         name = memberResult.rows[0]?.name || null;
+        is_fraternity_member = true;
       }
     } else if (user.seller_id) {
       const sellerResult = await pool.query('SELECT name FROM sellers WHERE id = $1', [user.seller_id]);
@@ -47,17 +53,55 @@ router.get('/me', authenticate, async (req: Request, res: Response) => {
       name = promoterResult.rows[0]?.name || null;
     }
 
+    // Check for seller role
+    if (user.seller_id) {
+      const sellerResult = await pool.query('SELECT status FROM sellers WHERE id = $1', [user.seller_id]);
+      if (sellerResult.rows.length > 0 && sellerResult.rows[0].status === 'APPROVED') {
+        is_seller = true;
+      }
+    }
+
+    // Check for promoter role
+    if (user.promoter_id) {
+      const promoterResult = await pool.query('SELECT status FROM promoters WHERE id = $1', [user.promoter_id]);
+      if (promoterResult.rows.length > 0 && promoterResult.rows[0].status === 'APPROVED') {
+        is_promoter = true;
+      }
+    }
+
+    // Check for steward role
+    if (user.steward_id) {
+      const stewardResult = await pool.query('SELECT status FROM stewards WHERE id = $1', [user.steward_id]);
+      if (stewardResult.rows.length > 0 && stewardResult.rows[0].status === 'APPROVED') {
+        is_steward = true;
+      }
+    } else if (user.fraternity_member_id) {
+      // Also check if there's a steward record for this fraternity_member_id
+      const stewardResult = await pool.query(
+        'SELECT status FROM stewards WHERE fraternity_member_id = $1 AND status = $2',
+        [user.fraternity_member_id, 'APPROVED']
+      );
+      if (stewardResult.rows.length > 0) {
+        is_steward = true;
+      }
+    }
+
     res.json({
       id: user.id,
       cognito_sub: user.cognito_sub,
       email: user.email,
       role: user.role,
       onboarding_status: user.onboarding_status,
-      member_id: user.member_id,
+      fraternity_member_id: user.fraternity_member_id,
       seller_id: user.seller_id,
       promoter_id: user.promoter_id,
+      steward_id: user.steward_id,
       features: user.features,
       name: name,
+      is_fraternity_member,
+      is_seller,
+      is_promoter,
+      is_steward,
     });
   } catch (error) {
     console.error('Error fetching user:', error);
@@ -103,25 +147,31 @@ router.post('/upsert-on-login', async (req: Request, res: Response) => {
 
     const user = await upsertUserOnLogin(cognito_sub, userEmail);
 
-    // Get name based on role
+    // Get name and role flags based on role
     let name: string | null = null;
-    if (user.member_id) {
-      const memberResult = await pool.query('SELECT name FROM members WHERE id = $1', [user.member_id]);
+    let is_fraternity_member = false;
+    let is_seller = false;
+    let is_promoter = false;
+    let is_steward = false;
+
+    if (user.fraternity_member_id) {
+      const memberResult = await pool.query('SELECT name FROM fraternity_members WHERE id = $1', [user.fraternity_member_id]);
       if (memberResult.rows.length === 0) {
-        // Orphaned member_id detected - clear it
-        console.warn(`Orphaned member_id detected for user ${user.id}: member_id ${user.member_id} doesn't exist`);
+        // Orphaned fraternity_member_id detected - clear it
+        console.warn(`Orphaned fraternity_member_id detected for user ${user.id}: fraternity_member_id ${user.fraternity_member_id} doesn't exist`);
         await pool.query(
           `UPDATE users 
-           SET member_id = NULL, 
+           SET fraternity_member_id = NULL, 
                onboarding_status = 'ONBOARDING_STARTED',
                updated_at = CURRENT_TIMESTAMP 
            WHERE id = $1`,
           [user.id]
         );
-        user.member_id = null;
+        user.fraternity_member_id = null;
         user.onboarding_status = 'ONBOARDING_STARTED';
       } else {
         name = memberResult.rows[0]?.name || null;
+        is_fraternity_member = true;
       }
     } else if (user.seller_id) {
       const sellerResult = await pool.query('SELECT name FROM sellers WHERE id = $1', [user.seller_id]);
@@ -131,18 +181,56 @@ router.post('/upsert-on-login', async (req: Request, res: Response) => {
       name = promoterResult.rows[0]?.name || null;
     }
 
+    // Check for seller role
+    if (user.seller_id) {
+      const sellerResult = await pool.query('SELECT status FROM sellers WHERE id = $1', [user.seller_id]);
+      if (sellerResult.rows.length > 0 && sellerResult.rows[0].status === 'APPROVED') {
+        is_seller = true;
+      }
+    }
+
+    // Check for promoter role
+    if (user.promoter_id) {
+      const promoterResult = await pool.query('SELECT status FROM promoters WHERE id = $1', [user.promoter_id]);
+      if (promoterResult.rows.length > 0 && promoterResult.rows[0].status === 'APPROVED') {
+        is_promoter = true;
+      }
+    }
+
+    // Check for steward role
+    if (user.steward_id) {
+      const stewardResult = await pool.query('SELECT status FROM stewards WHERE id = $1', [user.steward_id]);
+      if (stewardResult.rows.length > 0 && stewardResult.rows[0].status === 'APPROVED') {
+        is_steward = true;
+      }
+    } else if (user.fraternity_member_id) {
+      // Also check if there's a steward record for this fraternity_member_id
+      const stewardResult = await pool.query(
+        'SELECT status FROM stewards WHERE fraternity_member_id = $1 AND status = $2',
+        [user.fraternity_member_id, 'APPROVED']
+      );
+      if (stewardResult.rows.length > 0) {
+        is_steward = true;
+      }
+    }
+
     res.json({
       id: user.id,
       cognito_sub: user.cognito_sub,
       email: user.email,
       role: user.role,
       onboarding_status: user.onboarding_status,
-      member_id: user.member_id,
+      fraternity_member_id: user.fraternity_member_id,
       seller_id: user.seller_id,
       promoter_id: user.promoter_id,
+      steward_id: user.steward_id,
       features: user.features,
       name: name,
       last_login: user.last_login,
+      is_fraternity_member,
+      is_seller,
+      is_promoter,
+      is_steward,
     });
   } catch (error) {
     console.error('Error upserting user on login:', error);

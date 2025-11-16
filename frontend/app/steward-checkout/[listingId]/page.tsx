@@ -131,7 +131,7 @@ export default function StewardCheckoutPage() {
                   </div>
                   {listing.chapter && (
                     <div className="text-xs text-midnight-navy/50 mt-2">
-                      Donation goes to: {listing.chapter.name}
+                      Donation goes to: {listing.chapter.name} chapter.
                     </div>
                   )}
                   <div className="border-t border-midnight-navy/20 pt-3 mt-3 flex justify-between font-bold text-lg">

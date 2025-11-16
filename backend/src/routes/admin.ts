@@ -80,8 +80,25 @@ router.put('/sellers/:id', async (req: Request, res: Response) => {
         await updateSellerInvitationToken(sellerId, invitationToken);
       }
 
-      const account = await createConnectAccount(seller.email);
-      stripeAccountId = account.id;
+      // Check if Stripe is configured
+      const stripeKey = process.env.STRIPE_SECRET_KEY;
+      let stripeWarning: string | undefined;
+      
+      if (stripeKey && stripeKey.trim() !== '' && !stripeKey.includes('here')) {
+        try {
+          const account = await createConnectAccount(seller.email);
+          stripeAccountId = account.id;
+        } catch (error: any) {
+          console.error('Error creating Stripe account for seller:', error);
+          if (error.type === 'StripeAuthenticationError' || error.message?.includes('Invalid API Key')) {
+            stripeWarning = 'Seller approved, but Stripe payment setup failed. Stripe account will need to be set up manually.';
+          } else {
+            stripeWarning = 'Seller approved, but Stripe payment setup encountered an issue. Stripe account will need to be set up manually.';
+          }
+        }
+      } else {
+        stripeWarning = 'Seller approved, but Stripe is not configured. Stripe account will need to be set up manually.';
+      }
     }
 
     const updatedSeller = await updateSellerStatus(sellerId, body.status, stripeAccountId);
@@ -95,6 +112,11 @@ router.put('/sellers/:id', async (req: Request, res: Response) => {
       ).catch(error => {
         console.error('Failed to send seller approved email:', error);
       });
+    }
+    
+    // Include warning in response if present
+    if (body.status === 'APPROVED' && stripeWarning) {
+      return res.json({ ...updatedSeller, warning: stripeWarning });
     }
     
     res.json(updatedSeller);
@@ -145,6 +167,7 @@ router.put('/promoters/:id', async (req: Request, res: Response) => {
     const body = approveSellerSchema.parse(req.body);
     
     let stripeAccountId: string | undefined;
+    let stripeWarning: string | undefined;
     
     // If approving, create Stripe Connect account
     if (body.status === 'APPROVED') {
@@ -154,11 +177,33 @@ router.put('/promoters/:id', async (req: Request, res: Response) => {
         return res.status(404).json({ error: 'Promoter not found' });
       }
 
-      const account = await createConnectAccount(promoter.email);
-      stripeAccountId = account.id;
+      // Check if Stripe is configured
+      const stripeKey = process.env.STRIPE_SECRET_KEY;
+      
+      if (stripeKey && stripeKey.trim() !== '' && !stripeKey.includes('here')) {
+        try {
+          const account = await createConnectAccount(promoter.email);
+          stripeAccountId = account.id;
+        } catch (error: any) {
+          console.error('Error creating Stripe account for promoter:', error);
+          if (error.type === 'StripeAuthenticationError' || error.message?.includes('Invalid API Key')) {
+            stripeWarning = 'Promoter approved, but Stripe payment setup failed. Stripe account will need to be set up manually.';
+          } else {
+            stripeWarning = 'Promoter approved, but Stripe payment setup encountered an issue. Stripe account will need to be set up manually.';
+          }
+        }
+      } else {
+        stripeWarning = 'Promoter approved, but Stripe is not configured. Stripe account will need to be set up manually.';
+      }
     }
 
     const updatedPromoter = await updatePromoterStatus(promoterId, body.status, stripeAccountId);
+    
+    // Include warning in response if present
+    if (body.status === 'APPROVED' && stripeWarning) {
+      return res.json({ ...updatedPromoter, warning: stripeWarning });
+    }
+    
     res.json(updatedPromoter);
   } catch (error) {
     if (error instanceof z.ZodError) {
