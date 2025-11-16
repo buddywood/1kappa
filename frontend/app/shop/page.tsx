@@ -10,6 +10,7 @@ import VerificationBadge from '../components/VerificationBadge';
 import Skeleton, { SkeletonLoader } from '../components/Skeleton';
 import SearchableSelect from '../components/SearchableSelect';
 import UserRoleBadges from '../components/UserRoleBadges';
+import StewardshipHowItWorksModal from '../components/StewardshipHowItWorksModal';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -35,6 +36,7 @@ function ShopPageContent() {
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
+  const [isHowItWorksModalOpen, setIsHowItWorksModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchPromises: Promise<any>[] = [
@@ -235,7 +237,7 @@ function ShopPageContent() {
     } else if (roleFilter === 'steward') {
       return {
         title: 'Stewards Market',
-        subtitle: 'Discover exclusive products from our dedicated stewards.  Stewards pass on meaningful items—cardigans, pins, books, keepsakes, and legacy pieces—so they can continue their journey with another Brother. Every Steward listing includes a chapter donation designated by the Steward, ensuring that proceeds directly support undergraduate programs, scholarships, and the development of future leaders.',
+        subtitle: 'Stewards give new life to cherished fraternity items while funding the next generation of Brothers. Each listing includes a Steward-designated chapter donation that directly supports scholarships, programming, and undergraduate chapter initiatives.',
         becomeLink: '/steward-setup',
         becomeText: 'Become a Steward'
       };
@@ -255,15 +257,26 @@ function ShopPageContent() {
           <div className="max-w-7xl mx-auto text-center">
             <h1 className="text-4xl md:text-5xl font-display font-bold mb-4">{heroContent.title}</h1>
             <p className="text-lg md:text-xl text-white/90 mb-8 max-w-2xl mx-auto">{heroContent.subtitle}</p>
-            {/* Don't show "Become a Steward" button if user is already a steward */}
-            {!(roleFilter === 'steward' && is_steward) && (
-              <Link
-                href={heroContent.becomeLink}
-                className="inline-block bg-white text-crimson px-6 py-3 rounded-lg font-semibold hover:bg-cream transition-colors shadow-lg hover:shadow-xl"
-              >
-                {heroContent.becomeText}
-              </Link>
-            )}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              {/* Don't show "Become a Steward" button if user is already a steward */}
+              {!(roleFilter === 'steward' && is_steward) && (
+                <Link
+                  href={heroContent.becomeLink}
+                  className="inline-block bg-white text-crimson px-6 py-3 rounded-lg font-semibold hover:bg-cream transition-colors shadow-lg hover:shadow-xl"
+                >
+                  {heroContent.becomeText}
+                </Link>
+              )}
+              {/* Show "How It Works" button for steward section */}
+              {roleFilter === 'steward' && (
+                <button
+                  onClick={() => setIsHowItWorksModalOpen(true)}
+                  className="inline-block bg-transparent border-2 border-white text-white px-6 py-3 rounded-lg font-semibold hover:bg-white/10 transition-colors shadow-lg hover:shadow-xl"
+                >
+                  How It Works
+                </button>
+              )}
+            </div>
           </div>
         </section>
       )}
@@ -701,6 +714,10 @@ function ShopPageContent() {
       </main>
 
       <Footer />
+      <StewardshipHowItWorksModal
+        isOpen={isHowItWorksModalOpen}
+        onClose={() => setIsHowItWorksModalOpen(false)}
+      />
     </div>
   );
 }

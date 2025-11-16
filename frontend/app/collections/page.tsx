@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
+import { cookies, headers } from 'next/headers';
 import { fetchSellersWithProducts, fetchChapters, getStewardMarketplace } from '@/lib/api';
 import type { SellerWithProducts, StewardListing } from '@/lib/api';
 import Image from 'next/image';
@@ -20,17 +21,63 @@ export default async function CollectionsPage({ searchParams }: CollectionsPageP
   const stewardIdParam = searchParams.steward ? parseInt(searchParams.steward) : null;
   
   // If steward param is provided, fetch steward listings instead of seller products
+  // Note: getStewardMarketplace requires auth, so we'll fetch directly from the backend API
   if (stewardIdParam) {
-    const [stewardListings, chapters] = await Promise.all([
-      getStewardMarketplace().catch((err) => {
-        console.error('Error fetching steward listings:', err);
-        return [];
-      }),
-      fetchChapters().catch((err) => {
-        console.error('Error fetching chapters:', err);
-        return [];
-      }),
-    ]);
+    let stewardListings: StewardListing[] = [];
+    try {
+      // Get the auth token from cookies (NextAuth stores it in a cookie)
+      const cookieStore = await cookies();
+      const nextAuthSessionToken = cookieStore.get('next-auth.session-token') || cookieStore.get('__Secure-next-auth.session-token');
+      
+      // Fetch steward listings directly from backend API
+      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      
+      // If we have a session token, try to get the idToken from the session
+      let authHeaders: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (nextAuthSessionToken) {
+        // Get session to extract idToken
+        const host = headers().get('host') || 'localhost:3000';
+        const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
+        const sessionRes = await fetch(`${protocol}://${host}/api/auth/session`, {
+          headers: {
+            'Cookie': `${nextAuthSessionToken.name}=${nextAuthSessionToken.value}`,
+          },
+          cache: 'no-store',
+        });
+        
+        if (sessionRes.ok) {
+          const session = await sessionRes.json();
+          const idToken = (session as any)?.idToken;
+          if (idToken) {
+            authHeaders = {
+              ...authHeaders,
+              'Authorization': `Bearer ${idToken}`,
+            };
+          }
+        }
+      }
+      
+      const res = await fetch(`${backendUrl}/api/stewards/marketplace`, {
+        headers: authHeaders,
+        cache: 'no-store',
+      });
+      
+      if (res.ok) {
+        stewardListings = await res.json();
+      } else {
+        console.error('Error fetching steward listings:', res.status, res.statusText);
+      }
+    } catch (err) {
+      console.error('Error fetching steward listings:', err);
+    }
+    
+    const chapters = await fetchChapters().catch((err) => {
+      console.error('Error fetching chapters:', err);
+      return [];
+    });
 
     // Filter to specific steward
     const filteredListings = stewardListings.filter(l => l.steward_id === stewardIdParam);
