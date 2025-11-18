@@ -5,6 +5,7 @@ import Header from './components/Header';
 import HeroBanner from './components/HeroBanner';
 import VerificationBadge from './components/VerificationBadge';
 import UserRoleBadges from './components/UserRoleBadges';
+import ProductStatusBadge from './components/ProductStatusBadge';
 import ImpactBanner from './components/ImpactBanner';
 import EventCard from './components/EventCard';
 import Footer from './components/Footer';
@@ -72,6 +73,7 @@ export default async function Home() {
                 className="bg-white dark:bg-black rounded-xl overflow-hidden shadow hover:shadow-md dark:shadow-black/50 dark:hover:shadow-lg transition relative"
               >
                 <div className="aspect-[4/5] relative bg-cream dark:bg-gray-900">
+                  <ProductStatusBadge product={product} />
                   {product.image_url ? (
                     <Image
                       src={product.image_url}

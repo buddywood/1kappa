@@ -411,3 +411,143 @@ The 1Kappa Team
   }
 }
 
+/**
+ * Send an email notification to seller when a purchase is attempted but Stripe is not connected
+ */
+export async function sendSellerStripeSetupRequiredEmail(
+  email: string,
+  sellerName: string,
+  productName: string,
+  productId: number
+): Promise<void> {
+  const subject = 'Action Required: Connect Stripe to Activate Your Listings';
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const sellerSetupUrl = `${frontendUrl}/seller-setup`;
+
+  const htmlBody = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Stripe Setup Required</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background-color: #1a1a2e; padding: 30px; text-align: center;">
+          <img src="${getLogoUrl()}" alt="1Kappa Logo" style="max-width: 300px; height: auto; margin-bottom: 20px;" />
+          <h1 style="color: #dc143c; margin: 0; font-size: 28px;">Action Required</h1>
+        </div>
+        
+        <div style="background-color: #f9f9f9; padding: 30px;">
+          <p style="font-size: 16px; margin-top: 0;">Hello ${sellerName},</p>
+          
+          <p style="font-size: 16px;">
+            <strong>A Brother attempted to purchase your item!</strong>
+          </p>
+          
+          <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0;">
+            <p style="font-size: 14px; margin: 0; color: #856404;">
+              <strong>Product:</strong> ${productName}<br>
+              <strong>Product ID:</strong> #${productId}
+            </p>
+          </div>
+          
+          <p style="font-size: 16px;">
+            To activate your listings and start receiving payments, you need to connect your Stripe account.
+          </p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${sellerSetupUrl}" style="display: inline-block; background-color: #dc143c; color: #ffffff; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px;">
+              Connect Stripe Now
+            </a>
+          </div>
+          
+          <div style="background-color: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; margin: 20px 0;">
+            <p style="font-size: 14px; margin: 0; color: #1565c0;">
+              <strong>What happens when you connect Stripe?</strong><br>
+              • Your listings will become available for purchase<br>
+              • You'll receive payments directly to your account<br>
+              • The setup process takes just a few minutes
+            </p>
+          </div>
+          
+          <p style="font-size: 16px;">
+            Don't miss out on sales! Connect your Stripe account today.
+          </p>
+          
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #dc143c;">
+            <p style="font-size: 14px; color: #666; margin: 0;">
+              Best regards,<br>
+              The 1Kappa Team
+            </p>
+          </div>
+        </div>
+        
+        <div style="background-color: #1a1a2e; padding: 20px; text-align: center;">
+          <p style="color: #fff; font-size: 12px; margin: 0;">
+            © ${new Date().getFullYear()} 1Kappa. All rights reserved.
+          </p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const textBody = `
+Action Required: Connect Stripe to Activate Your Listings - 1Kappa
+
+Hello ${sellerName},
+
+A Brother attempted to purchase your item!
+
+Product: ${productName}
+Product ID: #${productId}
+
+To activate your listings and start receiving payments, you need to connect your Stripe account.
+
+Connect Stripe Now: ${sellerSetupUrl}
+
+What happens when you connect Stripe?
+• Your listings will become available for purchase
+• You'll receive payments directly to your account
+• The setup process takes just a few minutes
+
+Don't miss out on sales! Connect your Stripe account today.
+
+Best regards,
+The 1Kappa Team
+
+© ${new Date().getFullYear()} 1Kappa. All rights reserved.
+  `;
+
+  try {
+    const command = new SendEmailCommand({
+      Source: FROM_EMAIL,
+      Destination: {
+        ToAddresses: [email],
+      },
+      Message: {
+        Subject: {
+          Data: subject,
+          Charset: 'UTF-8',
+        },
+        Body: {
+          Html: {
+            Data: htmlBody,
+            Charset: 'UTF-8',
+          },
+          Text: {
+            Data: textBody,
+            Charset: 'UTF-8',
+          },
+        },
+      },
+    });
+
+    await sesClient.send(command);
+    console.log(`✅ Stripe setup required email sent successfully to ${email}`);
+  } catch (error) {
+    console.error(`❌ Error sending Stripe setup required email to ${email}:`, error);
+    // Don't throw - email failure shouldn't break the checkout process
+  }
+}
+

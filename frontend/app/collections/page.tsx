@@ -7,6 +7,7 @@ import Image from 'next/image';
 import Header from '../components/Header';
 import VerificationBadge from '../components/VerificationBadge';
 import UserRoleBadges from '../components/UserRoleBadges';
+import ProductStatusBadge from '../components/ProductStatusBadge';
 import ScrollToSeller from './ScrollToSeller';
 import Footer from '../components/Footer';
 
@@ -437,6 +438,7 @@ export default async function CollectionsPage({ searchParams }: CollectionsPageP
                           className="group bg-cream rounded-xl overflow-hidden shadow hover:shadow-lg transition-all duration-200 hover:-translate-y-1"
                         >
                           <div className="aspect-[4/5] relative bg-white">
+                            <ProductStatusBadge product={product} />
                             {product.image_url ? (
                               <Image
                                 src={product.image_url}

@@ -11,6 +11,7 @@ import Skeleton, { SkeletonLoader } from '../components/Skeleton';
 import SearchableSelect from '../components/SearchableSelect';
 import UserRoleBadges from '../components/UserRoleBadges';
 import StewardshipHowItWorksModal from '../components/StewardshipHowItWorksModal';
+import ProductStatusBadge from '../components/ProductStatusBadge';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -655,6 +656,7 @@ function ShopPageContent() {
                   className="bg-white rounded-xl overflow-hidden shadow hover:shadow-md transition relative group"
                 >
                   <div className="aspect-[4/5] relative bg-cream">
+                    <ProductStatusBadge product={product} />
                     {product.image_url ? (
                       <Image
                         src={product.image_url}

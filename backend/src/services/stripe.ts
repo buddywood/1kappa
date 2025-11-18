@@ -47,6 +47,7 @@ export async function createAccountLink(accountId: string, returnUrl: string, re
 
 /**
  * Create a checkout session with connected account
+ * Uses Stripe Connect with application fees - charges on platform account, transfers to connected account
  */
 export async function createCheckoutSession(params: {
   productId: number;
@@ -58,8 +59,12 @@ export async function createCheckoutSession(params: {
   cancelUrl: string;
   chapterId?: number;
 }): Promise<Stripe.Checkout.Session> {
-  const applicationFeeAmount = Math.round(params.priceCents * 0.08); // 8% total fee
+  const applicationFeeAmount = Math.round(params.priceCents * 0.08); // 8% platform fee
+  // Note: When using application_fee_amount, Stripe automatically calculates transfer amount
+  // Transfer amount = total - application_fee_amount
 
+  // Create session on platform account (not connected account)
+  // The payment_intent_data.transfer_data will handle the transfer to the connected account
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ['card'],
     line_items: [
@@ -80,6 +85,7 @@ export async function createCheckoutSession(params: {
       on_behalf_of: params.connectedAccountId,
       transfer_data: {
         destination: params.connectedAccountId,
+        // Don't specify amount - Stripe calculates it as (total - application_fee_amount)
       },
     },
     customer_email: params.buyerEmail,
@@ -89,8 +95,6 @@ export async function createCheckoutSession(params: {
       product_id: params.productId.toString(),
       chapter_id: params.chapterId?.toString() || '',
     },
-  }, {
-    stripeAccount: params.connectedAccountId,
   });
 
   return session;

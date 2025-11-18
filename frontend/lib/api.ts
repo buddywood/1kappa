@@ -64,6 +64,8 @@ export interface Product {
   seller_fraternity_member_id?: number | null;
   seller_sponsoring_chapter_id?: number | null;
   seller_initiated_chapter_id?: number | null;
+  seller_status?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  seller_stripe_account_id?: string | null;
   is_fraternity_member?: boolean;
   is_seller?: boolean;
   is_promoter?: boolean;
@@ -206,7 +208,90 @@ export async function createCheckoutSession(productId: number, buyerEmail: strin
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ buyer_email: buyerEmail }),
   });
-  if (!res.ok) throw new Error('Failed to create checkout session');
+  
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    // Include full error data for proper handling
+    const error = new Error(errorData.message || errorData.details || errorData.error || 'Failed to create checkout session');
+    (error as any).errorData = errorData;
+    throw error;
+  }
+  
+  return res.json();
+}
+
+export interface OrderDetails {
+  order: {
+    id: number;
+    status: 'PENDING' | 'PAID' | 'FAILED';
+    amount_cents: number;
+    buyer_email: string;
+    created_at: string;
+  };
+  product: {
+    id: number;
+    name: string;
+    price_cents: number;
+  } | null;
+}
+
+export async function getOrderBySessionId(sessionId: string): Promise<OrderDetails> {
+  const res = await fetch(`${API_URL}/api/checkout/session/${sessionId}`);
+  
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    const errorMessage = errorData.error || 'Failed to fetch order details';
+    throw new Error(errorMessage);
+  }
+  
+  return res.json();
+}
+
+// Favorites API
+export async function addFavorite(userEmail: string, productId: number): Promise<void> {
+  const res = await fetch(`${API_URL}/api/favorites/${userEmail}/${productId}`, {
+    method: 'POST',
+  });
+  
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    const errorMessage = errorData.error || 'Failed to add favorite';
+    throw new Error(errorMessage);
+  }
+}
+
+export async function removeFavorite(userEmail: string, productId: number): Promise<void> {
+  const res = await fetch(`${API_URL}/api/favorites/${userEmail}/${productId}`, {
+    method: 'DELETE',
+  });
+  
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    const errorMessage = errorData.error || 'Failed to remove favorite';
+    throw new Error(errorMessage);
+  }
+}
+
+export async function checkFavorite(userEmail: string, productId: number): Promise<boolean> {
+  const res = await fetch(`${API_URL}/api/favorites/${userEmail}/${productId}`);
+  
+  if (!res.ok) {
+    return false;
+  }
+  
+  const data = await res.json();
+  return data.favorited || false;
+}
+
+export async function getFavoriteProducts(userEmail: string): Promise<Product[]> {
+  const res = await fetch(`${API_URL}/api/favorites/${userEmail}/products`);
+  
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    const errorMessage = errorData.error || 'Failed to fetch favorite products';
+    throw new Error(errorMessage);
+  }
+  
   return res.json();
 }
 

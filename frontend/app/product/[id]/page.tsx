@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { fetchProduct, createCheckoutSession, fetchChapters } from '@/lib/api';
+import { fetchProduct, createCheckoutSession, fetchChapters, addFavorite, removeFavorite, checkFavorite } from '@/lib/api';
 import type { Product, Chapter, ProductImage } from '@/lib/api';
+import { Heart } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import Header from '../../components/Header';
@@ -13,6 +14,13 @@ import VerificationBadge from '../../components/VerificationBadge';
 import UserRoleBadges from '../../components/UserRoleBadges';
 import ProductAttributes from '../../components/ProductAttributes';
 import { SkeletonLoader } from '../../components/Skeleton';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 export default function ProductPage() {
   const params = useParams();
@@ -23,6 +31,10 @@ export default function ProductPage() {
   const [loading, setLoading] = useState(true);
   const [checkingOut, setCheckingOut] = useState(false);
   const [error, setError] = useState('');
+  const [showStripeModal, setShowStripeModal] = useState(false);
+  const [stripeModalMessage, setStripeModalMessage] = useState('');
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
 
   useEffect(() => {
     if (params.id) {
@@ -42,11 +54,46 @@ export default function ProductPage() {
     }
   }, [params.id]);
 
+  // Check favorite status when product and session are loaded
+  useEffect(() => {
+    if (product && sessionStatus === 'authenticated' && session?.user?.email) {
+      checkFavorite(session.user.email, product.id)
+        .then(setIsFavorited)
+        .catch(() => setIsFavorited(false));
+    } else {
+      setIsFavorited(false);
+    }
+  }, [product, sessionStatus, session?.user?.email]);
+
 
   const getChapterName = (chapterId: number | null) => {
     if (!chapterId) return null;
     const chapter = chapters.find(c => c.id === chapterId);
     return chapter?.name || null;
+  };
+
+  const handleToggleFavorite = async () => {
+    if (!product || sessionStatus !== 'authenticated' || !session?.user?.email) {
+      // Redirect to login if not authenticated
+      router.push('/login');
+      return;
+    }
+
+    setFavoriteLoading(true);
+    try {
+      if (isFavorited) {
+        await removeFavorite(session.user.email, product.id);
+        setIsFavorited(false);
+      } else {
+        await addFavorite(session.user.email, product.id);
+        setIsFavorited(true);
+      }
+    } catch (err: any) {
+      console.error('Error toggling favorite:', err);
+      setError('Failed to update favorite');
+    } finally {
+      setFavoriteLoading(false);
+    }
   };
 
   const handleCheckout = async (e: React.FormEvent) => {
@@ -66,7 +113,15 @@ export default function ProductPage() {
       const { url } = await createCheckoutSession(product.id, session.user.email);
       window.location.href = url;
     } catch (err: any) {
-      setError(err.message || 'Failed to start checkout');
+      // Check if it's a Stripe not connected error
+      const errorData = err.errorData || {};
+      if (errorData.error === 'STRIPE_NOT_CONNECTED' || err.message?.includes('STRIPE_NOT_CONNECTED')) {
+        const message = errorData.message || 'The seller is finalizing their payout setup.\n\nThis item will be available soon.';
+        setStripeModalMessage(message);
+        setShowStripeModal(true);
+      } else {
+        setError(err.message || 'Failed to start checkout');
+      }
       setCheckingOut(false);
     }
   };
@@ -205,9 +260,25 @@ export default function ProductPage() {
                 </div>
               )}
 
-              <p className="text-4xl font-bold text-crimson mb-12">
-                ${(product.price_cents / 100).toFixed(2)}
-              </p>
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-4xl font-bold text-crimson">
+                  ${(product.price_cents / 100).toFixed(2)}
+                </p>
+                {sessionStatus === 'authenticated' && session?.user?.email && (
+                  <button
+                    onClick={handleToggleFavorite}
+                    disabled={favoriteLoading}
+                    className={`p-3 rounded-full transition-all ${
+                      isFavorited
+                        ? 'bg-crimson text-white'
+                        : 'bg-gray-200 dark:bg-gray-700 text-midnight-navy dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                    } disabled:opacity-50`}
+                    aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                  >
+                    <Heart className={`w-6 h-6 ${isFavorited ? 'fill-current' : ''}`} />
+                  </button>
+                )}
+              </div>
 
               <form onSubmit={handleCheckout} className="space-y-4">
                 {error && (
@@ -236,6 +307,65 @@ export default function ProductPage() {
         </div>
       </main>
       <Footer />
+      
+      {/* Stripe Not Connected Modal */}
+      <Dialog open={showStripeModal} onOpenChange={setShowStripeModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-display text-midnight-navy dark:text-gray-100">
+              Item Temporarily Unavailable
+            </DialogTitle>
+            <DialogDescription className="text-midnight-navy/70 dark:text-gray-400 whitespace-pre-line pt-4">
+              {stripeModalMessage}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-frost-gray dark:border-gray-700">
+            <p className="text-sm text-midnight-navy dark:text-gray-300 mb-3">
+              <strong>Don't miss out!</strong> Favorite this item to be notified when it becomes available.
+            </p>
+            {sessionStatus === 'authenticated' && session?.user?.email && product && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    handleToggleFavorite();
+                    setShowStripeModal(false);
+                  }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition ${
+                    isFavorited
+                      ? 'bg-crimson text-white hover:bg-crimson/90'
+                      : 'bg-gray-200 dark:bg-gray-700 text-midnight-navy dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  <Heart className={`w-4 h-4 ${isFavorited ? 'fill-current' : ''}`} />
+                  {isFavorited ? 'Favorited' : 'Favorite Item'}
+                </button>
+                <Link
+                  href="/saved"
+                  onClick={() => setShowStripeModal(false)}
+                  className="text-sm text-crimson hover:underline"
+                >
+                  View your saved items →
+                </Link>
+              </div>
+            )}
+            {sessionStatus !== 'authenticated' && (
+              <p className="text-xs text-midnight-navy/60 dark:text-gray-400">
+                <Link href="/login" className="text-crimson hover:underline">
+                  Sign in
+                </Link> to favorite items and view them in your saved items list.
+              </p>
+            )}
+          </div>
+          <div className="flex justify-end mt-6">
+            <button
+              onClick={() => setShowStripeModal(false)}
+              className="bg-crimson text-white px-6 py-2 rounded-lg font-semibold hover:bg-crimson/90 transition"
+            >
+              Got it
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

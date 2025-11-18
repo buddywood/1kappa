@@ -208,6 +208,7 @@ export async function getProductById(id: number): Promise<Product | null> {
             s.name as seller_name, 
             s.business_name as seller_business_name,
             s.status as seller_status, 
+            s.stripe_account_id as seller_stripe_account_id,
             s.fraternity_member_id as seller_fraternity_member_id,
             m.initiated_chapter_id as seller_initiated_chapter_id, 
             s.sponsoring_chapter_id as seller_sponsoring_chapter_id,
@@ -244,6 +245,7 @@ export async function getActiveProducts(): Promise<Product[]> {
             s.name as seller_name, 
             s.business_name as seller_business_name, 
             s.status as seller_status, 
+            s.stripe_account_id as seller_stripe_account_id,
             s.fraternity_member_id as seller_fraternity_member_id,
             m.initiated_chapter_id as seller_initiated_chapter_id, 
             s.sponsoring_chapter_id as seller_sponsoring_chapter_id,
@@ -280,6 +282,7 @@ export async function getProductsBySeller(sellerId: number): Promise<Product[]> 
             s.name as seller_name, 
             s.business_name as seller_business_name, 
             s.status as seller_status, 
+            s.stripe_account_id as seller_stripe_account_id,
             s.fraternity_member_id as seller_fraternity_member_id,
             m.initiated_chapter_id as seller_initiated_chapter_id, 
             s.sponsoring_chapter_id as seller_sponsoring_chapter_id,
@@ -1492,6 +1495,83 @@ export async function setPlatformSetting(
 
 export async function getAllPlatformSettings(): Promise<PlatformSetting[]> {
   const result = await pool.query('SELECT * FROM platform_settings ORDER BY key');
+  return result.rows;
+}
+
+// Favorites queries
+export interface Favorite {
+  id: number;
+  user_email: string;
+  product_id: number;
+  created_at: Date;
+}
+
+export async function addFavorite(userEmail: string, productId: number): Promise<Favorite | null> {
+  const result = await pool.query(
+    `INSERT INTO favorites (user_email, product_id)
+     VALUES ($1, $2)
+     ON CONFLICT (user_email, product_id) DO NOTHING
+     RETURNING *`,
+    [userEmail, productId]
+  );
+  // If already favorited, return existing favorite
+  if (result.rows.length === 0) {
+    const existing = await pool.query(
+      'SELECT * FROM favorites WHERE user_email = $1 AND product_id = $2',
+      [userEmail, productId]
+    );
+    return existing.rows[0] || null;
+  }
+  return result.rows[0];
+}
+
+export async function removeFavorite(userEmail: string, productId: number): Promise<boolean> {
+  const result = await pool.query(
+    'DELETE FROM favorites WHERE user_email = $1 AND product_id = $2',
+    [userEmail, productId]
+  );
+  return result.rowCount > 0;
+}
+
+export async function getFavoritesByUser(userEmail: string): Promise<Favorite[]> {
+  const result = await pool.query(
+    'SELECT * FROM favorites WHERE user_email = $1 ORDER BY created_at DESC',
+    [userEmail]
+  );
+  return result.rows;
+}
+
+export async function isFavorite(userEmail: string, productId: number): Promise<boolean> {
+  const result = await pool.query(
+    'SELECT 1 FROM favorites WHERE user_email = $1 AND product_id = $2',
+    [userEmail, productId]
+  );
+  return result.rows.length > 0;
+}
+
+export async function getFavoriteProductsByUser(userEmail: string): Promise<Product[]> {
+  const result = await pool.query(
+    `SELECT p.*, 
+            s.name as seller_name,
+            s.status as seller_status,
+            s.stripe_account_id as seller_stripe_account_id,
+            s.sponsoring_chapter_id as seller_sponsoring_chapter_id,
+            m.initiated_chapter_id as seller_initiated_chapter_id,
+            CASE WHEN s.fraternity_member_id IS NOT NULL THEN true ELSE false END as is_fraternity_member,
+            CASE WHEN s.status = 'APPROVED' THEN true ELSE false END as is_seller,
+            CASE WHEN st.id IS NOT NULL THEN true ELSE false END as is_steward,
+            CASE WHEN pr.id IS NOT NULL THEN true ELSE false END as is_promoter,
+            f.created_at as favorited_at
+     FROM favorites f
+     JOIN products p ON f.product_id = p.id
+     LEFT JOIN sellers s ON p.seller_id = s.id
+     LEFT JOIN fraternity_members m ON s.fraternity_member_id = m.id
+     LEFT JOIN stewards st ON s.fraternity_member_id = st.fraternity_member_id AND st.status = 'APPROVED'
+     LEFT JOIN promoters pr ON (s.fraternity_member_id = pr.fraternity_member_id OR s.email = pr.email) AND pr.status = 'APPROVED'
+     WHERE f.user_email = $1
+     ORDER BY f.created_at DESC`,
+    [userEmail]
+  );
   return result.rows;
 }
 
