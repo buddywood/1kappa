@@ -1,4 +1,4 @@
-name: CI → Lint → Test → Migrate → Preview/Deploy (1Kappa)
+name: CI → Lint → Test → Migrate → Preview/Prod Deploy (1Kappa)
 
 on:
   push:
@@ -18,13 +18,15 @@ jobs:
         working-directory: ./frontend
 
     steps:
-      - name: Checkout
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
+          cache: 'npm'
+          cache-dependency-path: ./frontend/package-lock.json
 
       - name: Install dependencies
         run: npm install
@@ -32,10 +34,10 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
-      - name: TypeScript Check
+      - name: TypeScript type check
         run: npm run typecheck
 
-      - name: Run Unit Tests
+      - name: Run unit tests
         run: npm test
 
 
@@ -50,124 +52,153 @@ jobs:
         working-directory: ./backend
 
     steps:
-      - name: Checkout
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
+          cache: 'npm'
+          cache-dependency-path: ./backend/package-lock.json
 
       - name: Install dependencies
         run: npm install
 
       - name: Run ESLint
-        run: npm run lint || true
+        run: npm run lint || true   # allow warnings
 
-      - name: TypeScript Check
+      - name: TypeScript type check
         run: npm run type-check
 
-      - name: Run Unit Tests
+      - name: Run unit tests
         run: npm test
 
 
   # ============================================================
-  # RUN DATABASE MIGRATIONS + SEEDING (DEVELOPMENT PREVIEW)
+  # PREVIEW ENVIRONMENT – DB MIGRATIONS + SEEDING
   # ============================================================
-  migrate-development-db:
-    name: Run DB Migrations (development)
+  migrate-preview-db:
+    name: Run DB Migrations (preview)
     runs-on: ubuntu-latest
     needs: backend-quality
-    if: github.ref == 'refs/heads/development'
+    if: ${{ github.ref == 'refs/heads/development' }}
+    environment:
+      name: preview
 
     env:
       DATABASE_HOST: ${{ secrets.STAGING_DATABASE_HOST }}
       DATABASE_USERNAME: ${{ secrets.STAGING_DATABASE_USERNAME }}
       DATABASE_PASSWORD: ${{ secrets.STAGING_DATABASE_PASSWORD }}
       DATABASE_NAME: ${{ secrets.STAGING_DATABASE_NAME }}
-      SEED_TEST_DATA: "true"   # PREVIEW SEEDS ENABLED
+      SEED_TEST_DATA: "true"
 
     defaults:
       run:
         working-directory: ./backend
 
     steps:
-      - name: Checkout Repo
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Install Dependencies
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: ./backend/package-lock.json
+
+      - name: Install dependencies
         run: npm install
 
-      - name: Run Database Migrations & Seeding
+      - name: Run migrations + seeding
         run: ./scripts/migrate.sh
 
 
   # ============================================================
-  # RUN DATABASE MIGRATIONS (MAIN PRODUCTION)
+  # PRODUCTION ENVIRONMENT – DB MIGRATIONS
   # ============================================================
-  migrate-production-db:
-    name: Run DB Migrations (main)
+  migrate-prod-db:
+    name: Run DB Migrations (production)
     runs-on: ubuntu-latest
     needs: backend-quality
-    if: github.ref == 'refs/heads/main'
+    if: ${{ github.ref == 'refs/heads/main' }}
+    environment:
+      name: production
 
     env:
       DATABASE_HOST: ${{ secrets.DATABASE_HOST }}
       DATABASE_USERNAME: ${{ secrets.DATABASE_USERNAME }}
       DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
       DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
-      SEED_TEST_DATA: "false"  # NO TEST SEEDING IN PROD
+      SEED_TEST_DATA: "false"
 
     defaults:
       run:
         working-directory: ./backend
 
     steps:
-      - name: Checkout Repo
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Install Dependencies
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: ./backend/package-lock.json
+
+      - name: Install dependencies
         run: npm install
 
-      - name: Run Database Migrations
+      - name: Run database migrations
         run: ./scripts/migrate.sh
 
 
   # ============================================================
-  # FRONTEND PREVIEW DEPLOYMENT (DEVELOPMENT BRANCH)
+  # PREVIEW FRONTEND DEPLOYMENT (Vercel)
   # ============================================================
-  preview-frontend-deploy:
-    name: Vercel Preview Deployment (development)
+  deploy-frontend-preview:
+    name: Deploy Frontend to Vercel (preview)
     runs-on: ubuntu-latest
     needs: frontend-quality
-    if: github.ref == 'refs/heads/development'
+    if: ${{ github.ref == 'refs/heads/development' }}
+    environment:
+      name: preview
 
     steps:
-      - name: Checkout Repo
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      # Add Vercel deployment info check to GitHub PR
-      - name: Pull Vercel Environment Information
+      - name: Pull Vercel environment info
         uses: vercel/action@v2
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
 
-      # Trigger actual preview build
       - name: Trigger Vercel Preview Deployment
         run: |
-          curl -X POST "${{ secrets.VERCEL_STAGING_DEPLOY_HOOK }}"
+          response=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.VERCEL_STAGING_DEPLOY_HOOK }}")
+          http_code=$(echo "$response" | tail -n1)
+          if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
+            echo "✅ Vercel preview deployment triggered successfully"
+          else
+            echo "❌ Failed to trigger Vercel preview deployment (HTTP $http_code)"
+            exit 1
+          fi
 
 
   # ============================================================
-  # BACKEND PREVIEW DEPLOYMENT (DEVELOPMENT BRANCH)
+  # PREVIEW BACKEND DEPLOYMENT (Heroku)
   # ============================================================
-  preview-backend-deploy:
-    name: Deploy Backend to Heroku Staging (development)
+  deploy-backend-preview:
+    name: Deploy Backend to Heroku (preview)
     runs-on: ubuntu-latest
-    needs: [backend-quality, migrate-development-db]
-    if: github.ref == 'refs/heads/development'
+    needs: [backend-quality, migrate-preview-db]
+    if: ${{ github.ref == 'refs/heads/development' }}
+    environment:
+      name: preview
 
     steps:
       - uses: actions/checkout@v4
@@ -182,28 +213,39 @@ jobs:
 
 
   # ============================================================
-  # PRODUCTION FRONTEND DEPLOYMENT (MAIN BRANCH)
+  # PRODUCTION FRONTEND DEPLOYMENT (Vercel)
   # ============================================================
   deploy-frontend-prod:
-    name: Deploy Frontend to Vercel Production (main)
+    name: Deploy Frontend to Vercel (production)
     runs-on: ubuntu-latest
     needs: frontend-quality
-    if: github.ref == 'refs/heads/main'
+    if: ${{ github.ref == 'refs/heads/main' }}
+    environment:
+      name: production
 
     steps:
-      - name: Deploy to Vercel (Production)
+      - name: Trigger Vercel Production Deployment
         run: |
-          curl -X POST "${{ secrets.VERCEL_PROD_DEPLOY_HOOK }}"
+          response=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.VERCEL_PROD_DEPLOY_HOOK }}")
+          http_code=$(echo "$response" | tail -n1)
+          if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
+            echo "✅ Vercel production deployment triggered successfully"
+          else
+            echo "❌ Failed to trigger Vercel production deployment (HTTP $http_code)"
+            exit 1
+          fi
 
 
   # ============================================================
-  # PRODUCTION BACKEND DEPLOYMENT (MAIN BRANCH)
+  # PRODUCTION BACKEND DEPLOYMENT (Heroku)
   # ============================================================
   deploy-backend-prod:
-    name: Deploy Backend to Heroku Production (main)
+    name: Deploy Backend to Heroku (production)
     runs-on: ubuntu-latest
-    needs: [backend-quality, migrate-production-db]
-    if: github.ref == 'refs/heads/main'
+    needs: [backend-quality, migrate-prod-db]
+    if: ${{ github.ref == 'refs/heads/main' }}
+    environment:
+      name: production
 
     steps:
       - uses: actions/checkout@v4
@@ -215,4 +257,3 @@ jobs:
           heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
           heroku_email: ${{ secrets.HEROKU_EMAIL }}
           branch: main
-
