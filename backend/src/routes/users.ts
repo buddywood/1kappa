@@ -98,6 +98,8 @@ router.get('/me', authenticate, async (req: Request, res: Response) => {
       steward_id: user.steward_id,
       features: user.features,
       name: name,
+      last_login: user.last_login,
+      created_at: user.created_at,
       is_fraternity_member,
       is_seller,
       is_promoter,
@@ -235,6 +237,92 @@ router.post('/upsert-on-login', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error upserting user on login:', error);
     res.status(500).json({ error: 'Failed to upsert user' });
+  }
+});
+
+// Delete current user's account
+router.delete('/me/delete', authenticate, async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const user = await getUserById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Store IDs before deleting
+    const memberId = user.fraternity_member_id;
+    const sellerId = user.seller_id;
+    const promoterId = user.promoter_id;
+    const stewardId = user.steward_id;
+
+    // Delete role-specific data first (to handle foreign key constraints)
+    
+    // Delete seller-related data
+    if (sellerId) {
+      // Get product IDs first before deleting
+      const productIdsResult = await pool.query('SELECT id FROM products WHERE seller_id = $1', [sellerId]);
+      const productIds = productIdsResult.rows.map(row => row.id);
+      
+      // Delete orders for this seller's products (if any products exist)
+      if (productIds.length > 0) {
+        await pool.query('DELETE FROM orders WHERE product_id = ANY($1::int[])', [productIds]);
+      }
+      
+      // Delete products (they reference seller)
+      await pool.query('DELETE FROM products WHERE seller_id = $1', [sellerId]);
+      
+      // Delete seller record
+      await pool.query('DELETE FROM sellers WHERE id = $1', [sellerId]);
+    }
+
+    // Delete promoter-related data
+    if (promoterId) {
+      // Delete events first (they reference promoter)
+      await pool.query('DELETE FROM events WHERE promoter_id = $1', [promoterId]);
+      
+      // Delete promoter record
+      await pool.query('DELETE FROM promoters WHERE id = $1', [promoterId]);
+    }
+
+    // Delete steward-related data
+    if (stewardId) {
+      // Delete steward claims first
+      await pool.query(
+        'DELETE FROM steward_claims WHERE steward_listing_id IN (SELECT id FROM steward_listings WHERE steward_id = $1)',
+        [stewardId]
+      );
+      
+      // Delete steward listings
+      await pool.query('DELETE FROM steward_listings WHERE steward_id = $1', [stewardId]);
+      
+      // Delete steward record
+      await pool.query('DELETE FROM stewards WHERE id = $1', [stewardId]);
+    }
+
+    // Delete notifications
+    await pool.query('DELETE FROM notifications WHERE user_email = $1', [user.email]);
+
+    // Delete favorites
+    await pool.query('DELETE FROM favorites WHERE user_email = $1', [user.email]);
+
+    // Delete orders where user is buyer
+    await pool.query('DELETE FROM orders WHERE buyer_email = $1', [user.email]);
+
+    // Delete member record if exists
+    if (memberId) {
+      await pool.query('DELETE FROM fraternity_members WHERE id = $1', [memberId]);
+    }
+
+    // Finally, delete the user record
+    await pool.query('DELETE FROM users WHERE id = $1', [user.id]);
+
+    res.json({ success: true, message: 'Account deleted successfully' });
+  } catch (error: any) {
+    console.error('Error deleting account:', error);
+    res.status(500).json({ error: 'Failed to delete account', details: error.message });
   }
 });
 

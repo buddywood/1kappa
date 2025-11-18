@@ -662,6 +662,18 @@ export async function getPromoterMetrics(): Promise<PromoterMetrics> {
   return res.json();
 }
 
+export async function getPromoterProfile(): Promise<Promoter> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/promoters/me`, {
+    headers,
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to fetch promoter profile');
+  }
+  return res.json();
+}
+
 export async function fetchEvent(id: number): Promise<Event> {
   const res = await fetch(`${API_URL}/api/events/${id}`);
   if (!res.ok) throw new Error('Failed to fetch event');

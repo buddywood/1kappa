@@ -1,7 +1,8 @@
 import { Router, Request, Response } from 'express';
 import type { Router as ExpressRouter } from 'express';
 import multer from 'multer';
-import { createPromoter } from '../db/queries';
+import { createPromoter, getPromoterById } from '../db/queries';
+import { authenticate } from '../middleware/auth';
 import { uploadToS3 } from '../services/s3';
 import { z } from 'zod';
 
@@ -61,6 +62,24 @@ router.post('/apply', upload.single('headshot'), async (req: Request, res: Respo
     }
     console.error('Error creating promoter application:', error);
     res.status(500).json({ error: 'Failed to create promoter application' });
+  }
+});
+
+// Get current promoter's profile (authenticated promoter)
+router.get('/me', authenticate, async (req: Request, res: Response) => {
+  try {
+    if (!req.user || !req.user.promoterId) {
+      return res.status(403).json({ error: 'Not a promoter' });
+    }
+
+    const promoter = await getPromoterById(req.user.promoterId);
+    if (!promoter) {
+      return res.status(404).json({ error: 'Promoter not found' });
+    }
+    res.json(promoter);
+  } catch (error) {
+    console.error('Error fetching promoter profile:', error);
+    res.status(500).json({ error: 'Failed to fetch promoter profile' });
   }
 });
 

@@ -321,7 +321,7 @@ export default function ProductPage() {
           </DialogHeader>
           <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-frost-gray dark:border-gray-700">
             <p className="text-sm text-midnight-navy dark:text-gray-300 mb-3">
-              <strong>Don't miss out!</strong> Favorite this item to be notified when it becomes available.
+              <strong>Don&apos;t miss out!</strong> Favorite this item to be notified when it becomes available.
             </p>
             {sessionStatus === 'authenticated' && session?.user?.email && product && (
               <div className="flex items-center gap-2">

@@ -176,7 +176,7 @@ export default function NotificationsPage() {
                 No notifications
               </h2>
               <p className="text-midnight-navy/70 dark:text-gray-400">
-                You're all caught up! We'll notify you when there's something new.
+                You&apos;re all caught up! We&apos;ll notify you when there&apos;s something new.
               </p>
             </div>
           ) : (
