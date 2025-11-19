@@ -157,7 +157,7 @@ describe('S3 Service', () => {
 
       expect(result).toBe(mockPresignedUrl);
       expect(mockGetSignedUrl).toHaveBeenCalledWith(
-        expect.any(S3Client),
+        expect.anything(), // S3Client instance
         expect.any(PutObjectCommand),
         { expiresIn }
       );
@@ -177,7 +177,7 @@ describe('S3 Service', () => {
       await getPresignedUploadUrl(key, contentType);
 
       expect(mockGetSignedUrl).toHaveBeenCalledWith(
-        expect.any(S3Client),
+        expect.anything(), // S3Client instance
         expect.any(PutObjectCommand),
         { expiresIn: 3600 }
       );

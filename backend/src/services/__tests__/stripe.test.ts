@@ -143,13 +143,26 @@ describe('Stripe Service', () => {
           customer_email: params.buyerEmail,
           success_url: params.successUrl,
           cancel_url: params.cancelUrl,
-          metadata: {
+          line_items: expect.arrayContaining([
+            expect.objectContaining({
+              price_data: expect.objectContaining({
+                product_data: expect.objectContaining({
+                  name: params.productName,
+                }),
+                unit_amount: params.priceCents,
+              }),
+            }),
+          ]),
+          payment_intent_data: expect.objectContaining({
+            on_behalf_of: params.connectedAccountId,
+            transfer_data: expect.objectContaining({
+              destination: params.connectedAccountId,
+            }),
+          }),
+          metadata: expect.objectContaining({
             product_id: '1',
             chapter_id: '5',
-          },
-        }),
-        expect.objectContaining({
-          stripeAccount: params.connectedAccountId,
+          }),
         })
       );
     });

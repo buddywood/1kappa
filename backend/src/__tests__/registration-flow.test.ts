@@ -596,11 +596,15 @@ describe('Registration Flow Tests', () => {
         updated_at: new Date(),
       });
 
+      // Set up Stripe environment for auto-approval
+      process.env.STRIPE_SECRET_KEY = 'sk_test_1234567890';
+      
       // Mock: Auto-approval for verified members
       (stripeService.createConnectAccount as jest.Mock).mockResolvedValue({
         id: 'acct_steward123',
       });
 
+      // Mock pool.query for the UPDATE query that sets status and stripe_account_id
       (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] });
 
       (queries.linkUserToSteward as jest.Mock).mockResolvedValue(undefined);

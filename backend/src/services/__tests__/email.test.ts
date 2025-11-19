@@ -140,7 +140,8 @@ describe('Email Service', () => {
 
       const command = mockSendEmailCommand.mock.calls[0][0];
       expect(command.Message.Body.Html.Data).not.toContain('seller-setup?token=');
-      expect(command.Message.Body.Html.Data).toContain('/login');
+      // Check for login link - it could be '/login' or full URL with '/login'
+      expect(command.Message.Body.Html.Data).toMatch(/\/login/);
     });
 
     it('should not throw error when email sending fails', async () => {

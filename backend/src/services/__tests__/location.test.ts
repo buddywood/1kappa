@@ -29,6 +29,7 @@ describe('Location Service', () => {
   });
 
   afterEach(() => {
+    // Restore original environment
     process.env = originalEnv;
   });
 
@@ -155,11 +156,25 @@ describe('Location Service', () => {
     });
 
     it('should throw error when PLACE_INDEX_NAME is not configured', async () => {
-      delete process.env.AWS_LOCATION_PLACE_INDEX_NAME;
-
-      await expect(reverseGeocode(40.7128, -74.0060)).rejects.toThrow(
+      // Save original value
+      const originalPlaceIndex = process.env.AWS_LOCATION_PLACE_INDEX_NAME;
+      
+      // Set to empty string to simulate missing configuration
+      process.env.AWS_LOCATION_PLACE_INDEX_NAME = '';
+      
+      // Clear module cache to force reload with new env var
+      jest.resetModules();
+      
+      // Re-import after clearing cache
+      const { reverseGeocode: reverseGeocodeReloaded } = await import('../location');
+      
+      await expect(reverseGeocodeReloaded(40.7128, -74.0060)).rejects.toThrow(
         'AWS_LOCATION_PLACE_INDEX_NAME is not configured'
       );
+      
+      // Restore original value and reload module
+      process.env.AWS_LOCATION_PLACE_INDEX_NAME = originalPlaceIndex || 'test-place-index';
+      jest.resetModules();
     });
 
     it('should throw error when AWS Location API fails', async () => {
