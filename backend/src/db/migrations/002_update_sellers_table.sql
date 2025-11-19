@@ -35,16 +35,16 @@ BEGIN
       ALTER TABLE sellers ADD COLUMN member_id INTEGER REFERENCES members(id);
       CREATE INDEX IF NOT EXISTS idx_sellers_member_id ON sellers(member_id);
     END IF;
-  ELSIF EXISTS (SELECT 1 FROM information_schema.columns
-                WHERE table_name='sellers' AND column_name='member_id')
-     AND NOT EXISTS (SELECT 1 FROM information_schema.columns
-                     WHERE table_name='sellers' AND column_name='fraternity_member_id') THEN
-    -- If member_id exists but fraternity_member_id doesn't, and fraternity_members table exists,
-    -- migration 016 will handle the rename, but we ensure the column exists here
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='fraternity_members') THEN
-      -- Migration 016 should handle this, but ensure it exists
-      -- Don't add here - let migration 016 rename it
-    END IF;
+  END IF;
+  
+  -- Final safety check: ensure fraternity_member_id exists after all migrations
+  -- This handles cases where the column wasn't created in earlier migrations
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                 WHERE table_name='sellers' AND column_name='fraternity_member_id')
+     AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='fraternity_members') THEN
+    -- If we still don't have the column, add it now
+    ALTER TABLE sellers ADD COLUMN fraternity_member_id INTEGER REFERENCES fraternity_members(id);
+    CREATE INDEX IF NOT EXISTS idx_sellers_fraternity_member_id ON sellers(fraternity_member_id);
   END IF;
 
   -- Add store_logo_url column for seller store logos

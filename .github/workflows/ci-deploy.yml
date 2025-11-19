@@ -177,21 +177,13 @@ jobs:
         working-directory: ./frontend
         run: vercel env pull .env.local --environment=preview --token=${{ secrets.VERCEL_TOKEN }} || true
 
-      - name: Install dependencies
-        working-directory: ./frontend
-        run: npm ci
-
-      - name: Build Project Artifacts
+      - name: Deploy to Vercel
         working-directory: ./frontend
         env:
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL || 'http://localhost:3001' }}
           NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL || 'http://localhost:3000' }}
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'development-secret-key' }}
-        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Deploy Project Artifacts to Vercel
-        working-directory: ./frontend
-        run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+        run: vercel deploy --token=${{ secrets.VERCEL_TOKEN }}
 
 
   # ============================================================
@@ -247,21 +239,13 @@ jobs:
         working-directory: ./frontend
         run: vercel env pull .env.local --environment=production --token=${{ secrets.VERCEL_TOKEN }} || true
 
-      - name: Install dependencies
-        working-directory: ./frontend
-        run: npm ci
-
-      - name: Build Project Artifacts
+      - name: Deploy to Vercel
         working-directory: ./frontend
         env:
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL || 'http://localhost:3001' }}
           NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL || 'http://localhost:3000' }}
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'development-secret-key' }}
-        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Deploy Project Artifacts to Vercel
-        working-directory: ./frontend
-        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+        run: vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
 
 
   # ============================================================
