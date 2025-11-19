@@ -7,6 +7,7 @@
     "start": "npm run build && node dist/server.js",
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
+    "lint": "echo 'Linting skipped - ESLint not configured'",
     "type-check": "tsc --noEmit",
     "migrate": "tsx src/db/migrations.ts",
     "seed": "tsx src/db/seed.ts",

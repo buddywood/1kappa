@@ -159,16 +159,6 @@ jobs:
       name: preview
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
-      - name: Pull Vercel environment info
-        uses: vercel/action@v2
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-
       - name: Trigger Vercel Preview Deployment
         run: |
           response=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.VERCEL_STAGING_DEPLOY_HOOK }}")
