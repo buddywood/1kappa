@@ -5,8 +5,9 @@ echo "🔄 Running database migrations..."
 
 # Construct DATABASE_URL from individual variables if DATABASE_URL is not set
 if [ -z "$DATABASE_URL" ] && [ -n "$DATABASE_HOST" ] && [ -n "$DATABASE_USERNAME" ] && [ -n "$DATABASE_PASSWORD" ] && [ -n "$DATABASE_NAME" ]; then
-  export DATABASE_URL="postgresql://${DATABASE_USERNAME}:${DATABASE_PASSWORD}@${DATABASE_HOST}/${DATABASE_NAME}"
-  echo "✅ Constructed DATABASE_URL from individual variables"
+  # Add SSL mode for secure connections (required for Neon and most cloud databases)
+  export DATABASE_URL="postgresql://${DATABASE_USERNAME}:${DATABASE_PASSWORD}@${DATABASE_HOST}/${DATABASE_NAME}?sslmode=require"
+  echo "✅ Constructed DATABASE_URL from individual variables with SSL"
 fi
 
 # Run migrations
