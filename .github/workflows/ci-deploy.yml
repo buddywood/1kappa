@@ -173,23 +173,26 @@ jobs:
         run: npm install --global vercel@latest
 
       - name: Link to Vercel Project
-        working-directory: ./frontend
         run: |
-          # Link to existing project (1kappa) instead of creating new one
+          # Link to existing project (1kappa) from root directory
+          # The project root directory in Vercel is set to "frontend"
           echo "Linking to existing Vercel project: 1kappa"
+          cd frontend
           vercel link --yes --project=1kappa --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Pull Vercel Environment Information
-        working-directory: ./frontend
-        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+        run: |
+          cd frontend
+          vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Deploy to Vercel
-        working-directory: ./frontend
         env:
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL || 'http://localhost:3001' }}
           NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL || 'http://localhost:3000' }}
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'development-secret-key' }}
-        run: vercel deploy --token=${{ secrets.VERCEL_TOKEN }} --yes
+        run: |
+          cd frontend
+          vercel deploy --token=${{ secrets.VERCEL_TOKEN }} --yes
 
 
   # ============================================================
@@ -242,23 +245,26 @@ jobs:
         run: npm install --global vercel@latest
 
       - name: Link to Vercel Project
-        working-directory: ./frontend
         run: |
-          # Link to existing project (1kappa) instead of creating new one
+          # Link to existing project (1kappa) from root directory
+          # The project root directory in Vercel is set to "frontend"
           echo "Linking to existing Vercel project: 1kappa"
+          cd frontend
           vercel link --yes --project=1kappa --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Pull Vercel Environment Information
-        working-directory: ./frontend
-        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+        run: |
+          cd frontend
+          vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Deploy to Vercel
-        working-directory: ./frontend
         env:
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL || 'http://localhost:3001' }}
           NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL || 'http://localhost:3000' }}
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'development-secret-key' }}
-        run: vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
+        run: |
+          cd frontend
+          vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
 
 
   # ============================================================
