@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { signOut, useSession } from 'next-auth/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { fetchTotalDonations, fetchMemberProfile, getUnreadNotificationCount, getSellerProfile, fetchChapters } from '@/lib/api';
@@ -11,7 +11,7 @@ import { useTheme } from './ThemeProvider';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
-export default function Header() {
+function HeaderContent() {
   const { session, isAuthenticated } = useAuth();
   const { data: nextAuthSession, status: sessionStatus } = useSession();
   const pathname = usePathname();
@@ -680,6 +680,26 @@ export default function Header() {
         )}
       </div>
     </header>
+  );
+}
+
+export default function Header() {
+  return (
+    <Suspense fallback={
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center">
+              <Link href="/" className="flex-shrink-0">
+                <Image src="/horizon-logo.png" alt="1Kappa" width={120} height={40} />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </header>
+    }>
+      <HeaderContent />
+    </Suspense>
   );
 }
 
