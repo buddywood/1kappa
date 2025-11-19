@@ -159,16 +159,27 @@ jobs:
       name: preview
 
     steps:
-      - name: Trigger Vercel Preview Deployment
-        run: |
-          response=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.VERCEL_STAGING_DEPLOY_HOOK }}")
-          http_code=$(echo "$response" | tail -n1)
-          if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
-            echo "✅ Vercel preview deployment triggered successfully"
-          else
-            echo "❌ Failed to trigger Vercel preview deployment (HTTP $http_code)"
-            exit 1
-          fi
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull Vercel Environment Information
+        working-directory: ./frontend
+        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build Project Artifacts
+        working-directory: ./frontend
+        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy Project Artifacts to Vercel
+        working-directory: ./frontend
+        run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
 
 
   # ============================================================
@@ -206,16 +217,27 @@ jobs:
       name: production
 
     steps:
-      - name: Trigger Vercel Production Deployment
-        run: |
-          response=$(curl -s -w "\n%{http_code}" -X POST "${{ secrets.VERCEL_PROD_DEPLOY_HOOK }}")
-          http_code=$(echo "$response" | tail -n1)
-          if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
-            echo "✅ Vercel production deployment triggered successfully"
-          else
-            echo "❌ Failed to trigger Vercel production deployment (HTTP $http_code)"
-            exit 1
-          fi
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull Vercel Environment Information
+        working-directory: ./frontend
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build Project Artifacts
+        working-directory: ./frontend
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy Project Artifacts to Vercel
+        working-directory: ./frontend
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
 
 
   # ============================================================

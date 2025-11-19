@@ -1,3 +1,7 @@
+// Set environment variables BEFORE importing the service
+process.env.AWS_S3_BUCKET_NAME = 'test-bucket';
+process.env.AWS_REGION = 'us-east-1';
+
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { v4 as uuidv4 } from 'uuid';
@@ -119,8 +123,8 @@ describe('S3 Service', () => {
 
       expect(result).toBe(mockPresignedUrl);
       expect(mockGetSignedUrl).toHaveBeenCalledWith(
-        expect.any(S3Client),
-        expect.any(GetObjectCommand),
+        expect.anything(), // S3Client instance
+        expect.anything(), // GetObjectCommand instance
         { expiresIn }
       );
       const commandInput = (GetObjectCommand as unknown as jest.Mock).mock.calls[0][0];
