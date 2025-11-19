@@ -177,6 +177,10 @@ jobs:
         working-directory: ./frontend
         run: vercel env pull .env.local --environment=preview --token=${{ secrets.VERCEL_TOKEN }} || true
 
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
       - name: Build Project Artifacts
         working-directory: ./frontend
         env:
@@ -242,6 +246,10 @@ jobs:
       - name: Pull Vercel Environment Variables
         working-directory: ./frontend
         run: vercel env pull .env.local --environment=production --token=${{ secrets.VERCEL_TOKEN }} || true
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
 
       - name: Build Project Artifacts
         working-directory: ./frontend
