@@ -266,14 +266,15 @@ router.post('/apply', optionalAuthenticate, upload.fields([
           console.error('Failed to send seller approved email:', error);
         });
 
-        // If there's a warning, include it in the response
+        // Return the updated seller (with warning if present)
+        const updatedSeller = await getSellerById(seller.id);
         if (stripeWarning) {
-          const updatedSeller = await getSellerById(seller.id);
           return res.status(201).json({
             ...updatedSeller,
             warning: stripeWarning,
-          } || { ...seller, warning: stripeWarning });
+          });
         }
+        return res.status(201).json(updatedSeller);
       }
     }
 

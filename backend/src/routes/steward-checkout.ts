@@ -79,7 +79,7 @@ router.post('/:listingId', authenticate, requireVerifiedMember, async (req: Requ
     // Create claim record
     await createStewardClaim({
       listing_id: listing.id,
-      claimant_member_id: req.user.memberId,
+      claimant_fraternity_member_id: req.user.memberId,
       stripe_session_id: session.id,
       total_amount_cents: totalAmountCents,
       shipping_cents: listing.shipping_cost_cents,

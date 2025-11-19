@@ -84,9 +84,9 @@ router.post('/', authenticate, upload.single('image'), async (req: Request, res:
       city: body.city || undefined,
       state: body.state || undefined,
       image_url: imageUrl,
-      sponsored_chapter_id: body.sponsored_chapter_id,
+      sponsored_chapter_id: body.sponsored_chapter_id ?? undefined,
       ticket_price_cents: body.ticket_price_cents || 0,
-      max_attendees: body.max_attendees,
+      max_attendees: body.max_attendees ?? undefined,
     });
 
     res.status(201).json(event);

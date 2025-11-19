@@ -90,8 +90,8 @@ router.post('/apply', authenticate, async (req: Request, res: Response) => {
           ['APPROVED', steward.id]
         );
 
-        // Link user to steward
-        if (req.user?.id) {
+        // Link user to steward (req.user is already checked above)
+        if (req.user.id) {
           await linkUserToSteward(req.user.id, steward.id);
         }
 
@@ -123,8 +123,8 @@ router.post('/apply', authenticate, async (req: Request, res: Response) => {
           ['APPROVED', account.id, steward.id]
         );
 
-        // Link user to steward
-        if (req.user?.id) {
+        // Link user to steward (req.user is already checked above)
+        if (req.user.id) {
           await linkUserToSteward(req.user.id, steward.id);
         }
 
@@ -158,8 +158,8 @@ router.post('/apply', authenticate, async (req: Request, res: Response) => {
           ['APPROVED', steward.id]
         );
 
-        // Link user to steward
-        if (req.user?.id) {
+        // Link user to steward (req.user is already checked above)
+        if (req.user.id) {
           await linkUserToSteward(req.user.id, steward.id);
         }
 

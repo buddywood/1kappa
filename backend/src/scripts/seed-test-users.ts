@@ -278,7 +278,7 @@ async function seedTestUsers(): Promise<void> {
               sponsoring_chapter_id: sponsoringChapter.id,
               business_name: testUser.business_name || null,
               vendor_license_number: testUser.vendor_license_number || 'VL-TEST',
-              member_id: memberId,
+              fraternity_member_id: memberId,
             });
             sellerId = seller.id;
 
@@ -418,10 +418,15 @@ async function seedTestUsers(): Promise<void> {
               throw new Error(`${userRole} role requires fraternity_member_id but memberId is null for ${testUser.name}`);
             }
             
+            // Type guard: createUser doesn't accept 'STEWARD' role
+            if (userRole === 'STEWARD') {
+              throw new Error('STEWARD role should be handled by direct SQL insert, not createUser');
+            }
+            
             await createUser({
               cognito_sub: finalCognitoSub,
               email: testUser.email,
-              role: userRole,
+              role: userRole as 'ADMIN' | 'SELLER' | 'PROMOTER' | 'CONSUMER',
               onboarding_status: 'ONBOARDING_FINISHED',
               fraternity_member_id: (userRole === 'SELLER') ? null : memberId,
               seller_id: sellerId,
