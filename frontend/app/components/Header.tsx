@@ -31,16 +31,19 @@ export default function Header() {
   
   // Fetch notification count
   useEffect(() => {
-    if (showAuthenticatedMenu && nextAuthSession?.user?.email) {
-      getUnreadNotificationCount(nextAuthSession.user.email)
+    const userEmail = nextAuthSession?.user?.email;
+    if (showAuthenticatedMenu && userEmail) {
+      getUnreadNotificationCount(userEmail)
         .then(setNotificationCount)
         .catch(() => setNotificationCount(0));
       
       // Poll for updates every 30 seconds
       const interval = setInterval(() => {
-        getUnreadNotificationCount(nextAuthSession.user.email)
-          .then(setNotificationCount)
-          .catch(() => setNotificationCount(0));
+        if (userEmail) {
+          getUnreadNotificationCount(userEmail)
+            .then(setNotificationCount)
+            .catch(() => setNotificationCount(0));
+        }
       }, 30000);
       
       return () => clearInterval(interval);

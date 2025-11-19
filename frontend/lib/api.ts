@@ -481,7 +481,7 @@ export async function completeSellerSetup(token: string, password: string): Prom
   }
 }
 
-async function getAuthHeaders(): Promise<HeadersInit> {
+export async function getAuthHeaders(): Promise<HeadersInit> {
   const session = await fetch('/api/auth/session').then(res => res.json());
   const idToken = (session as any)?.idToken;
   const onboardingStatus = (session as any)?.user?.onboarding_status;

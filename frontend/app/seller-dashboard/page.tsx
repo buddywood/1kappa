@@ -311,7 +311,7 @@ export default function SellerDashboardPage() {
                           {formatPrice(product.price_cents)}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
-                          {formatDate(product.created_at || new Date().toISOString())}
+                          {formatDate(new Date().toISOString())}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">

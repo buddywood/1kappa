@@ -99,10 +99,11 @@ router.post('/apply', authenticate, async (req: Request, res: Response) => {
 
         // Fetch updated steward to return correct status
         const updatedSteward = await getStewardById(steward.id);
+        const warning = 'Your steward application was approved, but Stripe payment setup is required before you can receive payments. An admin will help you complete Stripe setup.';
         return res.status(201).json({
-          ...updatedSteward,
-          warning: 'Your steward application was approved, but Stripe payment setup is required before you can receive payments. An admin will help you complete Stripe setup.',
-        } || { ...steward, warning: 'Your steward application was approved, but Stripe payment setup is required before you can receive payments. An admin will help you complete Stripe setup.' });
+          ...(updatedSteward || steward),
+          warning,
+        });
       }
 
       try {
@@ -165,9 +166,9 @@ router.post('/apply', authenticate, async (req: Request, res: Response) => {
 
         const updatedSteward = await getStewardById(steward.id);
         return res.status(201).json({
-          ...updatedSteward,
+          ...(updatedSteward || steward),
           warning: warningMessage,
-        } || { ...steward, warning: warningMessage });
+        });
       }
     }
 

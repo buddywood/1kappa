@@ -180,7 +180,7 @@ export async function getStripeAccountBusinessDetails(accountId: string): Promis
   // Business profile is available for Express accounts
   const businessProfile = account.business_profile || ({} as Stripe.Account.BusinessProfile);
   const company = account.company || ({} as Stripe.Account.Company);
-  const individual = account.individual || ({} as Stripe.Account.Individual);
+  const individual = account.individual || ({} as any);
   
   // Determine account type
   let accountType: 'company' | 'individual' | null = null;

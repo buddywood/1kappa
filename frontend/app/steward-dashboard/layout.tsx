@@ -43,7 +43,7 @@ export default function StewardDashboardLayout({
   const isSeller = (session?.user as any)?.is_seller || (session?.user as any)?.sellerId;
   const isPromoter = (session?.user as any)?.is_promoter || (session?.user as any)?.promoterId;
 
-  const conditionalItems = [];
+  const conditionalItems: Array<{ href: string; label: string; icon: any }> = [];
   if (isSeller) {
     conditionalItems.push({ href: '/seller-dashboard', label: 'Seller Items', icon: ShoppingBag });
   }

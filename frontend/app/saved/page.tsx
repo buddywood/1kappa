@@ -120,11 +120,8 @@ export default function SavedItemsPage() {
                       {product.seller_name && (
                         <>
                           <VerificationBadge
-                            isFraternityMember={product.is_fraternity_member || false}
-                            isSeller={product.is_seller || false}
-                            isSteward={product.is_steward || false}
-                            isPromoter={product.is_promoter || false}
-                            size="sm"
+                            type={product.is_fraternity_member ? 'brother' : product.is_seller ? 'seller' : 'brother'}
+                            chapterName={null}
                           />
                           <span className="text-sm text-midnight-navy/70 dark:text-gray-400">
                             {product.seller_name}
