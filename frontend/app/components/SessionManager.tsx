@@ -148,7 +148,7 @@ export default function SessionManager() {
               />
             </svg>
           </div>
-          <DialogTitle className="text-2xl font-extrabold text-[#1E2A38] mb-2">
+          <DialogTitle className="text-2xl font-extrabold text-[#0D0D0F] mb-2">
             Session Expiring Soon
           </DialogTitle>
           <DialogDescription className="text-gray-600 mb-4">

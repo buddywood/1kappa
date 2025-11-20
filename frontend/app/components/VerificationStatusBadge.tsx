@@ -102,7 +102,7 @@ export default function VerificationStatusBadge({
               {badgeContent}
             </div>
           </TooltipTrigger>
-          <TooltipContent className="w-64 bg-[#1E2A38] text-white border-none p-3">
+          <TooltipContent className="w-64 bg-[#0D0D0F] text-white border-none p-3">
             <p className="mb-2 font-semibold">{config.label} Verification</p>
             <p className="text-white/90 leading-relaxed">{config.tooltip}</p>
             {status === 'FAILED' && (

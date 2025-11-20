@@ -437,7 +437,7 @@ function LoginPageContent() {
             ? 'Please set a new password to continue.'
             : needsVerification
             ? 'Please verify your email address to continue. Check your email for a verification code.'
-            : 'Sign in to continue the Bond'}
+            : 'One Family. One Step. One Kappa.'}
         </p>
         {needsVerification ? (
           <form onSubmit={handleVerification} className="space-y-4">
@@ -537,17 +537,25 @@ function LoginPageContent() {
               </button>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="rememberMe"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-              className="rounded border-frost-gray text-crimson focus:ring-crimson w-4 h-4"
-            />
-            <label htmlFor="rememberMe" className="text-sm text-midnight-navy/70 cursor-pointer">
-              Remember me
-            </label>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="rememberMe"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="rounded border-frost-gray text-crimson focus:ring-crimson w-4 h-4"
+              />
+              <label htmlFor="rememberMe" className="text-sm text-midnight-navy/70 cursor-pointer">
+                Remember me
+              </label>
+            </div>
+            <Link
+              href="/forgot-password"
+              className="text-sm font-medium text-crimson hover:text-crimson/80 transition underline"
+            >
+              Forgot Password?
+            </Link>
           </div>
           {error && <div className="text-red-600 text-sm">{error}</div>}
           <Button
@@ -557,14 +565,6 @@ function LoginPageContent() {
           >
             {loading ? 'Logging in...' : 'Login'}
           </Button>
-          <div className="text-center mt-4">
-            <Link
-              href="/forgot-password"
-              className="text-sm text-midnight-navy/70 hover:text-crimson transition"
-            >
-              Forgot your password?
-            </Link>
-          </div>
         </form>
         ) : (
           <form onSubmit={handlePasswordChange} className="space-y-4">
@@ -740,9 +740,15 @@ function LoginPageContent() {
 
         {!needsPasswordChange && (
         <div className="mt-6 text-center space-y-2">
-          <Link href="/" className="text-sm text-midnight-navy/70 hover:text-crimson transition block">
-            Return to homepage
-          </Link>
+          <Button
+            asChild
+            variant="outline"
+            className="w-full border-teal-500 text-teal-600 hover:bg-teal-50 hover:text-teal-700 hover:border-teal-600"
+          >
+            <Link href="/">
+              Return to Homepage
+            </Link>
+          </Button>
           <p className="text-xs text-midnight-navy/60">
             Don&apos;t have an account?{' '}
             <Link href="/register" className="text-crimson hover:underline font-medium">

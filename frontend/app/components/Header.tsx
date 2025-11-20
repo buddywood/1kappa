@@ -7,7 +7,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { fetchTotalDonations, fetchMemberProfile, getUnreadNotificationCount, getSellerProfile, fetchChapters } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { useTheme } from './ThemeProvider';
+import { useTheme } from 'next-themes';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
@@ -71,7 +71,14 @@ function HeaderContent() {
   const is_seller = (session?.user as any)?.is_seller ?? (nextAuthSession?.user as any)?.is_seller ?? false;
   const is_promoter = (session?.user as any)?.is_promoter ?? (nextAuthSession?.user as any)?.is_promoter ?? false;
   const is_steward = (session?.user as any)?.is_steward ?? (nextAuthSession?.user as any)?.is_steward ?? false;
-  const { theme, toggleTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
+  
+  const toggleTheme = () => {
+    const currentTheme = theme || 'light';
+    setTheme(currentTheme === 'dark' ? 'light' : 'dark');
+  };
+  
+  const currentTheme = theme || 'light';
 
   // Debug: Log role flags to console
   useEffect(() => {
@@ -355,8 +362,8 @@ function HeaderContent() {
 
                 {userMenuOpen && (
                   <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-black rounded-lg shadow-xl border border-gray-200 dark:border-gray-900 py-2 z-50">
-                    {/* Account Info Header */}
-                    <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-900">
+                    {/* Name Section */}
+                    <div className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <div className="relative w-10 h-10 rounded-full bg-crimson flex items-center justify-center text-white font-semibold text-base flex-shrink-0 overflow-hidden">
                           {profilePicture ? (
@@ -385,18 +392,25 @@ function HeaderContent() {
                       </div>
                     </div>
 
-                    {/* Menu Items */}
+                    {/* Stylish Divider */}
+                    <div className="px-4 py-1">
+                      <div className="h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-gray-700 to-transparent"></div>
+                    </div>
+
+                    {/* Dashboard Section */}
                     <div className="py-2">
-                      <Link
-                        href="/profile"
-                        onClick={() => setUserMenuOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
-                      >
-                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                        Profile
-                      </Link>
+                      {(is_seller || sellerId) && (
+                        <Link 
+                          href="/seller-dashboard" 
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                        >
+                          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                          </svg>
+                          Seller Dashboard
+                        </Link>
+                      )}
                       {(is_steward || stewardId) && (
                         <Link 
                           href="/steward-dashboard" 
@@ -409,16 +423,16 @@ function HeaderContent() {
                           Steward Dashboard
                         </Link>
                       )}
-                      {(is_seller || sellerId) && (
+                      {(is_promoter || promoterId) && (
                         <Link 
-                          href="/seller-dashboard" 
+                          href="/promoter-dashboard" 
                           onClick={() => setUserMenuOpen(false)}
                           className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
                         >
                           <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                           </svg>
-                          Seller Dashboard
+                          Promoter Dashboard
                         </Link>
                       )}
                       {userRole === 'ADMIN' && (
@@ -434,6 +448,25 @@ function HeaderContent() {
                           Admin Dashboard
                         </Link>
                       )}
+                    </div>
+
+                    {/* Divider */}
+                    <div className="px-4 py-1">
+                      <div className="h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-gray-700 to-transparent"></div>
+                    </div>
+
+                    {/* Profile & Settings Section */}
+                    <div className="py-2">
+                      <Link
+                        href="/profile"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                      >
+                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        Profile
+                      </Link>
                       <Link
                         href="/settings"
                         onClick={() => setUserMenuOpen(false)}
@@ -452,34 +485,64 @@ function HeaderContent() {
                           e.stopPropagation();
                           toggleTheme();
                         }}
-                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                        className="w-full flex items-center justify-between px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
                       >
-                        {theme === 'dark' ? (
-                          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                          </svg>
-                        ) : (
-                          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                          </svg>
-                        )}
-                        <span>Theme: {theme === 'dark' ? 'Dark' : 'Light'}</span>
+                        <div className="flex items-center gap-3">
+                          {currentTheme === 'dark' ? (
+                            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                            </svg>
+                          ) : (
+                            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                            </svg>
+                          )}
+                          <span>Theme</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {currentTheme === 'dark' ? 'Dark' : 'Light'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              toggleTheme();
+                            }}
+                            role="switch"
+                            aria-checked={currentTheme === 'dark'}
+                            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-crimson focus:ring-offset-2 ${
+                              currentTheme === 'dark' ? 'bg-crimson' : 'bg-gray-300'
+                            }`}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
+                                currentTheme === 'dark' ? 'translate-x-5' : 'translate-x-1'
+                              }`}
+                            />
+                          </button>
+                        </div>
                       </button>
                     </div>
 
                     {/* Divider */}
-                    <div className="border-t border-gray-100 dark:border-gray-900 my-2"></div>
+                    <div className="px-4 py-1">
+                      <div className="h-px bg-gradient-to-r from-transparent via-gray-300 dark:via-gray-700 to-transparent"></div>
+                    </div>
 
                     {/* Logout */}
-                    <button
-                      onClick={handleLogout}
-                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
-                    >
-                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                      </svg>
-                      Log out
-                    </button>
+                    <div className="py-2">
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                      >
+                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        Log out
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
