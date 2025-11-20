@@ -2,13 +2,86 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 
 export default function MemberSetupPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const { data: session, status: sessionStatus } = useSession();
+  const [isNavigating, setIsNavigating] = useState(false);
+
+  // Log component mount and session state
+  useEffect(() => {
+    console.log('[MemberSetup] Component mounted');
+    console.log('[MemberSetup] Current pathname:', pathname);
+    console.log('[MemberSetup] Session status:', sessionStatus);
+    console.log('[MemberSetup] Session data:', session);
+    console.log('[MemberSetup] User role:', (session?.user as any)?.role);
+    console.log('[MemberSetup] User memberId:', (session?.user as any)?.memberId);
+    console.log('[MemberSetup] User sellerId:', (session?.user as any)?.sellerId);
+  }, [pathname, sessionStatus, session]);
+
+  const handleStartRegistration = () => {
+    console.log('[MemberSetup] Start Registration button clicked');
+    console.log('[MemberSetup] Current state:', {
+      pathname,
+      sessionStatus,
+      isNavigating,
+      hasSession: !!session,
+      userRole: (session?.user as any)?.role,
+      userMemberId: (session?.user as any)?.memberId,
+      userSellerId: (session?.user as any)?.sellerId,
+    });
+
+    try {
+      setIsNavigating(true);
+      console.log('[MemberSetup] Attempting to navigate to /register');
+      
+      // Use setTimeout to ensure state is logged before navigation
+      setTimeout(() => {
+        console.log('[MemberSetup] Executing router.push("/register")');
+        router.push('/register');
+        console.log('[MemberSetup] router.push completed');
+      }, 0);
+    } catch (error) {
+      console.error('[MemberSetup] Error during navigation:', error);
+      setIsNavigating(false);
+    }
+  };
+
+  const handleLoginClick = () => {
+    console.log('[MemberSetup] Login button clicked');
+    console.log('[MemberSetup] Current state:', {
+      pathname,
+      sessionStatus,
+      isNavigating,
+    });
+
+    try {
+      setIsNavigating(true);
+      console.log('[MemberSetup] Attempting to navigate to /login');
+      
+      setTimeout(() => {
+        console.log('[MemberSetup] Executing router.push("/login")');
+        router.push('/login');
+        console.log('[MemberSetup] router.push completed');
+      }, 0);
+    } catch (error) {
+      console.error('[MemberSetup] Error during navigation:', error);
+      setIsNavigating(false);
+    }
+  };
+
+  // Log navigation state changes
+  useEffect(() => {
+    if (isNavigating) {
+      console.log('[MemberSetup] Navigation in progress...');
+    }
+  }, [isNavigating]);
 
   return (
     <div className="min-h-screen bg-cream text-midnight-navy">
@@ -105,18 +178,38 @@ export default function MemberSetupPage() {
             {/* CTA */}
             <div className="flex gap-4">
               <button
-                onClick={() => router.push('/register')}
-                className="flex-1 bg-crimson text-white px-6 py-3 rounded-full font-semibold hover:bg-crimson/90 transition"
+                onClick={handleStartRegistration}
+                disabled={isNavigating}
+                className="flex-1 bg-crimson text-white px-6 py-3 rounded-full font-semibold hover:bg-crimson/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Start Registration
+                {isNavigating ? 'Loading...' : 'Start Registration'}
               </button>
               <button
-                onClick={() => router.push('/login')}
-                className="px-6 py-3 border-2 border-crimson text-crimson rounded-full font-semibold hover:bg-crimson/10 transition"
+                onClick={handleLoginClick}
+                disabled={isNavigating}
+                className="px-6 py-3 border-2 border-crimson text-crimson rounded-full font-semibold hover:bg-crimson/10 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Already Have an Account?
               </button>
             </div>
+            
+            {/* Debug info (only in development) */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="mt-4 p-4 bg-gray-100 rounded-lg text-xs font-mono">
+                <div className="font-bold mb-2">Debug Info:</div>
+                <div>Pathname: {pathname}</div>
+                <div>Session Status: {sessionStatus}</div>
+                <div>Is Navigating: {isNavigating ? 'Yes' : 'No'}</div>
+                <div>Has Session: {session ? 'Yes' : 'No'}</div>
+                {session && (
+                  <>
+                    <div>User Role: {(session.user as any)?.role || 'N/A'}</div>
+                    <div>Member ID: {(session.user as any)?.memberId || 'N/A'}</div>
+                    <div>Seller ID: {(session.user as any)?.sellerId || 'N/A'}</div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </main>

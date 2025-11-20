@@ -141,23 +141,62 @@ export default function RegisterPage() {
   }, [cognitoStep, formData.cognitoSub]);
 
   // Check onboarding status and redirect accordingly
+  // Log component mount and navigation
+  useEffect(() => {
+    console.log('[Register] Component mounted/updated');
+    console.log('[Register] Session status:', sessionStatus);
+    console.log('[Register] Session data:', session);
+    console.log('[Register] Current step:', currentStep);
+    console.log('[Register] Cognito step:', cognitoStep);
+    console.log('[Register] User role:', (session?.user as any)?.role);
+    console.log('[Register] User memberId:', (session?.user as any)?.memberId);
+    console.log('[Register] User sellerId:', (session?.user as any)?.sellerId);
+    console.log('[Register] Onboarding status:', (session?.user as any)?.onboarding_status);
+  }, [sessionStatus, session, currentStep, cognitoStep]);
+
   // If user has cognitoSub and incomplete onboarding, skip to step 2
   useEffect(() => {
-    if (sessionStatus === 'loading') return; // Wait for session to load
+    console.log('[Register] Checking session and onboarding status...');
+    if (sessionStatus === 'loading') {
+      console.log('[Register] Session still loading, waiting...');
+      return; // Wait for session to load
+    }
     
     if (session && session.user) {
       const onboardingStatus = (session.user as any)?.onboarding_status;
       const cognitoSub = (session.user as any)?.cognitoSub;
       const userEmail = (session.user as any)?.email;
       
-      // If user has completed onboarding, redirect to home
-      if (onboardingStatus === 'ONBOARDING_FINISHED') {
+      const userMemberId = (session.user as any)?.memberId;
+      const userRole = (session.user as any)?.role;
+      
+      console.log('[Register] User session found:', {
+        onboardingStatus,
+        cognitoSub,
+        userEmail,
+        hasUser: !!session.user,
+        userMemberId,
+        userRole,
+      });
+      
+      // Only redirect if user has completed onboarding AND has a member profile
+      // Sellers can have completed seller onboarding but still need to register as members
+      if (onboardingStatus === 'ONBOARDING_FINISHED' && userMemberId) {
+        console.log('[Register] User has completed onboarding and has member profile, redirecting to home');
         router.push('/');
         return;
       }
       
+      // If user is a seller without a member profile, allow them to register as a member
+      if (userRole === 'SELLER' && !userMemberId) {
+        console.log('[Register] User is a seller without member profile, allowing member registration');
+        // Continue with registration flow - don't redirect
+      }
+      
       // If user has cognitoSub (Cognito is verified), skip step 1 and go to step 2
-      if (cognitoSub && onboardingStatus !== 'ONBOARDING_FINISHED') {
+      // This applies to both new users and sellers registering as members
+      if (cognitoSub && (!userMemberId || onboardingStatus !== 'ONBOARDING_FINISHED')) {
+        console.log('[Register] User has cognitoSub, skipping to step 2 (Basic Information)');
         // Set cognitoSub, email, and name (if available from session) in form data
         const userName = (session.user as any)?.name || '';
         setFormData(prev => ({ 
