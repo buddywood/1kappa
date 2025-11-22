@@ -6,6 +6,7 @@ import HeroBanner from './components/HeroBanner';
 import VerificationBadge from './components/VerificationBadge';
 import UserRoleBadges from './components/UserRoleBadges';
 import ProductStatusBadge from './components/ProductStatusBadge';
+import FeaturedProductsSection from './components/FeaturedProductsSection';
 import ImpactBanner from './components/ImpactBanner';
 import EventCard from './components/EventCard';
 import Footer from './components/Footer';
@@ -58,71 +59,7 @@ export default async function Home() {
 
       {/* Product Highlights */}
       {featuredProducts.length > 0 && (
-        <section id="shop" className="max-w-7xl mx-auto py-16 px-4">
-          <h2 className="text-2xl font-display font-bold text-crimson mb-6 text-center">Featured Products</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {featuredProducts.map((product) => (
-              <Link
-                key={product.id}
-                href={`/product/${product.id}`}
-                className="bg-card rounded-xl overflow-hidden shadow hover:shadow-md dark:shadow-black/50 dark:hover:shadow-lg transition relative"
-              >
-                <div className="aspect-[4/5] relative bg-muted">
-                  <ProductStatusBadge product={product} />
-                  {product.image_url ? (
-                    <Image
-                      src={product.image_url}
-                      alt={product.name}
-                      fill
-                      className="object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                      <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                  )}
-                </div>
-                <div className="p-3">
-                  <p className="font-semibold text-sm text-card-foreground line-clamp-2">{product.name}</p>
-                  {/* Verification badges under title */}
-                  <div className="flex flex-col items-start gap-2 my-1">
-                    {product.seller_fraternity_member_id ? (
-                      <VerificationBadge type="brother" className="text-xs" />
-                    ) : product.seller_name ? (
-                      <VerificationBadge type="seller" className="text-xs" />
-                    ) : null}
-                    {product.seller_sponsoring_chapter_id && (
-                      <VerificationBadge 
-                        type="sponsored-chapter" 
-                        chapterName={getChapterName(product.seller_sponsoring_chapter_id || null)}
-                        className="text-xs"
-                      />
-                    )}
-                  </div>
-                  {product.seller_name && (
-                    <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                      <p className="text-xs text-muted-foreground">
-                        by {product.seller_fraternity_member_id 
-                          ? `Brother ${product.seller_name}` 
-                          : (product.seller_business_name || product.seller_name)}
-                      </p>
-                      <UserRoleBadges
-                        is_member={product.is_fraternity_member}
-                        is_seller={product.is_seller}
-                        is_promoter={product.is_promoter}
-                        is_steward={product.is_steward}
-                        size="sm"
-                      />
-                    </div>
-                  )}
-                  <p className="text-crimson font-bold text-sm mt-1">${(product.price_cents / 100).toFixed(2)}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
+        <FeaturedProductsSection products={featuredProducts} />
       )}
 
       {/* Our Impact Banner */}

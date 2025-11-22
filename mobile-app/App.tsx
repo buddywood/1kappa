@@ -5,6 +5,7 @@ import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import * as SplashScreen from "expo-splash-screen";
 import { COLORS } from "./lib/constants";
 import { AuthProvider } from "./lib/auth";
+import { CartProvider } from "./lib/CartContext";
 import Header from "./components/Header";
 import HeroBanner from "./components/HeroBanner";
 import FeaturedProducts from "./components/FeaturedProducts";
@@ -302,10 +303,11 @@ export default function App() {
 
   return (
     <AuthProvider>
-      <SafeAreaProvider>
-        <SafeAreaView style={styles.container} edges={["top"]}>
-          <StatusBar style="auto" />
-          <View style={styles.contentWrapper}>{renderScreen()}</View>
+      <CartProvider>
+        <SafeAreaProvider>
+          <SafeAreaView style={styles.container} edges={["top"]}>
+            <StatusBar style="auto" />
+            <View style={styles.contentWrapper}>{renderScreen()}</View>
 
           {/* Bottom Tab Bar */}
           <BottomTabBar
@@ -332,6 +334,7 @@ export default function App() {
           )}
         </SafeAreaView>
       </SafeAreaProvider>
+      </CartProvider>
     </AuthProvider>
   );
 }

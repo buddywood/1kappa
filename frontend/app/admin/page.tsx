@@ -882,10 +882,10 @@ export default function AdminDashboard() {
                 </div>
               )}
 
-              {'vendor_license_number' in selectedItem && selectedItem.vendor_license_number && (
+              {'kappa_vendor_id' in selectedItem && selectedItem.kappa_vendor_id && (
                 <div>
-                  <label className="text-sm font-semibold text-gray-600">Vendor License Number</label>
-                  <p className="text-lg">{selectedItem.vendor_license_number}</p>
+                  <label className="text-sm font-semibold text-gray-600">Kappa Vendor ID</label>
+                  <p className="text-lg">{selectedItem.kappa_vendor_id}</p>
                 </div>
               )}
 

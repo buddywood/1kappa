@@ -126,21 +126,21 @@ const sampleSellers = [
     email: "marcus.johnson@example.com",
     membership_number: "KAP-2020-001",
     business_name: "Kappa Gear Co.",
-    vendor_license_number: "VL-2024-001",
+    kappa_vendor_id: "VL-2024-001",
   },
   {
     name: "David Carter",
     email: "david.carter@example.com",
     membership_number: "KAP-2019-045",
     business_name: "Brotherhood Apparel",
-    vendor_license_number: "VL-2024-002",
+    kappa_vendor_id: "VL-2024-002",
   },
   {
     name: "James Williams",
     email: "james.williams@example.com",
     membership_number: "KAP-2021-123",
     business_name: null,
-    vendor_license_number: "VL-2024-003",
+    kappa_vendor_id: "VL-2024-003",
   },
 ];
 
@@ -181,7 +181,7 @@ async function seedProducts(): Promise<void> {
           name: sellerData.name,
           sponsoring_chapter_id: randomChapter.id,
           business_name: sellerData.business_name,
-          vendor_license_number: sellerData.vendor_license_number,
+          kappa_vendor_id: sellerData.kappa_vendor_id,
           social_links: {
             instagram: `@${sellerData.name.toLowerCase().replace(' ', '')}`,
           },

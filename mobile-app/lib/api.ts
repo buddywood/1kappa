@@ -46,6 +46,7 @@ export interface Product {
   image_url: string | null;
   category_id: number | null;
   category_name?: string | null;
+  is_kappa_branded?: boolean;
   seller_name?: string;
   seller_business_name?: string | null;
   seller_fraternity_member_id?: number | null;

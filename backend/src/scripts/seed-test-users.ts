@@ -33,7 +33,7 @@ interface TestUser {
   type: 'seller' | 'member' | 'steward' | 'promoter';
   membership_number?: string;
   business_name?: string;
-  vendor_license_number?: string;
+  kappa_vendor_id?: string;
 }
 
 const testUsers: TestUser[] = [
@@ -43,7 +43,7 @@ const testUsers: TestUser[] = [
     type: 'seller',
     membership_number: 'KAP-TEST-SELLER',
     business_name: 'Buddy\'s Kappa Gear',
-    vendor_license_number: 'VL-TEST-SELLER',
+    kappa_vendor_id: 'VL-TEST-SELLER',
   },
   {
     email: 'buddy+member@ebilly.com',
@@ -315,7 +315,7 @@ async function seedTestUsers(): Promise<void> {
               name: testUser.name,
               sponsoring_chapter_id: sponsoringChapter.id,
               business_name: testUser.business_name || null,
-              vendor_license_number: testUser.vendor_license_number || 'VL-TEST',
+              kappa_vendor_id: testUser.kappa_vendor_id || 'VL-TEST',
               fraternity_member_id: memberId,
             });
             sellerId = seller.id;

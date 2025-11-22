@@ -120,7 +120,7 @@ const sampleProducts = [
     image_url: "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=500&h=500&fit=crop",
     category: "Books & Media",
   },
-  // Additional products for non-member sellers
+  // Additional products for non-member sellers (non-kappa branded)
   {
     name: "Crimson & Cream Tote Bag",
     description: "Stylish canvas tote bag featuring Kappa Alpha Psi colors. Perfect for everyday use.",
@@ -128,6 +128,7 @@ const sampleProducts = [
     image_url: "https://images.unsplash.com/photo-1591561954557-26941169b49e?w=500&h=500&fit=crop",
     category: "Accessories",
     seller_email: "sarah.mitchell@example.com", // Assign to non-member seller
+    is_kappa_branded: false, // Not explicitly branded
   },
   {
     name: "Vintage Kappa Pin Collection",
@@ -136,6 +137,7 @@ const sampleProducts = [
     image_url: "https://images.unsplash.com/photo-1611652022419-a9419f74343d?w=500&h=500&fit=crop",
     category: "Accessories",
     seller_email: "sarah.mitchell@example.com",
+    is_kappa_branded: true, // Has "Kappa" in name, so branded
   },
   {
     name: "Heritage Coffee Table Book",
@@ -144,6 +146,7 @@ const sampleProducts = [
     image_url: "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=500&h=500&fit=crop",
     category: "Books & Media",
     seller_email: "michael.chen@example.com", // Assign to non-member seller
+    is_kappa_branded: true, // Mentions Kappa Alpha Psi
   },
   {
     name: "Custom Engraved Watch",
@@ -162,7 +165,7 @@ const sampleSellers = [
     email: "marcus.johnson@example.com",
     membership_number: "KAP-2020-001",
     business_name: "Kappa Gear Co.",
-    vendor_license_number: "VL-2024-001",
+    kappa_vendor_id: "VL-2024-001",
     is_member: true,
     headshot_url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop",
     website: "https://kappagearco.example.com",
@@ -178,7 +181,7 @@ const sampleSellers = [
     email: "david.carter@example.com",
     membership_number: "KAP-2019-045",
     business_name: "Brotherhood Apparel",
-    vendor_license_number: "VL-2024-002",
+    kappa_vendor_id: "VL-2024-002",
     is_member: true,
     headshot_url: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop",
     website: "https://brotherhoodapparel.example.com",
@@ -194,7 +197,7 @@ const sampleSellers = [
     email: "james.williams@example.com",
     membership_number: "KAP-2021-123",
     business_name: null,
-    vendor_license_number: "VL-2024-003",
+    kappa_vendor_id: "VL-2024-003",
     is_member: true,
     headshot_url: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop",
     website: null,
@@ -210,7 +213,7 @@ const sampleSellers = [
     email: "sarah.mitchell@example.com",
     membership_number: null,
     business_name: "Crimson Threads",
-    vendor_license_number: "VL-2024-004",
+    kappa_vendor_id: "VL-2024-004",
     is_member: false,
     headshot_url: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop",
     website: "https://crimsonthreads.example.com",
@@ -226,7 +229,7 @@ const sampleSellers = [
     email: "michael.chen@example.com",
     membership_number: null,
     business_name: "Heritage Goods Co.",
-    vendor_license_number: "VL-2024-005",
+    kappa_vendor_id: "VL-2024-005",
     is_member: false,
     headshot_url: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop",
     website: "https://heritagegoods.example.com",
@@ -353,21 +356,21 @@ const stewardSellers = [
     email: "robert.thompson@example.com",
     membership_number: "KAP-2018-089",
     business_name: "Steward Heritage Goods",
-    vendor_license_number: "VL-2024-006",
+    kappa_vendor_id: "VL-2024-006",
   },
   {
     name: "Christopher Anderson",
     email: "christopher.anderson@example.com",
     membership_number: "KAP-2017-156",
     business_name: "Legacy Steward Shop",
-    vendor_license_number: "VL-2024-007",
+    kappa_vendor_id: "VL-2024-007",
   },
   {
     name: "Daniel Martinez",
     email: "daniel.martinez@example.com",
     membership_number: "KAP-2019-234",
     business_name: null,
-    vendor_license_number: "VL-2024-008",
+    kappa_vendor_id: "VL-2024-008",
   },
 ];
 
@@ -531,7 +534,7 @@ async function seedStewardSellers(): Promise<void> {
             fraternity_member_id: memberId,
             sponsoring_chapter_id: sponsoringChapter.id,
             business_name: stewardData.business_name,
-            vendor_license_number: stewardData.vendor_license_number,
+            kappa_vendor_id: stewardData.kappa_vendor_id,
             social_links: {
               instagram: `@${stewardData.name.toLowerCase().replace(' ', '')}`,
             },
@@ -589,6 +592,11 @@ async function seedStewardSellers(): Promise<void> {
         // Get category ID from category name
         const categoryId = productData.category ? categoryMap.get(productData.category) || null : null;
 
+        // Determine if product is Kappa branded (most products with "Kappa Alpha Psi" in name are branded)
+        const isKappaBranded = productData.name.toLowerCase().includes('kappa alpha psi') || 
+                              productData.name.toLowerCase().includes("founders' day") ||
+                              (productData.is_kappa_branded !== undefined ? productData.is_kappa_branded : true);
+
         await createProduct({
           seller_id: seller.sellerId,
           name: productData.name,
@@ -596,6 +604,7 @@ async function seedStewardSellers(): Promise<void> {
           price_cents: productData.price_cents,
           image_url: productData.image_url,
           category_id: categoryId || undefined,
+          is_kappa_branded: isKappaBranded,
         });
 
         inserted++;
@@ -751,7 +760,7 @@ async function seedProducts(): Promise<void> {
           name: sellerData.name,
           sponsoring_chapter_id: sponsoringChapter.id,
           business_name: sellerData.business_name,
-          vendor_license_number: sellerData.vendor_license_number,
+          kappa_vendor_id: sellerData.kappa_vendor_id,
           headshot_url: (sellerData as any).headshot_url || null,
           website: (sellerData as any).website || null,
           social_links: (sellerData as any).social_links || {
@@ -860,6 +869,11 @@ async function seedProducts(): Promise<void> {
         // Get category ID from category name
         const categoryId = productData.category ? categoryMap.get(productData.category) || null : null;
 
+        // Determine if product is Kappa branded
+        const isKappaBranded = productData.name.toLowerCase().includes('kappa alpha psi') || 
+                              productData.name.toLowerCase().includes("founders' day") ||
+                              (productData.is_kappa_branded !== undefined ? productData.is_kappa_branded : true);
+
         await createProduct({
           seller_id: seller.id,
           name: productData.name,
@@ -867,6 +881,7 @@ async function seedProducts(): Promise<void> {
           price_cents: productData.price_cents,
           image_url: productData.image_url,
           category_id: categoryId || undefined,
+          is_kappa_branded: isKappaBranded,
         });
 
         inserted++;

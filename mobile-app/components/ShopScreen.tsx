@@ -1,15 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   ActivityIndicator,
-} from 'react-native';
-import { COLORS } from '../lib/constants';
-import { fetchProducts, Product } from '../lib/api';
-import ProductCard from './ProductCard';
-import ScreenHeader from './ScreenHeader';
+} from "react-native";
+import { COLORS } from "../lib/constants";
+import { fetchProducts, Product } from "../lib/api";
+import { useCart } from "../lib/CartContext";
+import { useAuth } from "../lib/auth";
+import ProductCard from "./ProductCard";
+import ScreenHeader from "./ScreenHeader";
 
 interface ShopScreenProps {
   onBack: () => void;
@@ -24,8 +26,25 @@ export default function ShopScreen({
   onSearchPress,
   onUserPress,
 }: ShopScreenProps) {
+  const { addToCart } = useCart();
+  const { isGuest, isAuthenticated, user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Helper to check if user can add product to cart
+  const canAddToCart = (product: Product) => {
+    const isKappaBranded = product.is_kappa_branded === true;
+    // For guests or non-authenticated users, isMember is always false
+    // For authenticated users, check if they are a member (must have is_fraternity_member === true OR memberId > 0)
+    const isMember =
+      isAuthenticated &&
+      (user?.is_fraternity_member === true ||
+        (user?.memberId !== null &&
+          user?.memberId !== undefined &&
+          user?.memberId > 0));
+    // Explicitly block Kappa products for non-members, allow everyone for non-Kappa products
+    return isKappaBranded ? isMember : true;
+  };
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -34,7 +53,7 @@ export default function ShopScreen({
         const data = await fetchProducts();
         setProducts(data);
       } catch (error) {
-        console.error('Error loading products:', error);
+        console.error("Error loading products:", error);
       } finally {
         setLoading(false);
       }
@@ -87,9 +106,12 @@ export default function ShopScreen({
                   key={item.id.toString()}
                   product={item}
                   onPress={() => {
-                    console.log('ShopScreen: Product pressed', item.id);
+                    console.log("ShopScreen: Product pressed", item.id);
                     onProductPress(item);
                   }}
+                  onAddToCart={
+                    canAddToCart(item) ? () => addToCart(item) : undefined
+                  }
                 />
               ))}
             </View>
@@ -115,8 +137,8 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   loadingText: {
     marginTop: 16,
@@ -126,8 +148,8 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 60,
   },
   emptyText: {
@@ -136,12 +158,11 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   productsContainer: {
-    width: '100%',
+    width: "100%",
   },
   productsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
   },
 });
-

@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { fetchFeaturedProducts, Product } from '../lib/api';
 import { COLORS } from '../lib/constants';
+import { useCart } from '../lib/CartContext';
+import { useAuth } from '../lib/auth';
 import ProductCard from './ProductCard';
 
 interface FeaturedProductsProps {
@@ -9,8 +11,23 @@ interface FeaturedProductsProps {
 }
 
 export default function FeaturedProducts({ onProductPress }: FeaturedProductsProps) {
+  const { addToCart } = useCart();
+  const { isGuest, isAuthenticated, user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Helper to check if user can add product to cart
+  const canAddToCart = (product: Product) => {
+    const isKappaBranded = product.is_kappa_branded === true;
+    // For guests or non-authenticated users, isMember is always false
+    // For authenticated users, check if they are a member (must have is_fraternity_member === true OR memberId > 0)
+    const isMember = isAuthenticated && (
+      user?.is_fraternity_member === true || 
+      (user?.memberId !== null && user?.memberId !== undefined && user?.memberId > 0)
+    );
+    // Explicitly block Kappa products for non-members, allow everyone for non-Kappa products
+    return isKappaBranded ? isMember : true;
+  };
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -58,6 +75,7 @@ export default function FeaturedProducts({ onProductPress }: FeaturedProductsPro
             key={item.id.toString()}
             product={item}
             onPress={() => onProductPress?.(item)}
+            onAddToCart={canAddToCart(item) ? () => addToCart(item) : undefined}
           />
         ))}
       </View>

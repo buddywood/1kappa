@@ -15,6 +15,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../lib/constants";
 import { useAuth } from "../lib/auth";
+import { useCart } from "../lib/CartContext";
 import { searchPublicItems, Product, Event } from "../lib/api";
 
 interface HeaderProps {
@@ -32,6 +33,7 @@ interface HeaderProps {
   onSellersPress?: () => void;
   onNotificationPress?: () => void;
   notificationCount?: number;
+  onCartPress?: () => void;
 }
 
 export default function Header({
@@ -49,12 +51,21 @@ export default function Header({
   onSellersPress,
   onNotificationPress,
   notificationCount = 0,
+  onCartPress,
 }: HeaderProps) {
   const { isGuest, user } = useAuth();
+  const {
+    items,
+    removeFromCart,
+    updateQuantity,
+    getTotalItems,
+    getTotalPrice,
+  } = useCart();
   const [menuVisible, setMenuVisible] = React.useState(false);
   const [menuAnimation] = React.useState(new Animated.Value(0));
   const [searchQuery, setSearchQuery] = useState("");
   const [searchVisible, setSearchVisible] = useState(false);
+  const [cartVisible, setCartVisible] = useState(false);
   const [searchResults, setSearchResults] = useState<{
     products: Product[];
     events: Event[];
@@ -227,8 +238,30 @@ export default function Header({
           </View>
         </TouchableOpacity>
 
-        {/* Right side - Notifications, User menu and hamburger button */}
+        {/* Right side - Cart, Notifications, User menu and hamburger button */}
         <View style={styles.rightSection}>
+          {/* Cart Icon */}
+          <TouchableOpacity
+            onPress={() => setCartVisible(!cartVisible)}
+            style={styles.cartButton}
+            activeOpacity={0.7}
+          >
+            <View style={styles.cartIconContainer}>
+              <Ionicons
+                name="cart-outline"
+                size={24}
+                color={COLORS.midnightNavy}
+              />
+              {getTotalItems() > 0 && (
+                <View style={styles.cartBadge}>
+                  <Text style={styles.cartBadgeText}>
+                    {getTotalItems() > 99 ? "99+" : getTotalItems().toString()}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </TouchableOpacity>
+
           {/* Notification Icon */}
           {!isGuest && onNotificationPress && (
             <TouchableOpacity
@@ -468,6 +501,126 @@ export default function Header({
             )}
           </View>
         </View>
+      </Modal>
+
+      {/* Cart Dropdown Modal */}
+      <Modal
+        visible={cartVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setCartVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.cartModalOverlay}
+          activeOpacity={1}
+          onPress={() => setCartVisible(false)}
+        >
+          <View style={styles.cartDropdown}>
+            <View style={styles.cartHeader}>
+              <Text style={styles.cartTitle}>Cart ({getTotalItems()})</Text>
+              <TouchableOpacity
+                onPress={() => setCartVisible(false)}
+                style={styles.cartCloseButton}
+              >
+                <Ionicons name="close" size={24} color={COLORS.midnightNavy} />
+              </TouchableOpacity>
+            </View>
+            {items.length === 0 ? (
+              <View style={styles.cartEmptyContainer}>
+                <Ionicons
+                  name="cart-outline"
+                  size={48}
+                  color={COLORS.frostGray}
+                />
+                <Text style={styles.cartEmptyText}>Your cart is empty</Text>
+              </View>
+            ) : (
+              <ScrollView style={styles.cartItemsList}>
+                {items.map((item) => (
+                  <View key={item.product.id} style={styles.cartItem}>
+                    <Image
+                      source={
+                        item.product.image_url
+                          ? { uri: item.product.image_url }
+                          : require("../assets/icon.png")
+                      }
+                      style={styles.cartItemImage}
+                      resizeMode="cover"
+                    />
+                    <View style={styles.cartItemInfo}>
+                      <Text style={styles.cartItemName} numberOfLines={2}>
+                        {item.product.name}
+                      </Text>
+                      <Text style={styles.cartItemPrice}>
+                        $
+                        {(
+                          (item.product.price_cents / 100) *
+                          item.quantity
+                        ).toFixed(2)}
+                      </Text>
+                    </View>
+                    <View style={styles.cartItemActions}>
+                      <TouchableOpacity
+                        onPress={() =>
+                          updateQuantity(item.product.id, item.quantity - 1)
+                        }
+                        style={styles.cartQuantityButton}
+                      >
+                        <Ionicons
+                          name="remove"
+                          size={16}
+                          color={COLORS.midnightNavy}
+                        />
+                      </TouchableOpacity>
+                      <Text style={styles.cartQuantity}>{item.quantity}</Text>
+                      <TouchableOpacity
+                        onPress={() =>
+                          updateQuantity(item.product.id, item.quantity + 1)
+                        }
+                        style={styles.cartQuantityButton}
+                      >
+                        <Ionicons
+                          name="add"
+                          size={16}
+                          color={COLORS.midnightNavy}
+                        />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => removeFromCart(item.product.id)}
+                        style={styles.cartRemoveButton}
+                      >
+                        <Ionicons
+                          name="trash-outline"
+                          size={18}
+                          color={COLORS.crimson}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+            {items.length > 0 && (
+              <View style={styles.cartFooter}>
+                <View style={styles.cartTotal}>
+                  <Text style={styles.cartTotalLabel}>Total:</Text>
+                  <Text style={styles.cartTotalPrice}>
+                    ${getTotalPrice().toFixed(2)}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.cartCheckoutButton}
+                  onPress={() => {
+                    setCartVisible(false);
+                    // TODO: Navigate to checkout
+                  }}
+                >
+                  <Text style={styles.cartCheckoutButtonText}>Checkout</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </TouchableOpacity>
       </Modal>
 
       {/* Accordion Menu */}
@@ -1016,5 +1169,171 @@ const styles = StyleSheet.create({
     color: COLORS.midnightNavy,
     opacity: 0.6,
     textAlign: "center",
+  },
+  cartButton: {
+    padding: 8,
+    marginRight: 4,
+  },
+  cartIconContainer: {
+    position: "relative",
+    width: 24,
+    height: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cartBadge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    backgroundColor: COLORS.crimson,
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: COLORS.white,
+  },
+  cartBadgeText: {
+    color: COLORS.white,
+    fontSize: 10,
+    fontWeight: "bold",
+    textAlign: "center",
+  },
+  cartModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-start",
+    paddingTop: 60,
+    alignItems: "flex-end",
+    paddingRight: 12,
+  },
+  cartDropdown: {
+    width: 320,
+    maxHeight: 600,
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  cartHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.frostGray,
+  },
+  cartTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: COLORS.midnightNavy,
+  },
+  cartCloseButton: {
+    padding: 4,
+  },
+  cartEmptyContainer: {
+    padding: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cartEmptyText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: COLORS.midnightNavy,
+    opacity: 0.6,
+  },
+  cartItemsList: {
+    maxHeight: 400,
+  },
+  cartItem: {
+    flexDirection: "row",
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.frostGray,
+  },
+  cartItemImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    backgroundColor: COLORS.frostGray,
+  },
+  cartItemInfo: {
+    flex: 1,
+    marginLeft: 12,
+    justifyContent: "center",
+  },
+  cartItemName: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: COLORS.midnightNavy,
+    marginBottom: 4,
+  },
+  cartItemPrice: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.crimson,
+  },
+  cartItemActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginLeft: 8,
+    gap: 8,
+  },
+  cartQuantityButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: COLORS.frostGray,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cartQuantity: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.midnightNavy,
+    minWidth: 24,
+    textAlign: "center",
+  },
+  cartRemoveButton: {
+    padding: 4,
+    marginLeft: 4,
+  },
+  cartFooter: {
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.frostGray,
+  },
+  cartTotal: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  cartTotalLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: COLORS.midnightNavy,
+  },
+  cartTotalPrice: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: COLORS.crimson,
+  },
+  cartCheckoutButton: {
+    backgroundColor: COLORS.crimson,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cartCheckoutButtonText: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

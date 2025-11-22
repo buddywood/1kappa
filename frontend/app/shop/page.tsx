@@ -12,6 +12,8 @@ import SearchableSelect from '../components/SearchableSelect';
 import UserRoleBadges from '../components/UserRoleBadges';
 import StewardshipHowItWorksModal from '../components/StewardshipHowItWorksModal';
 import ProductStatusBadge from '../components/ProductStatusBadge';
+import ProductCard from '../components/ProductCard';
+import { useCart } from '../contexts/CartContext';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -21,8 +23,22 @@ type SortOption = 'name' | 'price-low' | 'price-high' | 'newest';
 function ShopPageContent() {
   const searchParams = useSearchParams();
   const { data: session, status: sessionStatus } = useSession();
+  const { addToCart } = useCart();
   const isAuthenticated = sessionStatus === 'authenticated' && session?.user;
   const isGuest = !isAuthenticated;
+
+  // Helper to check if user can add product to cart
+  const canAddToCart = (product: Product) => {
+    const isKappaBranded = product.is_kappa_branded === true;
+    // For guests (no session or not authenticated), isMember is always false
+    const isAuthenticated = sessionStatus === 'authenticated' && !!session?.user;
+    const isMember = isAuthenticated && (
+      (session.user as any)?.is_fraternity_member === true || 
+      ((session.user as any)?.memberId !== null && (session.user as any)?.memberId !== undefined && (session.user as any)?.memberId > 0)
+    );
+    // Explicitly block Kappa products for non-members, allow everyone for non-Kappa products
+    return isKappaBranded ? isMember : true;
+  };
   const roleFilter = searchParams.get('role'); // 'steward', or null (removed 'seller')
   const stewardParam = searchParams.get('steward'); // steward ID for filtering
   const is_steward = (session?.user as any)?.is_steward ?? false;
@@ -648,66 +664,11 @@ function ShopPageContent() {
             ) : (
               // Display products
               filteredAndSortedProducts.map((product) => (
-                <Link
+                <ProductCard
                   key={product.id}
-                  href={`/product/${product.id}`}
-                  className="bg-white rounded-xl overflow-hidden shadow hover:shadow-md transition relative group"
-                >
-                  <div className="aspect-[4/5] relative bg-cream">
-                    <ProductStatusBadge product={product} />
-                    {product.image_url ? (
-                      <Image
-                        src={product.image_url}
-                        alt={product.name}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-midnight-navy/30">
-                        <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-3">
-                    <p className="font-semibold text-sm text-midnight-navy line-clamp-2 mb-1 group-hover:text-crimson transition">
-                      {product.name}
-                    </p>
-                    {/* Verification badges under title */}
-                    <div className="flex flex-col items-start gap-2 mb-2">
-                      {product.seller_fraternity_member_id ? (
-                        <VerificationBadge type="brother" className="text-xs" />
-                      ) : product.seller_name ? (
-                        <VerificationBadge type="seller" className="text-xs" />
-                      ) : null}
-                      {product.seller_sponsoring_chapter_id && (
-                        <VerificationBadge 
-                          type="sponsored-chapter" 
-                          chapterName={getChapterName(product.seller_sponsoring_chapter_id || null)}
-                          className="text-xs"
-                        />
-                      )}
-                    </div>
-                    {product.seller_name && (
-                      <div className="flex items-center gap-1.5 mb-2 flex-wrap">
-                        <p className="text-xs text-midnight-navy/60">
-                          by {product.seller_fraternity_member_id 
-                            ? `Brother ${product.seller_name}` 
-                            : (product.seller_business_name || product.seller_name)}
-                        </p>
-                        <UserRoleBadges
-                          is_member={product.is_fraternity_member}
-                          is_seller={product.is_seller}
-                          is_promoter={product.is_promoter}
-                          is_steward={product.is_steward}
-                          size="sm"
-                        />
-                      </div>
-                    )}
-                    <p className="text-crimson font-bold text-sm">${(product.price_cents / 100).toFixed(2)}</p>
-                  </div>
-                </Link>
+                  product={product}
+                  onAddToCart={canAddToCart(product) ? () => addToCart(product) : undefined}
+                />
               ))
             )}
           </div>

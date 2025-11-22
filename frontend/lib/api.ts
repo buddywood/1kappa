@@ -63,6 +63,7 @@ export interface Product {
   image_url: string | null;
   category_id: number | null;
   category_name?: string | null;
+  is_kappa_branded?: boolean;
   seller_name?: string;
   seller_business_name?: string | null;
   seller_fraternity_member_id?: number | null;
@@ -87,7 +88,7 @@ export interface Seller {
   business_name: string | null;
   business_email: string | null;
   business_phone: string | null;
-  vendor_license_number: string | null;
+  kappa_vendor_id: string | null;
   merchandise_type: 'KAPPA' | 'NON_KAPPA' | null;
   headshot_url: string | null;
   store_logo_url: string;

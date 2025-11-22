@@ -100,8 +100,18 @@ export default function ProductPage() {
     e.preventDefault();
     if (!product) return;
 
-    // Require authentication for checkout
-    if (sessionStatus !== 'authenticated' || !session?.user?.email) {
+    // Check if product is Kappa branded - if so, require authentication
+    if (product.is_kappa_branded) {
+      if (sessionStatus !== 'authenticated' || !session?.user?.email) {
+        setError('Kappa Alpha Psi branded merchandise can only be purchased by verified members. Please sign in to continue.');
+        return;
+      }
+    }
+
+    // For non-kappa branded products, guests can checkout with email
+    // For kappa branded products, we already checked authentication above
+    const buyerEmail = session?.user?.email || '';
+    if (!buyerEmail && product.is_kappa_branded) {
       setError('Please sign in to purchase this item');
       return;
     }
@@ -110,7 +120,15 @@ export default function ProductPage() {
     setError('');
 
     try {
-      const { url } = await createCheckoutSession(product.id, session.user.email);
+      // For guests, we'll need to prompt for email - but for now, if no session, redirect to login
+      // In a full implementation, you might want a guest checkout form
+      if (!buyerEmail) {
+        // Redirect to login for guest checkout (they can enter email there)
+        router.push('/login?redirect=' + encodeURIComponent(`/product/${product.id}`));
+        return;
+      }
+
+      const { url } = await createCheckoutSession(product.id, buyerEmail);
       window.location.href = url;
     } catch (err: any) {
       // Check if it's a Stripe not connected error
@@ -119,6 +137,8 @@ export default function ProductPage() {
         const message = errorData.message || 'The seller is finalizing their payout setup.\n\nThis item will be available soon.';
         setStripeModalMessage(message);
         setShowStripeModal(true);
+      } else if (errorData.error === 'AUTH_REQUIRED_FOR_KAPPA_BRANDED' || errorData.code === 'AUTH_REQUIRED_FOR_KAPPA_BRANDED') {
+        setError('Kappa Alpha Psi branded merchandise can only be purchased by verified members. Please sign in to continue.');
       } else {
         setError(err.message || 'Failed to start checkout');
       }
@@ -438,21 +458,43 @@ export default function ProductPage() {
                   <div className="text-red-600 text-sm">{error}</div>
                 )}
 
-                {sessionStatus === 'authenticated' && session?.user?.email ? (
-                  <button
-                    type="submit"
-                    disabled={checkingOut}
-                    className="w-full bg-crimson text-white py-3 rounded-lg font-semibold hover:bg-crimson/90 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
-                  >
-                    {checkingOut ? 'Processing...' : 'Buy Now'}
-                  </button>
+                {/* Show different button based on product type and auth status */}
+                {product.is_kappa_branded ? (
+                  // Kappa branded products require authentication
+                  sessionStatus === 'authenticated' && session?.user?.email ? (
+                    <button
+                      type="submit"
+                      disabled={checkingOut}
+                      className="w-full bg-crimson text-white py-3 rounded-lg font-semibold hover:bg-crimson/90 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
+                    >
+                      {checkingOut ? 'Processing...' : 'Buy Now'}
+                    </button>
+                  ) : (
+                    <Link
+                      href="/login"
+                      className="w-full bg-crimson text-white py-3 rounded-lg font-semibold hover:bg-crimson/90 transition shadow-md hover:shadow-lg text-center block"
+                    >
+                      Sign In to Purchase
+                    </Link>
+                  )
                 ) : (
-                  <Link
-                    href="/login"
-                    className="w-full bg-crimson text-white py-3 rounded-lg font-semibold hover:bg-crimson/90 transition shadow-md hover:shadow-lg text-center block"
-                  >
-                    Sign In to Purchase
-                  </Link>
+                  // Non-kappa branded products can be purchased by guests
+                  sessionStatus === 'authenticated' && session?.user?.email ? (
+                    <button
+                      type="submit"
+                      disabled={checkingOut}
+                      className="w-full bg-crimson text-white py-3 rounded-lg font-semibold hover:bg-crimson/90 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
+                    >
+                      {checkingOut ? 'Processing...' : 'Buy Now'}
+                    </button>
+                  ) : (
+                    <Link
+                      href="/login?redirect=" + encodeURIComponent(`/product/${product.id}`)
+                      className="w-full bg-crimson text-white py-3 rounded-lg font-semibold hover:bg-crimson/90 transition shadow-md hover:shadow-lg text-center block"
+                    >
+                      Continue to Checkout
+                    </Link>
+                  )
                 )}
               </form>
             </div>

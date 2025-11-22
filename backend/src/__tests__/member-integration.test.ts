@@ -213,7 +213,7 @@ describe('Member Role Integration Tests', () => {
         .send({
           name: 'Test Seller',
           sponsoring_chapter_id: 1,
-          vendor_license_number: 'V12345',
+          kappa_vendor_id: 'V12345',
         })
         .expect(201);
 

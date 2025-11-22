@@ -164,6 +164,89 @@ export function requireSteward(req: Request, res: Response, next: NextFunction):
 }
 
 /**
+ * Optional authentication middleware - doesn't fail if no token, but sets req.user if token is valid
+ */
+export async function authenticateOptional(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    // Get token from Authorization header
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      // No token provided - continue without authentication
+      next();
+      return;
+    }
+
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+
+    // Verify token
+    const payload = await verifyCognitoToken(token);
+    if (!payload) {
+      // Invalid token - continue without authentication
+      next();
+      return;
+    }
+
+    // Extract user info from token
+    const { cognitoSub, email } = extractUserInfoFromToken(payload);
+
+    // Get user in database
+    const user = await getUserByCognitoSub(cognitoSub);
+    if (!user) {
+      // User not found - continue without authentication
+      next();
+      return;
+    }
+
+    // Validate fraternity_member_id if it exists
+    let memberId = user.fraternity_member_id;
+    if (memberId) {
+      const memberCheck = await pool.query('SELECT id FROM fraternity_members WHERE id = $1', [memberId]);
+      if (memberCheck.rows.length === 0) {
+        console.warn(`Orphaned fraternity_member_id detected in authenticateOptional: user ${user.id} has fraternity_member_id ${memberId} but fraternity_member doesn't exist`);
+        try {
+          await pool.query(
+            `UPDATE users 
+             SET fraternity_member_id = NULL, 
+                 onboarding_status = 'ONBOARDING_STARTED',
+                 updated_at = CURRENT_TIMESTAMP 
+             WHERE id = $1`,
+            [user.id]
+          );
+          memberId = null;
+          user.fraternity_member_id = null;
+          user.onboarding_status = 'ONBOARDING_STARTED';
+        } catch (cleanupError) {
+          console.error('Error clearing orphaned fraternity_member_id in authenticateOptional:', cleanupError);
+        }
+      }
+    }
+
+    // Attach user to request
+    req.user = {
+      id: user.id,
+      cognitoSub: user.cognito_sub,
+      email: user.email,
+      role: user.role,
+      memberId: memberId,
+      sellerId: user.seller_id,
+      promoterId: user.promoter_id,
+      stewardId: user.steward_id || null,
+      features: user.features,
+    };
+
+    next();
+  } catch (error) {
+    // On error, continue without authentication (don't block the request)
+    console.warn('Optional authentication error (continuing without auth):', error);
+    next();
+  }
+}
+
+/**
  * Middleware to require verified member status
  * Used for steward marketplace access
  */

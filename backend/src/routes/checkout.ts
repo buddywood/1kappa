@@ -3,6 +3,7 @@ import type { Router as ExpressRouter } from 'express';
 import { getProductById, getOrderByStripeSessionId } from '../db/queries';
 import { createCheckoutSession } from '../services/stripe';
 import { createOrder } from '../db/queries';
+import { authenticateOptional } from '../middleware/auth';
 import { z } from 'zod';
 import dotenv from 'dotenv';
 
@@ -14,7 +15,7 @@ const checkoutSchema = z.object({
   buyer_email: z.string().email(),
 });
 
-router.post('/:productId', async (req: Request, res: Response) => {
+router.post('/:productId', authenticateOptional, async (req: Request, res: Response) => {
   try {
     const productId = parseInt(req.params.productId);
     
@@ -33,6 +34,17 @@ router.post('/:productId', async (req: Request, res: Response) => {
     // Validate product has a price
     if (!product.price_cents || product.price_cents <= 0) {
       return res.status(400).json({ error: 'Product does not have a valid price' });
+    }
+
+    // Check if product is Kappa branded - if so, require authentication
+    if (product.is_kappa_branded) {
+      if (!req.user) {
+        return res.status(401).json({ 
+          error: 'Authentication required',
+          message: 'Kappa Alpha Psi branded merchandise can only be purchased by verified members. Please sign in to continue.',
+          code: 'AUTH_REQUIRED_FOR_KAPPA_BRANDED'
+        });
+      }
     }
 
     // Get seller to check status and get Stripe account

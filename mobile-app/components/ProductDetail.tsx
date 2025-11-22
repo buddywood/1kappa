@@ -108,9 +108,26 @@ export default function ProductDetail({
   }
 
   const handleCheckout = async () => {
-    if (!product || !user?.email) {
-      setError("Please sign in to purchase this item");
+    if (!product) {
+      setError("Product not available");
       return;
+    }
+
+    // Check if product is Kappa branded - if so, require authentication
+    if (product.is_kappa_branded) {
+      if (!user?.email) {
+        setError(
+          "Kappa Alpha Psi branded merchandise can only be purchased by verified members. Please sign in to continue."
+        );
+        return;
+      }
+    } else {
+      // For non-kappa branded products, we still need an email for checkout
+      // In a full implementation, you might collect email from guests
+      if (!user?.email) {
+        setError("Please sign in to purchase this item");
+        return;
+      }
     }
 
     setCheckingOut(true);
@@ -135,7 +152,17 @@ export default function ProductDetail({
       // The success/cancel URLs will handle redirects via deep linking
     } catch (err: any) {
       console.error("Checkout error:", err);
-      setError(err.message || "Failed to start checkout. Please try again.");
+      const errorData = (err as any).errorData || {};
+      if (
+        errorData.error === "AUTH_REQUIRED_FOR_KAPPA_BRANDED" ||
+        errorData.code === "AUTH_REQUIRED_FOR_KAPPA_BRANDED"
+      ) {
+        setError(
+          "Kappa Alpha Psi branded merchandise can only be purchased by verified members. Please sign in to continue."
+        );
+      } else {
+        setError(err.message || "Failed to start checkout. Please try again.");
+      }
       setCheckingOut(false);
     }
   };
@@ -309,8 +336,18 @@ export default function ProductDetail({
               );
             })()}
 
-            {/* Guest Message */}
-            {isGuest && (
+            {/* Guest Message - only show for Kappa branded products */}
+            {isGuest && product.is_kappa_branded && (
+              <View style={styles.guestMessageContainer}>
+                <Text style={styles.guestMessageText}>
+                  Kappa Alpha Psi branded merchandise can only be purchased by
+                  verified members. Please sign in to continue.
+                </Text>
+              </View>
+            )}
+
+            {/* Guest Message for non-kappa branded - still need sign in for now */}
+            {isGuest && !product.is_kappa_branded && (
               <View style={styles.guestMessageContainer}>
                 <Text style={styles.guestMessageText}>
                   Sign in to purchase this item
@@ -318,8 +355,8 @@ export default function ProductDetail({
               </View>
             )}
 
-            {/* Purchase Button for Authenticated Members */}
-            {!isGuest && user?.email && (
+            {/* Purchase Button - show for authenticated users, or for non-kappa branded (though still need email) */}
+            {user?.email && (
               <PrimaryButton
                 title="Buy Now"
                 onPress={handleCheckout}

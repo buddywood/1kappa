@@ -7,6 +7,7 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { fetchTotalDonations, fetchMemberProfile, getUnreadNotificationCount, getSellerProfile, fetchChapters } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { useCart } from '../contexts/CartContext';
 import { useTheme } from 'next-themes';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -21,12 +22,14 @@ function HeaderContent() {
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [cartMenuOpen, setCartMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [notificationCount, setNotificationCount] = useState(0);
   const [sponsoringChapterName, setSponsoringChapterName] = useState<string | null>(null);
   const [memberVerificationStatus, setMemberVerificationStatus] = useState<string | null>(null);
+  const { items, removeFromCart, updateQuantity, getTotalItems, getTotalPrice } = useCart();
   
   // Show authenticated menu for any authenticated user (not just fully onboarded)
   const showAuthenticatedMenu = sessionStatus === 'authenticated' && nextAuthSession?.user;
@@ -205,6 +208,20 @@ function HeaderContent() {
     await signOut({ callbackUrl: '/' });
   };
 
+  // Close cart menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (cartMenuOpen && !target.closest('.cart-menu-container')) {
+        setCartMenuOpen(false);
+      }
+    };
+    if (cartMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [cartMenuOpen]);
+
   const navLinks = [
     { href: '/shop', label: 'Shop', matchPath: '/shop' },
     { href: '/steward-marketplace', label: 'Stewards', matchPath: '/steward-marketplace' },
@@ -349,6 +366,125 @@ function HeaderContent() {
                 )}
               </Link>
             )}
+
+            {/* Cart Icon */}
+            <div className="relative cart-menu-container">
+              <button
+                onClick={() => setCartMenuOpen(!cartMenuOpen)}
+                className="p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-black rounded-lg transition-colors relative"
+                aria-label="Shopping Cart"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                {getTotalItems() > 0 && (
+                  <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1.5 bg-crimson text-white text-xs font-semibold rounded-full flex items-center justify-center">
+                    {getTotalItems() > 99 ? '99+' : getTotalItems()}
+                  </span>
+                )}
+              </button>
+
+              {cartMenuOpen && (
+                <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-black rounded-lg shadow-xl border border-gray-200 dark:border-gray-900 z-50">
+                  <div className="p-4 border-b border-gray-200 dark:border-gray-900 flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                      Cart ({getTotalItems()})
+                    </h3>
+                    <button
+                      onClick={() => setCartMenuOpen(false)}
+                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  {items.length === 0 ? (
+                    <div className="p-8 text-center">
+                      <svg className="w-12 h-12 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                      </svg>
+                      <p className="text-gray-500 dark:text-gray-400">Your cart is empty</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="max-h-96 overflow-y-auto">
+                        {items.map((item) => (
+                          <div key={item.product.id} className="p-4 border-b border-gray-200 dark:border-gray-900 flex gap-3">
+                            <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 flex-shrink-0">
+                              {item.product.image_url ? (
+                                <Image
+                                  src={item.product.image_url}
+                                  alt={item.product.name}
+                                  fill
+                                  className="object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  </svg>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-2 mb-1">
+                                {item.product.name}
+                              </p>
+                              <p className="text-sm font-semibold text-crimson">
+                                ${((item.product.price_cents / 100) * item.quantity).toFixed(2)}
+                              </p>
+                              <div className="flex items-center gap-2 mt-2">
+                                <button
+                                  onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                                  className="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                                >
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                                  </svg>
+                                </button>
+                                <span className="text-sm font-medium text-gray-900 dark:text-gray-100 min-w-[24px] text-center">
+                                  {item.quantity}
+                                </span>
+                                <button
+                                  onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                                  className="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                                >
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                  </svg>
+                                </button>
+                                <button
+                                  onClick={() => removeFromCart(item.product.id)}
+                                  className="ml-auto text-red-500 hover:text-red-700 dark:hover:text-red-400"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="p-4 border-t border-gray-200 dark:border-gray-900">
+                        <div className="flex items-center justify-between mb-4">
+                          <span className="text-base font-semibold text-gray-900 dark:text-gray-100">Total:</span>
+                          <span className="text-xl font-bold text-crimson">${getTotalPrice().toFixed(2)}</span>
+                        </div>
+                        <Link
+                          href="/checkout"
+                          onClick={() => setCartMenuOpen(false)}
+                          className="block w-full bg-crimson text-white text-center py-3 rounded-lg font-semibold hover:bg-crimson/90 transition-colors"
+                        >
+                          Checkout
+                        </Link>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* User Menu */}
             {showAuthenticatedMenu ? (

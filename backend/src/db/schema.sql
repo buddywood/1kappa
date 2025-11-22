@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS sellers (
   fraternity_member_id INTEGER REFERENCES fraternity_members(id),
   sponsoring_chapter_id INTEGER NOT NULL REFERENCES chapters(id),
   business_name VARCHAR(255),
-  vendor_license_number VARCHAR(100) NOT NULL,
+  kappa_vendor_id VARCHAR(100) NOT NULL,
   headshot_url TEXT,
   store_logo_url TEXT,
   social_links JSONB DEFAULT '{}',

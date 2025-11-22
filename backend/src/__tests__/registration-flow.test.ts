@@ -107,7 +107,7 @@ describe('Registration Flow Tests', () => {
         sponsoring_chapter_id: 1,
         business_name: 'Guest Business',
         merchandise_type: 'NON_KAPPA',
-        vendor_license_number: null,
+        kappa_vendor_id: null,
         website: 'https://example.com',
         social_links: JSON.stringify({ instagram: '@guest' }),
       };
@@ -168,7 +168,7 @@ describe('Registration Flow Tests', () => {
         email: 'guest-seller@example.com',
         sponsoring_chapter_id: 1,
         merchandise_type: 'KAPPA',
-        // Missing vendor_license_number
+        // Missing kappa_vendor_id
       };
 
       const response = await request(app)
@@ -351,7 +351,7 @@ describe('Registration Flow Tests', () => {
         sponsoring_chapter_id: 1,
         business_name: 'Member Business',
         merchandise_type: 'KAPPA',
-        vendor_license_number: 'VENDOR123',
+        kappa_vendor_id: 'VENDOR123',
         website: 'https://member-business.com',
         social_links: JSON.stringify({ instagram: '@member' }),
       };
@@ -433,7 +433,7 @@ describe('Registration Flow Tests', () => {
         .field('sponsoring_chapter_id', sellerApplication.sponsoring_chapter_id.toString())
         .field('business_name', sellerApplication.business_name)
         .field('merchandise_type', sellerApplication.merchandise_type)
-        .field('vendor_license_number', sellerApplication.vendor_license_number)
+        .field('kappa_vendor_id', sellerApplication.kappa_vendor_id)
         .field('website', sellerApplication.website)
         .field('social_links', sellerApplication.social_links)
         .attach('store_logo', Buffer.from('fake logo'), 'logo.jpg')

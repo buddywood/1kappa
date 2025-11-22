@@ -39,7 +39,7 @@ export default function ApplyPage() {
     sponsoring_chapter_id: urlParams || '',
     business_name: '',
     business_email: '',
-    vendor_license_number: '',
+    kappa_vendor_id: '',
     merchandise_type: '' as 'KAPPA' | 'NON_KAPPA' | '',
     website: '',
     social_links: {
@@ -170,8 +170,8 @@ export default function ApplyPage() {
     }
 
     // Require vendor license number if selling Kappa merchandise
-    if (formData.merchandise_type === 'KAPPA' && !formData.vendor_license_number.trim()) {
-      setError('Vendor license number is required for selling Kappa merchandise.');
+    if (formData.merchandise_type === 'KAPPA' && !formData.kappa_vendor_id.trim()) {
+      setError('Kappa vendor ID is required for selling Kappa merchandise.');
       setSubmitting(false);
       return;
     }
@@ -188,8 +188,8 @@ export default function ApplyPage() {
         formDataToSend.append('business_email', formData.business_email);
       }
       formDataToSend.append('merchandise_type', formData.merchandise_type);
-      if (formData.vendor_license_number) {
-        formDataToSend.append('vendor_license_number', formData.vendor_license_number);
+      if (formData.kappa_vendor_id) {
+        formDataToSend.append('kappa_vendor_id', formData.kappa_vendor_id);
       }
       if (formData.website) {
         formDataToSend.append('website', formData.website);
@@ -517,7 +517,7 @@ export default function ApplyPage() {
                   name="merchandise_type"
                   value="NON_KAPPA"
                   checked={formData.merchandise_type === 'NON_KAPPA'}
-                  onChange={(e) => setFormData({ ...formData, merchandise_type: e.target.value as 'KAPPA' | 'NON_KAPPA', vendor_license_number: '' })}
+                  onChange={(e) => setFormData({ ...formData, merchandise_type: e.target.value as 'KAPPA' | 'NON_KAPPA', kappa_vendor_id: '' })}
                   className="mr-2 text-crimson focus:ring-crimson"
                   required
                 />
@@ -532,10 +532,10 @@ export default function ApplyPage() {
               <Input
                 type="text"
                 required={formData.merchandise_type === 'KAPPA'}
-                value={formData.vendor_license_number}
-                onChange={(e) => setFormData({ ...formData, vendor_license_number: e.target.value })}
+                value={formData.kappa_vendor_id}
+                onChange={(e) => setFormData({ ...formData, kappa_vendor_id: e.target.value })}
                 className="text-midnight-navy"
-                placeholder="Enter your vendor license number"
+                placeholder="Enter your Kappa vendor ID"
               />
               <p className="text-xs text-midnight-navy/60">
                 Required for selling Kappa merchandise

@@ -36,21 +36,21 @@ const testSellers = [
     name: 'David Brown',
     membership_number: '22222',
     business_name: 'Test Seller Business 1',
-    vendor_license_number: 'TEST-VL-001',
+    kappa_vendor_id: 'TEST-VL-001',
   },
   {
     email: 'test.seller2@example.com',
     name: 'James Davis',
     membership_number: '33333',
     business_name: 'Test Seller Business 2',
-    vendor_license_number: 'TEST-VL-002',
+    kappa_vendor_id: 'TEST-VL-002',
   },
   {
     email: 'test.seller3@example.com',
     name: 'William Miller',
     membership_number: '44444',
     business_name: null,
-    vendor_license_number: 'TEST-VL-003',
+    kappa_vendor_id: 'TEST-VL-003',
   },
 ];
 
@@ -198,7 +198,7 @@ async function seedTestSellers(): Promise<void> {
           name: sellerData.name,
           sponsoring_chapter_id: randomChapter.id,
           business_name: sellerData.business_name,
-          vendor_license_number: sellerData.vendor_license_number,
+          kappa_vendor_id: sellerData.kappa_vendor_id,
           social_links: {},
         });
 
