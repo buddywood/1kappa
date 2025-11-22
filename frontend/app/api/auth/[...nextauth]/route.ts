@@ -149,6 +149,10 @@ const authOptions: NextAuthOptions = {
     signIn: '/login',
     error: '/login', // Redirect errors to login page
   },
+  session: {
+    strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 days - allows "Remember Me" to persist sessions
+  },
   callbacks: {
     async signIn({ user, account, profile, email, credentials }) {
       // This callback is called before the user is signed in

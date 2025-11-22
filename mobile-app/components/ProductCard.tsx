@@ -80,13 +80,13 @@ const styles = StyleSheet.create({
   container: {
     width: cardWidth,
     backgroundColor: COLORS.white,
-    borderRadius: 12,
+    borderRadius: 16,
     overflow: 'hidden',
     marginBottom: 16,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
     elevation: 3,
   },
   imageContainer: {
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   infoContainer: {
-    padding: 12,
+    padding: 16,
   },
   productName: {
     fontSize: 14,
@@ -119,17 +119,20 @@ const styles = StyleSheet.create({
     color: COLORS.midnightNavy,
     marginBottom: 4,
     minHeight: 36,
+    letterSpacing: 0.1,
   },
   sellerName: {
-    fontSize: 11,
+    fontSize: 12,
     color: COLORS.midnightNavy,
-    opacity: 0.6,
+    opacity: 0.7,
     marginBottom: 6,
+    lineHeight: 18,
   },
   price: {
-    fontSize: 14,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '700',
     color: COLORS.crimson,
+    letterSpacing: 0.2,
   },
   disabledContainer: {
     opacity: 0.7,

@@ -133,7 +133,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
+    paddingHorizontal: 8,
+    paddingTop: 12,
     paddingBottom: 80, // Extra padding for bottom tab bar
   },
   loadingContainer: {
@@ -149,15 +150,23 @@ const styles = StyleSheet.create({
   },
   guestBanner: {
     backgroundColor: COLORS.crimson,
-    padding: 12,
-    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 14,
     marginBottom: 16,
+    marginHorizontal: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
   },
   guestBannerText: {
     color: COLORS.white,
     fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
+    letterSpacing: 0.1,
   },
   emptyContainer: {
     flex: 1,

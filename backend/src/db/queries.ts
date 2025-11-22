@@ -214,6 +214,7 @@ export async function getProductById(id: number): Promise<Product | null> {
             s.sponsoring_chapter_id as seller_sponsoring_chapter_id,
             s.email as seller_email,
             m.initiated_chapter_id as seller_initiated_chapter_id,
+            pc.name as category_name,
             CASE WHEN s.fraternity_member_id IS NOT NULL THEN true ELSE false END as is_fraternity_member,
             CASE WHEN s.status = 'APPROVED' THEN true ELSE false END as is_seller,
             CASE WHEN st.id IS NOT NULL THEN true ELSE false END as is_steward,
@@ -223,6 +224,7 @@ export async function getProductById(id: number): Promise<Product | null> {
      LEFT JOIN fraternity_members m ON s.fraternity_member_id = m.id
      LEFT JOIN stewards st ON s.fraternity_member_id = st.fraternity_member_id AND st.status = 'APPROVED'
      LEFT JOIN promoters pr ON (s.fraternity_member_id = pr.fraternity_member_id OR s.email = pr.email) AND pr.status = 'APPROVED'
+     LEFT JOIN product_categories pc ON p.category_id = pc.id
      WHERE p.id = $1`,
     [id]
   );
@@ -394,7 +396,14 @@ export async function getCategoryAttributeDefinitionById(id: number): Promise<Ca
 // Product Attribute Value queries
 export async function getProductAttributeValues(productId: number): Promise<ProductAttributeValue[]> {
   const result = await pool.query(
-    'SELECT * FROM product_attribute_values WHERE product_id = $1',
+    `SELECT pav.*, 
+            cad.attribute_name,
+            cad.attribute_type,
+            cad.display_order
+     FROM product_attribute_values pav
+     JOIN category_attribute_definitions cad ON pav.attribute_definition_id = cad.id
+     WHERE pav.product_id = $1
+     ORDER BY cad.display_order ASC`,
     [productId]
   );
   return result.rows;

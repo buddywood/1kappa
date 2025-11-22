@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -9,13 +9,19 @@ import {
   ActivityIndicator,
   Modal,
   Dimensions,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Product } from '../lib/api';
-import { COLORS } from '../lib/constants';
-import { useAuth } from '../lib/auth';
-import { fetchProduct } from '../lib/api';
-import ScreenHeader from './ScreenHeader';
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as WebBrowser from "expo-web-browser";
+import {
+  Product,
+  createCheckoutSession,
+  fetchCategoryAttributeDefinitions,
+  CategoryAttributeDefinition,
+} from "../lib/api";
+import { COLORS } from "../lib/constants";
+import { useAuth } from "../lib/auth";
+import { fetchProduct } from "../lib/api";
+import ScreenHeader from "./ScreenHeader";
 
 interface ProductDetailProps {
   productId: number;
@@ -23,18 +29,22 @@ interface ProductDetailProps {
   onSellerPress?: (sellerId: number) => void;
 }
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 
 export default function ProductDetail({
   productId,
   onClose,
   onSellerPress,
 }: ProductDetailProps) {
-  const { isGuest } = useAuth();
+  const { isGuest, user, token } = useAuth();
   const insets = useSafeAreaInsets();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [checkingOut, setCheckingOut] = useState(false);
+  const [attributeDefinitions, setAttributeDefinitions] = useState<
+    CategoryAttributeDefinition[]
+  >([]);
 
   useEffect(() => {
     const loadProduct = async () => {
@@ -43,9 +53,21 @@ export default function ProductDetail({
         setError(null);
         const data = await fetchProduct(productId);
         setProduct(data);
+
+        // Load attribute definitions as fallback if attributes don't have attribute_name
+        if (data.category_id) {
+          try {
+            const definitions = await fetchCategoryAttributeDefinitions(
+              data.category_id
+            );
+            setAttributeDefinitions(definitions);
+          } catch (err) {
+            console.error("Error loading attribute definitions:", err);
+          }
+        }
       } catch (err) {
-        console.error('Error loading product:', err);
-        setError('Failed to load product');
+        console.error("Error loading product:", err);
+        setError("Failed to load product");
       } finally {
         setLoading(false);
       }
@@ -58,11 +80,7 @@ export default function ProductDetail({
     return (
       <Modal visible={true} animationType="slide" onRequestClose={onClose}>
         <View style={[styles.container, { paddingTop: insets.top }]}>
-          <ScreenHeader
-            title="Product"
-            onBack={onClose}
-            showUser={false}
-          />
+          <ScreenHeader title="Product" onBack={onClose} showUser={false} />
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={COLORS.crimson} />
             <Text style={styles.loadingText}>Loading product...</Text>
@@ -76,15 +94,9 @@ export default function ProductDetail({
     return (
       <Modal visible={true} animationType="slide" onRequestClose={onClose}>
         <View style={[styles.container, { paddingTop: insets.top }]}>
-          <ScreenHeader
-            title="Product"
-            onBack={onClose}
-            showUser={false}
-          />
+          <ScreenHeader title="Product" onBack={onClose} showUser={false} />
           <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>
-              {error || 'Product not found'}
-            </Text>
+            <Text style={styles.errorText}>{error || "Product not found"}</Text>
             <TouchableOpacity onPress={onClose} style={styles.errorButton}>
               <Text style={styles.errorButtonText}>Close</Text>
             </TouchableOpacity>
@@ -93,6 +105,39 @@ export default function ProductDetail({
       </Modal>
     );
   }
+
+  const handleCheckout = async () => {
+    if (!product || !user?.email) {
+      setError("Please sign in to purchase this item");
+      return;
+    }
+
+    setCheckingOut(true);
+    setError(null);
+
+    try {
+      const { url } = await createCheckoutSession(
+        product.id,
+        user.email,
+        token || undefined
+      );
+
+      // Open Stripe checkout URL in in-app browser
+      // This keeps users in the app instead of opening external browser
+      await WebBrowser.openBrowserAsync(url, {
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
+        controlsColor: COLORS.crimson,
+        toolbarColor: COLORS.white,
+      });
+
+      // Note: User will return to app after completing or canceling checkout
+      // The success/cancel URLs will handle redirects via deep linking
+    } catch (err: any) {
+      console.error("Checkout error:", err);
+      setError(err.message || "Failed to start checkout. Please try again.");
+      setCheckingOut(false);
+    }
+  };
 
   const price = (product.price_cents / 100).toFixed(2);
   const sellerName = product.seller_fraternity_member_id
@@ -108,10 +153,10 @@ export default function ProductDetail({
           onBack={onClose}
           showUser={false}
           rightAction={{
-            icon: 'mail-outline',
+            icon: "mail-outline",
             onPress: () => {
               // TODO: Implement contact seller functionality
-              console.log('Contact seller:', product.seller_id);
+              console.log("Contact seller:", product.seller_id);
             },
           }}
         />
@@ -156,7 +201,9 @@ export default function ProductDetail({
                 <Text style={styles.sellerLabel}>Sold by</Text>
                 <Text style={styles.sellerName}>{sellerName}</Text>
                 {onSellerPress && product.seller_id && (
-                  <Text style={styles.viewCollectionText}>View Collection →</Text>
+                  <Text style={styles.viewCollectionText}>
+                    View Collection →
+                  </Text>
                 )}
               </TouchableOpacity>
             )}
@@ -167,6 +214,14 @@ export default function ProductDetail({
               <Text style={styles.price}>${price}</Text>
             </View>
 
+            {/* Category */}
+            {product.category_name && (
+              <View style={styles.categoryContainer}>
+                <Text style={styles.categoryLabel}>Category</Text>
+                <Text style={styles.categoryName}>{product.category_name}</Text>
+              </View>
+            )}
+
             {/* Description */}
             {product.description && (
               <View style={styles.descriptionContainer}>
@@ -175,12 +230,116 @@ export default function ProductDetail({
               </View>
             )}
 
+            {/* Product Attributes */}
+            {(() => {
+              if (!product.attributes || product.attributes.length === 0)
+                return null;
+
+              // Debug: log attributes to see what we're getting
+              console.log("Product attributes:", product.attributes);
+              console.log("Attribute definitions:", attributeDefinitions);
+
+              const processedAttributes = product.attributes
+                .map((attr) => {
+                  // Try to get attribute name from the attribute itself first, then from definitions
+                  let attributeName = attr.attribute_name;
+                  let attributeType = attr.attribute_type;
+                  let displayOrder = attr.display_order || 0;
+
+                  // Fallback: look up in definitions if attribute_name not present
+                  if (!attributeName && attributeDefinitions.length > 0) {
+                    const definition = attributeDefinitions.find(
+                      (def) => def.id === attr.attribute_definition_id
+                    );
+                    if (definition) {
+                      attributeName = definition.attribute_name;
+                      attributeType = definition.attribute_type;
+                      displayOrder = definition.display_order || 0;
+                    }
+                  }
+
+                  if (!attributeName) return null;
+
+                  // Get display value based on attribute type
+                  let displayValue = "";
+                  if (attributeType === "BOOLEAN") {
+                    displayValue = attr.value_boolean ? "Yes" : "No";
+                  } else if (attributeType === "NUMBER") {
+                    displayValue = attr.value_number?.toString() || "";
+                  } else {
+                    displayValue = attr.value_text || "";
+                  }
+
+                  if (!displayValue) return null;
+
+                  return { attributeName, displayValue, displayOrder };
+                })
+                .filter(
+                  (
+                    item
+                  ): item is {
+                    attributeName: string;
+                    displayValue: string;
+                    displayOrder: number;
+                  } => item !== null
+                )
+                .sort((a, b) => a.displayOrder - b.displayOrder);
+
+              console.log("Processed attributes:", processedAttributes);
+
+              if (processedAttributes.length === 0) return null;
+
+              return (
+                <View style={styles.attributesContainer}>
+                  <Text style={styles.attributesTitle}>Product Details</Text>
+                  {processedAttributes.map(
+                    ({ attributeName, displayValue }, index) => (
+                      <View key={index} style={styles.attributeItem}>
+                        <Text style={styles.attributeLabel}>
+                          {attributeName}
+                        </Text>
+                        <Text style={styles.attributeValue}>
+                          {displayValue}
+                        </Text>
+                      </View>
+                    )
+                  )}
+                </View>
+              );
+            })()}
+
             {/* Guest Message */}
             {isGuest && (
               <View style={styles.guestMessageContainer}>
                 <Text style={styles.guestMessageText}>
                   Sign in to purchase this item
                 </Text>
+              </View>
+            )}
+
+            {/* Purchase Button for Authenticated Members */}
+            {!isGuest && user?.email && (
+              <TouchableOpacity
+                onPress={handleCheckout}
+                disabled={checkingOut}
+                style={[
+                  styles.purchaseButton,
+                  checkingOut && styles.purchaseButtonDisabled,
+                ]}
+                activeOpacity={0.8}
+              >
+                {checkingOut ? (
+                  <ActivityIndicator color={COLORS.white} />
+                ) : (
+                  <Text style={styles.purchaseButtonText}>Buy Now</Text>
+                )}
+              </TouchableOpacity>
+            )}
+
+            {/* Error Message */}
+            {error && !checkingOut && (
+              <View style={styles.errorMessageContainer}>
+                <Text style={styles.errorMessageText}>{error}</Text>
               </View>
             )}
           </View>
@@ -207,15 +366,15 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.frostGray,
   },
   image: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   placeholder: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
     backgroundColor: COLORS.frostGray,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   placeholderText: {
     color: COLORS.midnightNavy,
@@ -232,7 +391,7 @@ const styles = StyleSheet.create({
   },
   productName: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: COLORS.midnightNavy,
     marginBottom: 16,
   },
@@ -250,14 +409,14 @@ const styles = StyleSheet.create({
   },
   sellerName: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
     color: COLORS.midnightNavy,
     marginBottom: 4,
   },
   viewCollectionText: {
     fontSize: 14,
     color: COLORS.crimson,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   priceContainer: {
     marginBottom: 20,
@@ -273,8 +432,25 @@ const styles = StyleSheet.create({
   },
   price: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: COLORS.crimson,
+  },
+  categoryContainer: {
+    marginBottom: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.frostGray,
+  },
+  categoryLabel: {
+    fontSize: 12,
+    color: COLORS.midnightNavy,
+    opacity: 0.6,
+    marginBottom: 4,
+  },
+  categoryName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: COLORS.midnightNavy,
   },
   descriptionContainer: {
     marginBottom: 20,
@@ -290,6 +466,35 @@ const styles = StyleSheet.create({
     color: COLORS.midnightNavy,
     lineHeight: 24,
   },
+  attributesContainer: {
+    marginBottom: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.frostGray,
+  },
+  attributesTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: COLORS.midnightNavy,
+    marginBottom: 16,
+  },
+  attributeItem: {
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.frostGray,
+  },
+  attributeLabel: {
+    fontSize: 12,
+    color: COLORS.midnightNavy,
+    opacity: 0.6,
+    marginBottom: 4,
+  },
+  attributeValue: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: COLORS.midnightNavy,
+  },
   guestMessageContainer: {
     marginTop: 20,
     padding: 16,
@@ -299,12 +504,47 @@ const styles = StyleSheet.create({
   guestMessageText: {
     fontSize: 14,
     color: COLORS.midnightNavy,
-    textAlign: 'center',
+    textAlign: "center",
+  },
+  purchaseButton: {
+    marginTop: 20,
+    backgroundColor: COLORS.crimson,
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  purchaseButtonDisabled: {
+    opacity: 0.6,
+  },
+  purchaseButtonText: {
+    color: COLORS.white,
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  errorMessageContainer: {
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: "#FEE2E2",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#FCA5A5",
+  },
+  errorMessageText: {
+    color: "#DC2626",
+    fontSize: 14,
+    textAlign: "center",
   },
   loadingContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   loadingText: {
     marginTop: 16,
@@ -314,14 +554,14 @@ const styles = StyleSheet.create({
   },
   errorContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     padding: 20,
   },
   errorText: {
     fontSize: 16,
     color: COLORS.midnightNavy,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 20,
   },
   errorButton: {
@@ -333,7 +573,6 @@ const styles = StyleSheet.create({
   errorButtonText: {
     color: COLORS.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
-

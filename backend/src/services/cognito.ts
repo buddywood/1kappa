@@ -105,6 +105,26 @@ export async function authenticateUser(email: string, password: string) {
 }
 
 /**
+ * Refresh tokens using refresh token
+ */
+export async function refreshUserTokens(refreshToken: string) {
+  try {
+    const command = new InitiateAuthCommand({
+      AuthFlow: AuthFlowType.REFRESH_TOKEN_AUTH,
+      ClientId: COGNITO_CLIENT_ID,
+      AuthParameters: {
+        REFRESH_TOKEN: refreshToken,
+      },
+    });
+    const response = await cognitoClient.send(command);
+    return response;
+  } catch (error: any) {
+    console.error('Error refreshing tokens:', error);
+    throw error;
+  }
+}
+
+/**
  * Extract user info from Cognito token payload
  */
 export function extractUserInfoFromToken(payload: CognitoTokenPayload) {

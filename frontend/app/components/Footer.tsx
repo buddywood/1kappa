@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { SUPPORT_URL } from '@/lib/constants';
 
 export default function Footer() {
   return (
@@ -20,6 +21,13 @@ export default function Footer() {
             className="text-crimson hover:text-aurora-gold dark:hover:text-crimson/80 hover:underline transition"
           >
             Privacy Policy
+          </Link>
+          <span className="text-midnight-navy/30 dark:text-gray-600">|</span>
+          <Link 
+            href={SUPPORT_URL}
+            className="text-crimson hover:text-aurora-gold dark:hover:text-crimson/80 hover:underline transition"
+          >
+            Support
           </Link>
         </div>
         <p className="text-xs text-midnight-navy/50 dark:text-gray-500 mb-2">

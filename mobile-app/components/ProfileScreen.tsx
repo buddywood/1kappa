@@ -14,6 +14,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { COLORS } from "../lib/constants";
 import { useAuth } from "../lib/auth";
 import ScreenHeader from "./ScreenHeader";
+import { forgotPassword } from "../lib/cognito";
 
 const REMEMBERED_EMAIL_KEY = "@1kappa:remembered_email";
 const REMEMBER_ME_KEY = "@1kappa:remember_me";
@@ -39,6 +40,11 @@ export default function ProfileScreen({
   const [cognitoSub, setCognitoSub] = React.useState<string | null>(null);
   const [showPassword, setShowPassword] = React.useState(false);
   const [rememberMe, setRememberMe] = React.useState(false);
+  const [forgotPasswordLoading, setForgotPasswordLoading] =
+    React.useState(false);
+  const [forgotPasswordMessage, setForgotPasswordMessage] = React.useState<
+    string | null
+  >(null);
 
   // Load remembered email on mount
   React.useEffect(() => {
@@ -75,13 +81,16 @@ export default function ProfileScreen({
     try {
       await login(email, password);
 
-      // Save or clear remembered email based on rememberMe preference
+      // Save or clear remembered email and enable auto-login based on rememberMe preference
       if (rememberMe) {
         await AsyncStorage.setItem(REMEMBERED_EMAIL_KEY, email);
         await AsyncStorage.setItem(REMEMBER_ME_KEY, "true");
+        // Store remember me flag in auth context storage too
+        await AsyncStorage.setItem("@1kappa:remember_me", "true");
       } else {
         await AsyncStorage.removeItem(REMEMBERED_EMAIL_KEY);
         await AsyncStorage.removeItem(REMEMBER_ME_KEY);
+        await AsyncStorage.removeItem("@1kappa:remember_me");
       }
 
       // Login successful - auth context will update, component will re-render showing profile
@@ -220,173 +229,225 @@ export default function ProfileScreen({
   return (
     <View style={styles.container}>
       <ScreenHeader title={isLogin ? "Login" : "Sign Up"} onBack={onBack} />
-      <View style={styles.headerContainer}>
-        <View style={styles.firstRow}>
+      <View style={styles.headerWrapper}>
+        <View style={styles.headerContainer}>
           <View style={styles.logoColumn}>
             <Image
               source={require("../assets/icon.png")}
               style={styles.logo}
               resizeMode="contain"
-              width={75}
-              height={75}
+              width={60}
+              height={60}
             />
           </View>
           <View style={styles.textColumn}>
             <Text style={styles.title}>
               {isLogin ? "Welcome Back" : "Create Account"}
             </Text>
+            <Text style={styles.subtitle}>
+              {isLogin
+                ? "Sign in to access your account"
+                : "Join the brotherhood marketplace"}
+            </Text>
           </View>
         </View>
-        <View style={styles.secondRow}>
-          <Text style={styles.subtitle}>
-            {isLogin
-              ? "Sign in to access your account"
-              : "Join the brotherhood marketplace"}
-          </Text>
-        </View>
       </View>
+      <View style={styles.headerDivider} />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         contentInsetAdjustmentBehavior="never"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.formContainer}>
-          {!isLogin && (
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Full Name</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your full name"
-                placeholderTextColor={COLORS.midnightNavy + "60"}
-                value={name}
-                onChangeText={setName}
-                autoCapitalize="words"
-              />
-            </View>
-          )}
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your email"
-              placeholderTextColor={COLORS.midnightNavy + "60"}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Password</Text>
-            <View style={styles.passwordContainer}>
-              <TextInput
-                style={styles.passwordInput}
-                placeholder="Enter your password"
-                placeholderTextColor={COLORS.midnightNavy + "60"}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-              />
-              <TouchableOpacity
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.passwordIcon}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name={showPassword ? "eye-off-outline" : "eye-outline"}
-                  size={24}
-                  color={COLORS.midnightNavy + "80"}
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {isLogin && (
-            <TouchableOpacity
-              style={styles.rememberMeContainer}
-              onPress={() => setRememberMe(!rememberMe)}
-              activeOpacity={0.7}
-            >
-              <View
-                style={[styles.checkbox, rememberMe && styles.checkboxChecked]}
-              >
-                {rememberMe && (
-                  <Ionicons name="checkmark" size={18} color={COLORS.white} />
-                )}
-              </View>
-              <Text style={styles.rememberMeText}>Remember me</Text>
-            </TouchableOpacity>
-          )}
-
-          {error && (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          )}
-
-          {needsVerification ? (
-            <>
+        <View style={styles.formCard}>
+          <View style={styles.formContainer}>
+            {!isLogin && (
               <View style={styles.inputContainer}>
-                <Text style={styles.label}>Verification Code</Text>
+                <Text style={styles.label}>Full Name</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Enter code from email"
-                  placeholderTextColor={COLORS.midnightNavy + "60"}
-                  value={verificationCode}
-                  onChangeText={setVerificationCode}
-                  keyboardType="number-pad"
-                  autoCapitalize="none"
+                  placeholder="Enter your full name"
+                  placeholderTextColor={COLORS.midnightNavy + "50"}
+                  value={name}
+                  onChangeText={setName}
+                  autoCapitalize="words"
                 />
               </View>
+            )}
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your email"
+                placeholderTextColor={COLORS.midnightNavy + "50"}
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Password</Text>
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="Enter your password"
+                  placeholderTextColor={COLORS.midnightNavy + "50"}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.passwordIcon}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                    size={24}
+                    color={COLORS.midnightNavy + "80"}
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {isLogin && (
+              <View style={styles.rememberMeRow}>
+                <TouchableOpacity
+                  style={styles.rememberMeContainer}
+                  onPress={() => setRememberMe(!rememberMe)}
+                  activeOpacity={0.7}
+                >
+                  <View
+                    style={[
+                      styles.checkbox,
+                      rememberMe && styles.checkboxChecked,
+                    ]}
+                  >
+                    {rememberMe && (
+                      <Ionicons
+                        name="checkmark"
+                        size={18}
+                        color={COLORS.white}
+                      />
+                    )}
+                  </View>
+                  <Text style={styles.rememberMeText}>Remember me</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={async () => {
+                    if (!email) {
+                      setForgotPasswordMessage(
+                        "Please enter your email address first"
+                      );
+                      return;
+                    }
+                    setForgotPasswordLoading(true);
+                    setForgotPasswordMessage(null);
+                    try {
+                      await forgotPassword(email);
+                      setForgotPasswordMessage(
+                        "Password reset code sent! Check your email."
+                      );
+                    } catch (err: any) {
+                      setForgotPasswordMessage(
+                        err.message ||
+                          "Failed to send reset code. Please try again."
+                      );
+                    } finally {
+                      setForgotPasswordLoading(false);
+                    }
+                  }}
+                  disabled={forgotPasswordLoading || !email}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.forgotPasswordText}>
+                    Forgot Password?
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {isLogin && forgotPasswordMessage && (
+              <View style={styles.forgotPasswordMessageContainer}>
+                <Text style={styles.forgotPasswordMessageText}>
+                  {forgotPasswordMessage}
+                </Text>
+              </View>
+            )}
+
+            {error && (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            )}
+
+            {needsVerification ? (
+              <>
+                <View style={styles.inputContainer}>
+                  <Text style={styles.label}>Verification Code</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter code from email"
+                    placeholderTextColor={COLORS.midnightNavy + "50"}
+                    value={verificationCode}
+                    onChangeText={setVerificationCode}
+                    keyboardType="number-pad"
+                    autoCapitalize="none"
+                  />
+                </View>
+                <TouchableOpacity
+                  style={[
+                    styles.primaryButton,
+                    loading && styles.primaryButtonDisabled,
+                  ]}
+                  onPress={handleVerifyEmail}
+                  disabled={loading}
+                  activeOpacity={0.85}
+                >
+                  <Text style={styles.primaryButtonText}>
+                    {loading ? "Verifying..." : "Verify Email"}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            ) : (
               <TouchableOpacity
                 style={[
                   styles.primaryButton,
                   loading && styles.primaryButtonDisabled,
                 ]}
-                onPress={handleVerifyEmail}
+                onPress={isLogin ? handleLogin : handleRegister}
                 disabled={loading}
+                activeOpacity={0.85}
               >
                 <Text style={styles.primaryButtonText}>
-                  {loading ? "Verifying..." : "Verify Email"}
+                  {loading
+                    ? isLogin
+                      ? "Signing In..."
+                      : "Creating Account..."
+                    : isLogin
+                    ? "Sign In"
+                    : "Create Account"}
                 </Text>
               </TouchableOpacity>
-            </>
-          ) : (
+            )}
+
             <TouchableOpacity
-              style={[
-                styles.primaryButton,
-                loading && styles.primaryButtonDisabled,
-              ]}
-              onPress={isLogin ? handleLogin : handleRegister}
-              disabled={loading}
+              style={styles.switchButton}
+              onPress={() => setIsLogin(!isLogin)}
+              activeOpacity={0.6}
             >
-              <Text style={styles.primaryButtonText}>
-                {loading
-                  ? isLogin
-                    ? "Signing In..."
-                    : "Creating Account..."
-                  : isLogin
-                  ? "Sign In"
-                  : "Create Account"}
+              <Text style={styles.switchButtonText}>
+                {isLogin
+                  ? "Don't have an account? Sign Up"
+                  : "Already have an account? Sign In"}
               </Text>
             </TouchableOpacity>
-          )}
-
-          <TouchableOpacity
-            style={styles.switchButton}
-            onPress={() => setIsLogin(!isLogin)}
-          >
-            <Text style={styles.switchButtonText}>
-              {isLogin
-                ? "Don't have an account? Sign Up"
-                : "Already have an account? Sign In"}
-            </Text>
-          </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -398,70 +459,82 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.cream,
   },
+  headerWrapper: {
+    width: "100%",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    marginBottom: 8,
+  },
   headerContainer: {
     flexDirection: "column",
-    paddingTop: 0,
-    paddingBottom: 24,
-    paddingHorizontal: 16,
-    backgroundColor: COLORS.cream,
-    marginTop: 64,
-    marginBottom: 0,
-  },
-  firstRow: {
-    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 12,
-    gap: 16,
+    justifyContent: "center",
+    paddingTop: 0,
+    paddingBottom: 16,
+    backgroundColor: COLORS.cream,
+    marginTop: 6,
+    marginBottom: 0,
+    alignSelf: "center",
+    width: "auto",
+    gap: 8,
   },
   logoColumn: {
-    width: 75,
-    alignItems: "flex-start",
+    alignItems: "center",
     justifyContent: "center",
   },
   textColumn: {
-    flex: 1,
-    alignItems: "flex-start",
-    justifyContent: "center",
-    paddingLeft: 1,
-  },
-  secondRow: {
-    width: "100%",
     alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "column",
+    gap: 4,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 0,
+    paddingHorizontal: 0,
+    paddingTop: 12,
     paddingBottom: 80,
+  },
+  formCard: {
+    backgroundColor: COLORS.white,
+    padding: 20,
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+    marginHorizontal: 8,
+    marginTop: 12,
   },
   formContainer: {
     width: "100%",
-    paddingTop: 16,
+    paddingTop: 20,
+    paddingHorizontal: 8,
   },
   logo: {
-    width: 150,
-    height: 150,
+    width: 80,
+    height: 80,
     marginTop: 0,
     marginBottom: 0,
   },
   title: {
-    fontSize: 24,
-    fontWeight: "bold",
+    fontSize: 26,
+    fontWeight: "700",
     color: COLORS.midnightNavy,
-    textAlign: "left",
+    textAlign: "center",
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 15,
     color: COLORS.midnightNavy,
     opacity: 0.7,
-    textAlign: "left",
-    lineHeight: 20,
+    textAlign: "center",
+    lineHeight: 22,
+    maxWidth: 280,
   },
   inputContainer: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   label: {
     fontSize: 14,
@@ -471,24 +544,41 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: COLORS.white,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 16,
     fontSize: 16,
     color: COLORS.midnightNavy,
     borderWidth: 1,
-    borderColor: COLORS.frostGray,
+    borderColor: COLORS.frostGray + "AA",
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
   passwordContainer: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: COLORS.white,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: COLORS.frostGray,
+    borderColor: COLORS.frostGray + "AA",
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  headerDivider: {
+    height: 1,
+    width: "100%",
+    backgroundColor: COLORS.frostGray + "60",
+    marginBottom: 16,
   },
   passwordInput: {
     flex: 1,
-    padding: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     fontSize: 16,
     color: COLORS.midnightNavy,
   },
@@ -496,11 +586,17 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingLeft: 8,
   },
+  rememberMeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 4,
+    marginBottom: 14,
+    width: "100%",
+  },
   rememberMeContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 8,
-    marginBottom: 8,
   },
   checkbox: {
     width: 24,
@@ -512,36 +608,71 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginRight: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
   },
   checkboxChecked: {
-    backgroundColor: COLORS.crimson,
+    backgroundColor: "#0D0D0F",
+    borderColor: "#0D0D0F",
   },
   rememberMeText: {
     fontSize: 14,
     color: COLORS.midnightNavy,
     opacity: 0.8,
   },
+  forgotPasswordText: {
+    fontSize: 14,
+    color: "#0D0D0F",
+    fontWeight: "500",
+    opacity: 0.85,
+  },
+  forgotPasswordMessageContainer: {
+    marginTop: 8,
+    marginBottom: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    backgroundColor: COLORS.auroraGold + "20",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.auroraGold,
+  },
+  forgotPasswordMessageText: {
+    fontSize: 14,
+    color: COLORS.midnightNavy,
+    textAlign: "center",
+  },
   primaryButton: {
     backgroundColor: COLORS.crimson,
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 14,
+    paddingVertical: 15,
     alignItems: "center",
-    marginTop: 8,
-    marginBottom: 16,
+    marginTop: 20,
+    marginBottom: 28,
+    shadowColor: "#000",
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
   primaryButtonText: {
     color: COLORS.white,
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 17,
+    fontWeight: "700",
+    letterSpacing: 0.3,
   },
   switchButton: {
-    padding: 16,
+    padding: 12,
     alignItems: "center",
+    marginBottom: 8,
   },
   switchButtonText: {
     color: COLORS.crimson,
     fontSize: 14,
     fontWeight: "600",
+    opacity: 0.9,
   },
   profileSection: {
     alignItems: "center",
@@ -610,7 +741,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FEE2E2",
     borderRadius: 8,
     padding: 12,
-    marginBottom: 16,
+    marginBottom: 20,
     borderWidth: 1,
     borderColor: "#FCA5A5",
   },
@@ -618,6 +749,8 @@ const styles = StyleSheet.create({
     color: "#DC2626",
     fontSize: 14,
     textAlign: "center",
+    lineHeight: 20,
+    fontWeight: "500",
   },
   primaryButtonDisabled: {
     opacity: 0.6,

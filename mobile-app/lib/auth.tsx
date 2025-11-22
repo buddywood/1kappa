@@ -3,6 +3,7 @@ import { API_URL } from './constants';
 
 // Use actual AsyncStorage package
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { decode } from 'react-native-base64';
 
 export interface User {
   id?: number;
@@ -17,6 +18,7 @@ export interface User {
   is_promoter?: boolean;
   is_steward?: boolean;
   name?: string | null;
+  headshot_url?: string | null;
 }
 
 export interface AuthState {
@@ -37,6 +39,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const TOKEN_KEY = '@1kappa:token';
 const USER_KEY = '@1kappa:user';
+const REFRESH_TOKEN_KEY = '@1kappa:refresh_token';
+const REMEMBER_ME_KEY = '@1kappa:remember_me';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -52,14 +56,113 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(true);
       const storedToken = await AsyncStorage.getItem(TOKEN_KEY);
       const storedUser = await AsyncStorage.getItem(USER_KEY);
+      const storedRefreshToken = await AsyncStorage.getItem(REFRESH_TOKEN_KEY);
+      const rememberMe = await AsyncStorage.getItem(REMEMBER_ME_KEY);
 
+      // If we have a token and user, use them
       if (storedToken && storedUser) {
-        setToken(storedToken);
-        setUser(JSON.parse(storedUser));
-      } else {
-        setToken(null);
-        setUser(null);
+          // Check if token is expired (basic check - decode JWT exp)
+          try {
+            const payload = JSON.parse(decode(storedToken.split('.')[1]));
+          const expirationTime = payload.exp * 1000; // Convert to milliseconds
+          const now = Date.now();
+          
+          // If token is expired or expires in less than 5 minutes, try to refresh
+          if (expirationTime - now < 5 * 60 * 1000 && storedRefreshToken && rememberMe === 'true') {
+            // Try to refresh token
+            try {
+              const refreshResponse = await fetch(`${API_URL}/api/members/cognito/refresh`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ refreshToken: storedRefreshToken }),
+              });
+
+              if (refreshResponse.ok) {
+                const { tokens, user: refreshedUser } = await refreshResponse.json();
+                
+                // Store new tokens
+                await AsyncStorage.setItem(TOKEN_KEY, tokens.idToken);
+                await AsyncStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken || storedRefreshToken);
+                await AsyncStorage.setItem(USER_KEY, JSON.stringify({
+                  ...refreshedUser,
+                  is_fraternity_member: !!refreshedUser.memberId,
+                  is_seller: !!refreshedUser.sellerId,
+                  is_promoter: !!refreshedUser.promoterId,
+                  is_steward: !!refreshedUser.stewardId,
+                }));
+                
+                setToken(tokens.idToken);
+                setUser({
+                  ...refreshedUser,
+                  is_fraternity_member: !!refreshedUser.memberId,
+                  is_seller: !!refreshedUser.sellerId,
+                  is_promoter: !!refreshedUser.promoterId,
+                  is_steward: !!refreshedUser.stewardId,
+                });
+                return;
+              }
+            } catch (refreshError) {
+              console.error('Error refreshing token:', refreshError);
+              // Fall through to use stored token or clear
+            }
+          }
+          
+          // Token is still valid, use stored values
+          setToken(storedToken);
+          setUser(JSON.parse(storedUser));
+        } catch (parseError) {
+          // Token format invalid, clear everything
+          await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY, REFRESH_TOKEN_KEY]);
+          setToken(null);
+          setUser(null);
+        }
+      } else if (storedRefreshToken && rememberMe === 'true') {
+        // No token but have refresh token and remember me is enabled - try to refresh
+        try {
+          const refreshResponse = await fetch(`${API_URL}/api/members/cognito/refresh`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ refreshToken: storedRefreshToken }),
+          });
+
+          if (refreshResponse.ok) {
+            const { tokens, user: refreshedUser } = await refreshResponse.json();
+            
+            // Store new tokens
+            await AsyncStorage.setItem(TOKEN_KEY, tokens.idToken);
+            await AsyncStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken || storedRefreshToken);
+            await AsyncStorage.setItem(USER_KEY, JSON.stringify({
+              ...refreshedUser,
+              is_fraternity_member: !!refreshedUser.memberId,
+              is_seller: !!refreshedUser.sellerId,
+              is_promoter: !!refreshedUser.promoterId,
+              is_steward: !!refreshedUser.stewardId,
+            }));
+            
+            setToken(tokens.idToken);
+            setUser({
+              ...refreshedUser,
+              is_fraternity_member: !!refreshedUser.memberId,
+              is_seller: !!refreshedUser.sellerId,
+              is_promoter: !!refreshedUser.promoterId,
+              is_steward: !!refreshedUser.stewardId,
+            });
+            return;
+          }
+        } catch (refreshError) {
+          console.error('Error refreshing token on session load:', refreshError);
+          // Clear invalid refresh token
+          await AsyncStorage.multiRemove([REFRESH_TOKEN_KEY, REMEMBER_ME_KEY]);
+        }
       }
+      
+      // No valid session
+      setToken(null);
+      setUser(null);
     } catch (error) {
       console.error('Error getting session:', error);
       setToken(null);
@@ -91,6 +194,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       // Store tokens and user info
       await AsyncStorage.setItem(TOKEN_KEY, tokens.idToken);
+      if (tokens.refreshToken) {
+        await AsyncStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken);
+      }
       await AsyncStorage.setItem(USER_KEY, JSON.stringify({
         ...user,
         is_fraternity_member: !!user.memberId,
@@ -132,8 +238,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       
       // Clear local storage
-      await AsyncStorage.removeItem(TOKEN_KEY);
-      await AsyncStorage.removeItem(USER_KEY);
+      await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY, REFRESH_TOKEN_KEY]);
       setToken(null);
       setUser(null);
     } catch (error) {

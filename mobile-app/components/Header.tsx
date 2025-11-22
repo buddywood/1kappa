@@ -237,7 +237,11 @@ export default function Header({
               activeOpacity={0.7}
             >
               <View style={styles.notificationIconContainer}>
-                <Text style={styles.notificationIcon}>🔔</Text>
+                <Ionicons
+                  name="notifications-outline"
+                  size={24}
+                  color={COLORS.midnightNavy}
+                />
                 {notificationCount > 0 && (
                   <View style={styles.notificationBadge}>
                     <Text style={styles.notificationBadgeText}>
@@ -247,18 +251,6 @@ export default function Header({
                     </Text>
                   </View>
                 )}
-              </View>
-            </TouchableOpacity>
-          )}
-
-          {!isGuest && (
-            <TouchableOpacity
-              onPress={handleUserPress}
-              style={styles.userButton}
-              activeOpacity={0.7}
-            >
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{getInitials()}</Text>
               </View>
             </TouchableOpacity>
           )}
@@ -497,6 +489,29 @@ export default function Header({
           showsVerticalScrollIndicator={true}
           nestedScrollEnabled={true}
         >
+          {/* Welcome Section for Authenticated Members */}
+          {!isGuest && user && (
+            <View style={styles.menuWelcomeSection}>
+              <View style={styles.menuAvatar}>
+                {user.headshot_url ? (
+                  <Image
+                    source={{ uri: user.headshot_url }}
+                    style={styles.menuAvatarImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <Text style={styles.menuAvatarText}>{getInitials()}</Text>
+                )}
+              </View>
+              <Text style={styles.menuWelcomeText}>
+                Welcome Brother{" "}
+                {user.name?.split(" ")[0] ||
+                  user.email?.split("@")[0] ||
+                  "Member"}
+              </Text>
+            </View>
+          )}
+
           {/* Shop & Browse Section */}
           <View style={styles.menuSection}>
             <Text style={styles.menuSectionTitle}>Shop & Browse</Text>
@@ -682,13 +697,14 @@ const styles = StyleSheet.create({
   rightSection: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 0,
   },
   notificationButton: {
     width: 40,
     height: 40,
     alignItems: "center",
     justifyContent: "center",
+    marginRight: 20,
   },
   notificationIconContainer: {
     position: "relative",
@@ -696,9 +712,6 @@ const styles = StyleSheet.create({
     height: 24,
     alignItems: "center",
     justifyContent: "center",
-  },
-  notificationIcon: {
-    fontSize: 20,
   },
   notificationBadge: {
     position: "absolute",
@@ -748,7 +761,7 @@ const styles = StyleSheet.create({
   },
   menuButton: {
     padding: 8,
-    marginLeft: 12,
+    marginLeft: -20,
   },
   menuIcon: {
     width: 24,
@@ -781,6 +794,41 @@ const styles = StyleSheet.create({
   },
   menuScrollView: {
     maxHeight: 600,
+  },
+  menuWelcomeSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.frostGray,
+    backgroundColor: COLORS.cream,
+  },
+  menuAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: COLORS.crimson,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+    overflow: "hidden",
+  },
+  menuAvatarImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+  },
+  menuAvatarText: {
+    color: COLORS.white,
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  menuWelcomeText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: "600",
+    color: COLORS.midnightNavy,
   },
   menuSection: {
     padding: 20,

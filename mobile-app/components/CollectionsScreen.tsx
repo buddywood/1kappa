@@ -136,7 +136,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
+    paddingHorizontal: 8,
+    paddingTop: 12,
     paddingBottom: 80, // Extra padding for bottom tab bar
   },
   loadingContainer: {

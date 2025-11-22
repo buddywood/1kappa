@@ -8,7 +8,7 @@ import { authenticate } from '../middleware/auth';
 import { z } from 'zod';
 import { CognitoIdentityProviderClient, SignUpCommand, ConfirmSignUpCommand, ForgotPasswordCommand, ConfirmForgotPasswordCommand, AdminGetUserCommand, AdminConfirmSignUpCommand, ResendConfirmationCodeCommand, ListUsersCommand } from '@aws-sdk/client-cognito-identity-provider';
 import { getUserByCognitoSub, createUser, linkUserToMember, updateUserOnboardingStatusByCognitoSub, upsertUserOnLogin } from '../db/queries';
-import { authenticateUser, verifyCognitoToken, extractUserInfoFromToken } from '../services/cognito';
+import { authenticateUser, refreshUserTokens, verifyCognitoToken, extractUserInfoFromToken } from '../services/cognito';
 
 const router: ExpressRouter = Router();
 
@@ -399,15 +399,19 @@ router.post('/cognito/signin', async (req: Request, res: Response) => {
     let promoterId = user.promoter_id || null;
     let stewardId = user.steward_id || null;
 
-    // Get name from member if available
+    // Get name and headshot from member if available
     let name: string | null = user.name || null;
-    if (!name && memberId) {
+    let headshotUrl: string | null = null;
+    if (memberId) {
       const memberResult = await pool.query(
-        'SELECT full_name FROM fraternity_members WHERE id = $1',
+        'SELECT name, headshot_url FROM fraternity_members WHERE id = $1',
         [memberId]
       );
       if (memberResult.rows.length > 0) {
-        name = memberResult.rows[0].full_name;
+        if (!name) {
+          name = memberResult.rows[0].name;
+        }
+        headshotUrl = memberResult.rows[0].headshot_url;
       }
     }
 
@@ -427,6 +431,7 @@ router.post('/cognito/signin', async (req: Request, res: Response) => {
         promoterId,
         stewardId,
         name,
+        headshot_url: headshotUrl,
         is_fraternity_member: !!memberId,
         is_seller: !!sellerId,
         is_promoter: !!promoterId,
@@ -452,6 +457,101 @@ router.post('/cognito/signin', async (req: Request, res: Response) => {
 
     res.status(500).json({ 
       error: error.message || 'Failed to sign in'
+    });
+  }
+});
+
+// Cognito Refresh Token endpoint
+router.post('/cognito/refresh', async (req: Request, res: Response) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return res.status(400).json({ error: 'Refresh token is required' });
+    }
+
+    // Refresh tokens with Cognito
+    const authResponse = await refreshUserTokens(refreshToken);
+    
+    if (!authResponse.AuthenticationResult) {
+      return res.status(401).json({ error: 'Token refresh failed' });
+    }
+
+    const { IdToken, AccessToken, RefreshToken: NewRefreshToken, ExpiresIn } = authResponse.AuthenticationResult;
+
+    if (!IdToken || !AccessToken) {
+      return res.status(401).json({ error: 'Failed to get refreshed tokens' });
+    }
+
+    // Verify and decode the ID token to get user info
+    const payload = await verifyCognitoToken(IdToken);
+    if (!payload) {
+      return res.status(401).json({ error: 'Invalid refreshed token' });
+    }
+
+    const { cognitoSub, email: tokenEmail } = extractUserInfoFromToken(payload);
+
+    // Get user from database
+    const user = await getUserByCognitoSub(cognitoSub);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Get user role flags
+    let memberId = user.fraternity_member_id || null;
+    let sellerId = user.seller_id || null;
+    let promoterId = user.promoter_id || null;
+    let stewardId = user.steward_id || null;
+
+    // Get name and headshot from member if available
+    let name: string | null = user.name || null;
+    let headshotUrl: string | null = null;
+    if (memberId) {
+      const memberResult = await pool.query(
+        'SELECT name, headshot_url FROM fraternity_members WHERE id = $1',
+        [memberId]
+      );
+      if (memberResult.rows.length > 0) {
+        if (!name) {
+          name = memberResult.rows[0].name;
+        }
+        headshotUrl = memberResult.rows[0].headshot_url;
+      }
+    }
+
+    res.json({
+      tokens: {
+        idToken: IdToken,
+        accessToken: AccessToken,
+        refreshToken: NewRefreshToken || refreshToken, // Use new refresh token if provided, otherwise keep old one
+        expiresIn: ExpiresIn || 3600,
+      },
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        memberId,
+        sellerId,
+        promoterId,
+        stewardId,
+        name,
+        headshot_url: headshotUrl,
+        is_fraternity_member: !!memberId,
+        is_seller: !!sellerId,
+        is_promoter: !!promoterId,
+        is_steward: !!stewardId,
+      },
+    });
+  } catch (error: any) {
+    console.error('Cognito Refresh Token error:', error);
+    
+    // Handle specific Cognito errors
+    if (error.name === 'NotAuthorizedException') {
+      return res.status(401).json({ error: 'Invalid or expired refresh token' });
+    }
+
+    res.status(500).json({ 
+      error: error.message || 'Failed to refresh tokens'
     });
   }
 });

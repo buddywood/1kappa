@@ -354,6 +354,19 @@ export default function ProductPage() {
                   )}
                 </div>
               </div>
+              
+              {/* Category */}
+              {product.category_name && (
+                <div className="mb-4">
+                  <span className="text-xs font-medium text-midnight-navy/60 dark:text-gray-400 uppercase tracking-wide">
+                    Category
+                  </span>
+                  <p className="text-base font-semibold text-midnight-navy dark:text-gray-200 mt-1">
+                    {product.category_name}
+                  </p>
+                </div>
+              )}
+              
               <p className="text-midnight-navy/70 dark:text-gray-300 mb-6">{product.description}</p>
               
               {/* Product Attributes */}

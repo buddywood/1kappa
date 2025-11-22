@@ -12,6 +12,31 @@ export interface Chapter {
   contact_email: string | null;
 }
 
+export interface ProductAttributeValue {
+  id: number;
+  product_id: number;
+  attribute_definition_id: number;
+  value_text: string | null;
+  value_number: number | null;
+  value_boolean: boolean | null;
+  created_at: string;
+  attribute_name?: string;
+  attribute_type?: 'TEXT' | 'SELECT' | 'NUMBER' | 'BOOLEAN';
+  display_order?: number;
+}
+
+export interface CategoryAttributeDefinition {
+  id: number;
+  category_id: number;
+  attribute_name: string;
+  attribute_type: 'TEXT' | 'SELECT' | 'NUMBER' | 'BOOLEAN';
+  is_required: boolean;
+  display_order: number;
+  options: string[] | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Product {
   id: number;
   seller_id: number;
@@ -20,6 +45,7 @@ export interface Product {
   price_cents: number;
   image_url: string | null;
   category_id: number | null;
+  category_name?: string | null;
   seller_name?: string;
   seller_business_name?: string | null;
   seller_fraternity_member_id?: number | null;
@@ -30,6 +56,7 @@ export interface Product {
   is_seller?: boolean;
   is_promoter?: boolean;
   is_steward?: boolean;
+  attributes?: ProductAttributeValue[];
 }
 
 export interface Event {
@@ -216,12 +243,60 @@ export async function getStewardListingPublic(id: number): Promise<StewardListin
   }
 }
 
+export async function fetchCategoryAttributeDefinitions(categoryId: number): Promise<CategoryAttributeDefinition[]> {
+  try {
+    const res = await fetch(`${API_URL}/api/products/categories/${categoryId}/attributes`);
+    if (!res.ok) throw new Error('Failed to fetch category attributes');
+    return res.json();
+  } catch (error) {
+    console.error('Error fetching category attributes:', error);
+    return [];
+  }
+}
+
 // Helper function to get auth headers (for future use when auth is implemented)
 export async function getAuthHeaders(): Promise<HeadersInit> {
   // TODO: Get token from auth context when authentication is implemented
   return {
     'Content-Type': 'application/json',
   };
+}
+
+export interface CheckoutSession {
+  sessionId: string;
+  url: string;
+}
+
+export async function createCheckoutSession(
+  productId: number,
+  buyerEmail: string,
+  token?: string
+): Promise<CheckoutSession> {
+  try {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const res = await fetch(`${API_URL}/api/checkout/${productId}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ buyer_email: buyerEmail }),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({ error: 'Failed to create checkout session' }));
+      throw new Error(errorData.error || errorData.details || 'Failed to create checkout session');
+    }
+
+    return res.json();
+  } catch (error) {
+    console.error('Error creating checkout session:', error);
+    throw error;
+  }
 }
 
 

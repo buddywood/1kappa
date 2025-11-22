@@ -1,4 +1,15 @@
 /**
+ * Support URL for customer support
+ * Can be overridden with NEXT_PUBLIC_SUPPORT_URL environment variable
+ */
+export const SUPPORT_URL = process.env.NEXT_PUBLIC_SUPPORT_URL || '/support';
+
+/**
+ * Support email address
+ */
+export const SUPPORT_EMAIL = 'support@1kappa.com';
+
+/**
  * Professional industries list for registration forms
  * Used in member registration and other professional information forms
  */

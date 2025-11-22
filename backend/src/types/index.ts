@@ -90,6 +90,9 @@ export interface ProductAttributeValue {
   value_number: number | null;
   value_boolean: boolean | null;
   created_at: Date;
+  attribute_name?: string; // Included when joined with category_attribute_definitions
+  attribute_type?: 'TEXT' | 'SELECT' | 'NUMBER' | 'BOOLEAN'; // Included when joined
+  display_order?: number; // Included when joined
 }
 
 export interface Product {

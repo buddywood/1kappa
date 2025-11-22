@@ -40,6 +40,9 @@ export interface ProductAttributeValue {
   value_number: number | null;
   value_boolean: boolean | null;
   created_at: string;
+  attribute_name?: string; // Included when joined with category_attribute_definitions
+  attribute_type?: 'TEXT' | 'SELECT' | 'NUMBER' | 'BOOLEAN'; // Included when joined
+  display_order?: number; // Included when joined
 }
 
 export interface ProductImage {
@@ -59,6 +62,7 @@ export interface Product {
   price_cents: number;
   image_url: string | null;
   category_id: number | null;
+  category_name?: string | null;
   seller_name?: string;
   seller_business_name?: string | null;
   seller_fraternity_member_id?: number | null;

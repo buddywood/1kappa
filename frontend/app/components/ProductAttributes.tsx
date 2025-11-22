@@ -33,59 +33,62 @@ export default function ProductAttributes({ product }: ProductAttributesProps) {
     return null;
   }
 
-  // Create a map of attribute values by definition ID for quick lookup
-  const attributeValueMap = new Map<number, ProductAttributeValue>();
-  if (product.attributes) {
-    product.attributes.forEach((attr) => {
-      attributeValueMap.set(attr.attribute_definition_id, attr);
-    });
-  }
+  // Use attribute_name from attribute values if available, otherwise match with definitions
+  const attributesWithValues = (product.attributes || [])
+    .map((attr) => {
+      // Try to get attribute name from the attribute itself first (included by backend)
+      let attributeName = attr.attribute_name;
+      let attributeType = attr.attribute_type;
+      let displayOrder = attr.display_order || 0;
+      
+      // Fallback: look up in definitions if attribute_name not present
+      if (!attributeName && attributeDefinitions.length > 0) {
+        const definition = attributeDefinitions.find(
+          (def) => def.id === attr.attribute_definition_id
+        );
+        if (definition) {
+          attributeName = definition.attribute_name;
+          attributeType = definition.attribute_type;
+          displayOrder = definition.display_order || 0;
+        }
+      }
+      
+      if (!attributeName) return null;
 
-  // Match definitions with their values and filter to only show attributes that have values
-  const attributesWithValues = attributeDefinitions
-    .map((def) => {
-      const value = attributeValueMap.get(def.id);
-      return { definition: def, value };
+      // Get display value based on attribute type
+      let displayValue = '';
+      if (attributeType === 'BOOLEAN') {
+        displayValue = attr.value_boolean ? 'Yes' : 'No';
+      } else if (attributeType === 'NUMBER') {
+        displayValue = attr.value_number?.toString() || '';
+      } else {
+        displayValue = attr.value_text || '';
+      }
+
+      if (!displayValue) return null;
+
+      return { attributeName, displayValue, displayOrder };
     })
-    .filter((item) => {
-      // Only show if there's a value and it's not empty
-      if (!item.value) return false;
-      if (item.definition.attribute_type === 'TEXT' && !item.value.value_text) return false;
-      if (item.definition.attribute_type === 'NUMBER' && item.value.value_number === null) return false;
-      if (item.definition.attribute_type === 'BOOLEAN' && item.value.value_boolean === null) return false;
-      return true;
-    });
+    .filter(
+      (item): item is { attributeName: string; displayValue: string; displayOrder: number } => item !== null
+    )
+    .sort((a, b) => a.displayOrder - b.displayOrder);
 
   if (attributesWithValues.length === 0) {
     return null;
   }
 
-  const getDisplayValue = (def: CategoryAttributeDefinition, value: ProductAttributeValue | undefined): string => {
-    if (!value) return '';
-    
-    if (def.attribute_type === 'BOOLEAN') {
-      return value.value_boolean ? 'Yes' : 'No';
-    }
-    if (def.attribute_type === 'NUMBER') {
-      return value.value_number?.toString() || '';
-    }
-    if (def.attribute_type === 'SELECT') {
-      return value.value_text || '';
-    }
-    return value.value_text || '';
-  };
-
   return (
     <div className="mt-6">
       <h3 className="text-lg font-semibold text-midnight-navy dark:text-gray-100 mb-4">Product Details</h3>
       <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {attributesWithValues.map(({ definition, value }) => (
-          <div key={definition.id} className="border-b border-frost-gray/30 dark:border-gray-800/30 pb-3">
+        {attributesWithValues.map(({ attributeName, displayValue }, index) => (
+          <div key={index} className="border-b border-frost-gray/30 dark:border-gray-800/30 pb-3">
             <dt className="text-sm font-medium text-midnight-navy/70 dark:text-gray-400 mb-1">
-              {definition.attribute_name}
+              {attributeName}
             </dt>
             <dd className="text-base text-midnight-navy dark:text-gray-200 font-medium">
-              {getDisplayValue(definition, value)}
+              {displayValue}
             </dd>
           </div>
         ))}

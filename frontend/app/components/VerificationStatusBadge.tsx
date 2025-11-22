@@ -6,6 +6,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { SUPPORT_URL } from '@/lib/constants';
 
 interface VerificationStatusBadgeProps {
   status: 'PENDING' | 'VERIFIED' | 'FAILED' | 'MANUAL_REVIEW' | undefined;
@@ -107,7 +108,15 @@ export default function VerificationStatusBadge({
             <p className="text-white/90 leading-relaxed">{config.tooltip}</p>
             {status === 'FAILED' && (
               <p className="mt-2 text-xs text-white/70">
-                Need help? Contact support through your chapter or email support@1kappa.com
+                Need help? Contact support through your chapter or{' '}
+                <a 
+                  href={SUPPORT_URL} 
+                  className="underline hover:text-white"
+                  target={SUPPORT_URL.startsWith('http') ? '_blank' : undefined}
+                  rel={SUPPORT_URL.startsWith('http') ? 'noopener noreferrer' : undefined}
+                >
+                  visit our support page
+                </a>
               </p>
             )}
           </TooltipContent>
