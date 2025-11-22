@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { fetchProducts, fetchChapters, fetchSellersWithProducts, fetchProductCategories, getStewardMarketplace, type Product, type Chapter, type SellerWithProducts, type ProductCategory, type StewardListing } from '@/lib/api';
+import { fetchProducts, fetchChapters, fetchSellersWithProducts, fetchProductCategories, getStewardMarketplace, getStewardMarketplacePublic, type Product, type Chapter, type SellerWithProducts, type ProductCategory, type StewardListing } from '@/lib/api';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import VerificationBadge from '../components/VerificationBadge';
@@ -20,7 +20,9 @@ type SortOption = 'name' | 'price-low' | 'price-high' | 'newest';
 
 function ShopPageContent() {
   const searchParams = useSearchParams();
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
+  const isAuthenticated = sessionStatus === 'authenticated' && session?.user;
+  const isGuest = !isAuthenticated;
   const roleFilter = searchParams.get('role'); // 'steward', or null (removed 'seller')
   const stewardParam = searchParams.get('steward'); // steward ID for filtering
   const is_steward = (session?.user as any)?.is_steward ?? false;
@@ -55,10 +57,15 @@ function ShopPageContent() {
 
     // Fetch products or steward listings based on role filter
     if (roleFilter === 'steward') {
+      // Use public endpoint for guests, authenticated endpoint for members
+      const fetchStewardListings = isGuest 
+        ? getStewardMarketplacePublic()
+        : getStewardMarketplace();
+      
       fetchPromises.push(
-        getStewardMarketplace().catch((err) => {
+        fetchStewardListings.catch((err) => {
           console.error('Error fetching steward listings:', err);
-          if (err.message === 'VERIFICATION_REQUIRED') {
+          if (err.message === 'VERIFICATION_REQUIRED' && !isGuest) {
             setError('You must be a verified member to view steward listings. Please complete your verification first.');
           }
           return [];
@@ -118,7 +125,7 @@ function ShopPageContent() {
         setError('Failed to load data');
       })
       .finally(() => setLoading(false));
-  }, [roleFilter]);
+  }, [roleFilter, isGuest]);
 
   const getChapterName = (chapterId: number | null) => {
     if (!chapterId) return null;
@@ -565,6 +572,14 @@ function ShopPageContent() {
                           <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
+                        </div>
+                      )}
+                      {/* Members Only badge for guests */}
+                      {isGuest && (
+                        <div className="absolute top-2 left-2 z-10">
+                          <span className="bg-crimson text-white text-xs px-2 py-1 rounded-full font-semibold">
+                            Members Only
+                          </span>
                         </div>
                       )}
                     </div>

@@ -164,6 +164,14 @@ const sampleSellers = [
     business_name: "Kappa Gear Co.",
     vendor_license_number: "VL-2024-001",
     is_member: true,
+    headshot_url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop",
+    website: "https://kappagearco.example.com",
+    social_links: {
+      instagram: "@kappagearco",
+      twitter: "@kappagearco",
+      linkedin: "marcus-johnson-kappa",
+      website: "https://kappagearco.example.com",
+    },
   },
   {
     name: "David Carter",
@@ -172,6 +180,14 @@ const sampleSellers = [
     business_name: "Brotherhood Apparel",
     vendor_license_number: "VL-2024-002",
     is_member: true,
+    headshot_url: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop",
+    website: "https://brotherhoodapparel.example.com",
+    social_links: {
+      instagram: "@brotherhoodapparel",
+      twitter: "@brotherhoodapp",
+      linkedin: "david-carter-kappa",
+      website: "https://brotherhoodapparel.example.com",
+    },
   },
   {
     name: "James Williams",
@@ -180,6 +196,13 @@ const sampleSellers = [
     business_name: null,
     vendor_license_number: "VL-2024-003",
     is_member: true,
+    headshot_url: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop",
+    website: null,
+    social_links: {
+      instagram: "@jameswilliams",
+      twitter: "@jwilliams",
+      linkedin: "james-williams-kappa",
+    },
   },
   // Non-member sellers
   {
@@ -189,6 +212,14 @@ const sampleSellers = [
     business_name: "Crimson Threads",
     vendor_license_number: "VL-2024-004",
     is_member: false,
+    headshot_url: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop",
+    website: "https://crimsonthreads.example.com",
+    social_links: {
+      instagram: "@crimsonthreads",
+      twitter: "@crimsonthreads",
+      linkedin: "sarah-mitchell",
+      website: "https://crimsonthreads.example.com",
+    },
   },
   {
     name: "Michael Chen",
@@ -197,6 +228,14 @@ const sampleSellers = [
     business_name: "Heritage Goods Co.",
     vendor_license_number: "VL-2024-005",
     is_member: false,
+    headshot_url: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop",
+    website: "https://heritagegoods.example.com",
+    social_links: {
+      instagram: "@heritagegoods",
+      twitter: "@heritagegoodsco",
+      linkedin: "michael-chen",
+      website: "https://heritagegoods.example.com",
+    },
   },
 ];
 
@@ -713,7 +752,9 @@ async function seedProducts(): Promise<void> {
           sponsoring_chapter_id: sponsoringChapter.id,
           business_name: sellerData.business_name,
           vendor_license_number: sellerData.vendor_license_number,
-          social_links: {
+          headshot_url: (sellerData as any).headshot_url || null,
+          website: (sellerData as any).website || null,
+          social_links: (sellerData as any).social_links || {
             instagram: `@${sellerData.name.toLowerCase().replace(' ', '')}`,
           },
           fraternity_member_id: memberId,
@@ -724,6 +765,14 @@ async function seedProducts(): Promise<void> {
           'UPDATE sellers SET status = $1 WHERE id = $2',
           ['APPROVED', newSeller.id]
         );
+
+        // Update headshot_url and store_logo_url if provided (in case they weren't set during creation)
+        if ((sellerData as any).headshot_url) {
+          await pool.query(
+            'UPDATE sellers SET headshot_url = $1 WHERE id = $2',
+            [(sellerData as any).headshot_url, newSeller.id]
+          );
+        }
 
         // Update seller object in memory to reflect approval
         newSeller.status = 'APPROVED';

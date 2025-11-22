@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { getStewardMarketplace, fetchProductCategories, type StewardListing, type ProductCategory } from '@/lib/api';
+import { getStewardMarketplace, getStewardMarketplacePublic, fetchProductCategories, type StewardListing, type ProductCategory } from '@/lib/api';
 import SearchableSelect from '../components/SearchableSelect';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -16,11 +16,13 @@ import StewardshipHowItWorksModal from '../components/StewardshipHowItWorksModal
 
 export default function StewardMarketplacePage() {
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
+  const isAuthenticated = sessionStatus === 'authenticated' && session?.user;
   const is_steward = (session?.user as any)?.is_steward ?? false;
   const memberId = (session?.user as any)?.memberId;
   const is_fraternity_member = (session?.user as any)?.is_fraternity_member ?? false;
   const isMember = (memberId !== null && memberId !== undefined) || is_fraternity_member;
+  const isGuest = !isAuthenticated;
   const [listings, setListings] = useState<StewardListing[]>([]);
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,8 +34,13 @@ export default function StewardMarketplacePage() {
   useEffect(() => {
     async function loadData() {
       try {
+        // Use public endpoint for guests, authenticated endpoint for members
+        const fetchListings = isGuest 
+          ? getStewardMarketplacePublic()
+          : getStewardMarketplace();
+        
         const [listingsData, categoriesData] = await Promise.all([
-          getStewardMarketplace(),
+          fetchListings,
           fetchProductCategories(),
         ]);
         console.log('Steward Marketplace - Loaded listings:', listingsData.length, listingsData);
@@ -50,7 +57,7 @@ export default function StewardMarketplacePage() {
         console.error('Error loading marketplace:', err);
         if (err.message === 'VERIFICATION_REQUIRED') {
           setError('You must be a verified member to view the Steward Marketplace. Please complete your verification first.');
-        } else if (err.message === 'Not authenticated') {
+        } else if (err.message === 'Not authenticated' && !isGuest) {
           router.push('/login');
           return;
         } else {
@@ -62,7 +69,7 @@ export default function StewardMarketplacePage() {
     }
 
     loadData();
-  }, [router]);
+  }, [router, isGuest]);
 
   const filteredListings = useMemo(() => {
     let filtered = [...listings];
@@ -126,9 +133,23 @@ export default function StewardMarketplacePage() {
           Where the stories continue. Brothers can pass on cherished paraphernalia so it finds new life with another member.
           Legacy listings come from Stewards—verified Brothers who share meaningful items and direct a chapter donation to support undergraduates.
           </p>
+          {isGuest && (
+            <div className="mb-6 p-4 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20">
+              <p className="text-white font-semibold mb-2">Members Only</p>
+              <p className="text-white/90 text-sm mb-4">
+                You can view these listings, but you must be a verified member to claim items.
+              </p>
+              <Link
+                href="/member-setup"
+                className="inline-block bg-white text-crimson px-6 py-3 rounded-full font-semibold hover:bg-cream transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl"
+              >
+                Become a Member
+              </Link>
+            </div>
+          )}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            {/* Show "Become a Member" if user is not a member */}
-            {!isMember && (
+            {/* Show "Become a Member" if user is not a member (always show for guests) */}
+            {(!isMember || isGuest) && (
               <Link
                 href="/member-setup"
                 className="inline-block bg-white text-crimson px-6 py-3 rounded-full font-semibold hover:bg-cream transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl"
@@ -137,7 +158,7 @@ export default function StewardMarketplacePage() {
               </Link>
             )}
             {/* Show "Become a Steward" button if user is a member but not a steward */}
-            {!isMember && !is_steward && (
+            {isMember && !is_steward && (
               <Link
                 href="/steward-setup"
                 className="inline-block bg-white text-crimson px-6 py-3 rounded-full font-semibold hover:bg-cream transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl"

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Image, Linking } from 'react-native';
 import { fetchEvents, fetchChapters, Event, Chapter } from '../lib/api';
 import { COLORS } from '../lib/constants';
+import { useAuth } from '../lib/auth';
 
 interface EventsSectionProps {
   onEventPress?: (event: Event) => void;
@@ -9,9 +10,19 @@ interface EventsSectionProps {
 }
 
 export default function EventsSection({ onEventPress, onRSVPPress }: EventsSectionProps) {
+  const { isGuest } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const handleRSVP = (event: Event) => {
+    if (isGuest) {
+      // Redirect guests to login/member setup
+      Linking.openURL(`${process.env.EXPO_PUBLIC_WEB_URL || 'http://localhost:3000'}/member-setup`);
+      return;
+    }
+    onRSVPPress?.(event);
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -136,10 +147,12 @@ export default function EventsSection({ onEventPress, onRSVPPress }: EventsSecti
 
                 <TouchableOpacity
                   style={styles.rsvpButton}
-                  onPress={() => onRSVPPress?.(item)}
+                  onPress={() => handleRSVP(item)}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.rsvpButtonText}>RSVP Now</Text>
+                  <Text style={styles.rsvpButtonText}>
+                    {isGuest ? 'Login to RSVP' : 'RSVP Now'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </TouchableOpacity>

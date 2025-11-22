@@ -194,7 +194,7 @@ export default async function Home() {
                     </div>
                   )}
                   <Link 
-                    href={`/collections?seller=${seller.id}`}
+                    href={`/collections/${seller.id}`}
                     className="text-sm text-crimson font-medium hover:underline"
                   >
                     Shop Collection

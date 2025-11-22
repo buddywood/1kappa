@@ -132,14 +132,154 @@ export default function ProductPage() {
 
   if (!product) {
     return (
-      <div className="min-h-screen bg-cream dark:bg-black flex items-center justify-center">
+      <div className="min-h-screen bg-cream text-midnight-navy flex flex-col">
         <Header />
-        <div className="text-center">
-          <h1 className="text-2xl font-display font-bold text-midnight-navy dark:text-gray-100 mb-4">Product not found</h1>
-          <Link href="/" className="text-crimson hover:underline">
-            Return to homepage
-          </Link>
-        </div>
+        
+        <main className="flex-1 flex items-center justify-center px-4 py-16">
+          <div className="max-w-2xl mx-auto text-center">
+            {/* Fun Product Not Found Illustration */}
+            <div className="mb-8 relative">
+              <div className="text-9xl font-display font-bold text-crimson/20 select-none">
+                🛍️
+              </div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-6xl animate-bounce">❓</div>
+              </div>
+            </div>
+
+            {/* Main Message */}
+            <h1 className="text-4xl md:text-5xl font-display font-bold text-midnight-navy mb-4">
+              Product Not Found
+            </h1>
+            
+            <p className="text-xl text-midnight-navy/70 mb-8">
+              This product seems to have vanished from our marketplace. It may have been removed or the link is incorrect.
+            </p>
+
+            {/* Fun Illustration */}
+            <div className="mb-12 flex justify-center">
+              <div className="relative w-64 h-64">
+                <div className="absolute inset-0 bg-gradient-to-br from-crimson/10 to-midnight-navy/10 rounded-full blur-3xl"></div>
+                <div className="relative bg-white rounded-full p-8 shadow-lg border-4 border-crimson/20">
+                  <svg 
+                    className="w-full h-full text-crimson" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={2} 
+                      d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" 
+                    />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Helpful Links */}
+            <div className="space-y-4 mb-8">
+              <p className="text-midnight-navy/60 mb-6">
+                Don&apos;t worry, brother! Here are some places you might want to visit:
+              </p>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Link
+                  href="/shop"
+                  className="group bg-white border-2 border-crimson/30 rounded-xl p-6 hover:border-crimson hover:shadow-lg transition-all duration-200"
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <svg className="w-6 h-6 text-crimson" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                    </svg>
+                    <h3 className="font-semibold text-midnight-navy group-hover:text-crimson transition">
+                      Shop
+                    </h3>
+                  </div>
+                  <p className="text-sm text-midnight-navy/60">
+                    Browse our full marketplace
+                  </p>
+                </Link>
+
+                <Link
+                  href="/collections"
+                  className="group bg-white border-2 border-crimson/30 rounded-xl p-6 hover:border-crimson hover:shadow-lg transition-all duration-200"
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <svg className="w-6 h-6 text-crimson" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    </svg>
+                    <h3 className="font-semibold text-midnight-navy group-hover:text-crimson transition">
+                      Collections
+                    </h3>
+                  </div>
+                  <p className="text-sm text-midnight-navy/60">
+                    Explore seller collections
+                  </p>
+                </Link>
+
+                <Link
+                  href="/"
+                  className="group bg-white border-2 border-crimson/30 rounded-xl p-6 hover:border-crimson hover:shadow-lg transition-all duration-200"
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <svg className="w-6 h-6 text-crimson" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                    <h3 className="font-semibold text-midnight-navy group-hover:text-crimson transition">
+                      Home
+                    </h3>
+                  </div>
+                  <p className="text-sm text-midnight-navy/60">
+                    Return to the homepage
+                  </p>
+                </Link>
+
+                <Link
+                  href="/steward-marketplace"
+                  className="group bg-white border-2 border-crimson/30 rounded-xl p-6 hover:border-crimson hover:shadow-lg transition-all duration-200"
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <svg className="w-6 h-6 text-crimson" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                    <h3 className="font-semibold text-midnight-navy group-hover:text-crimson transition">
+                      Steward Market
+                    </h3>
+                  </div>
+                  <p className="text-sm text-midnight-navy/60">
+                    Check out legacy items
+                  </p>
+                </Link>
+              </div>
+            </div>
+
+            {/* Fun Quote */}
+            <div className="mt-12 p-6 bg-gradient-to-r from-crimson/5 to-midnight-navy/5 rounded-xl border-l-4 border-crimson">
+              <p className="text-midnight-navy/80 italic">
+                &quot;The best products are those that bring brothers together&quot;
+              </p>
+              <p className="text-sm text-midnight-navy/60 mt-2">
+                — Keep exploring to find your perfect item
+              </p>
+            </div>
+
+            {/* Back Button */}
+            <div className="mt-8">
+              <Link
+                href="/shop"
+                className="inline-flex items-center gap-2 bg-crimson text-white px-8 py-3 rounded-full font-semibold hover:bg-crimson/90 transition shadow-md hover:shadow-lg"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+                Browse Shop
+              </Link>
+            </div>
+          </div>
+        </main>
+
         <Footer />
       </div>
     );
@@ -249,7 +389,7 @@ export default function ProductPage() {
                     </p>
                   )}
                   <Link 
-                    href={`/collections?seller=${product.seller_id}`}
+                    href={`/collections/${product.seller_id}`}
                     className="text-sm text-crimson font-medium hover:underline inline-flex items-center gap-1 mt-2"
                   >
                     Shop Collection

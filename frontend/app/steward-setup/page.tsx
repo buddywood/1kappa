@@ -15,6 +15,8 @@ import SearchableSelect from '../components/SearchableSelect';
 export default function StewardSetupPage() {
   const router = useRouter();
   const { data: session, status: sessionStatus } = useSession();
+  const isAuthenticated = sessionStatus === 'authenticated' && session?.user;
+  const memberId = (session?.user as any)?.memberId;
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [selectedChapterId, setSelectedChapterId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -23,6 +25,14 @@ export default function StewardSetupPage() {
   const [warning, setWarning] = useState('');
   const [isAlreadySteward, setIsAlreadySteward] = useState(false);
   const [stewardStatus, setStewardStatus] = useState<string | null>(null);
+
+  // Redirect guests to member setup
+  useEffect(() => {
+    if (sessionStatus === 'loading') return;
+    if (!isAuthenticated || !memberId) {
+      router.push('/member-setup');
+    }
+  }, [sessionStatus, isAuthenticated, memberId, router]);
 
   useEffect(() => {
     async function loadChapters() {

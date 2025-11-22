@@ -2,26 +2,38 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, Dimensions } from 'react-native';
 import { Product } from '../lib/api';
 import { COLORS } from '../lib/constants';
+import { useAuth } from '../lib/auth';
 
 interface ProductCardProps {
   product: Product;
   onPress?: () => void;
+  isStewardItem?: boolean;
 }
 
 const { width } = Dimensions.get('window');
 const cardWidth = (width - 48) / 2; // 2 columns with padding
 
-export default function ProductCard({ product, onPress }: ProductCardProps) {
+export default function ProductCard({ product, onPress, isStewardItem = false }: ProductCardProps) {
+  const { isGuest } = useAuth();
   const price = (product.price_cents / 100).toFixed(2);
   const sellerName = product.seller_fraternity_member_id
     ? `Brother ${product.seller_name}`
     : product.seller_business_name || product.seller_name;
 
+  const handlePress = () => {
+    // Disable press for steward items when guest
+    if (isStewardItem && isGuest) {
+      return;
+    }
+    onPress?.();
+  };
+
   return (
     <TouchableOpacity
-      onPress={onPress}
-      style={styles.container}
-      activeOpacity={0.7}
+      onPress={handlePress}
+      style={[styles.container, isStewardItem && isGuest && styles.disabledContainer]}
+      activeOpacity={isStewardItem && isGuest ? 1 : 0.7}
+      disabled={isStewardItem && isGuest}
     >
       {/* Product Image */}
       <View style={styles.imageContainer}>
@@ -37,6 +49,13 @@ export default function ProductCard({ product, onPress }: ProductCardProps) {
           </View>
         )}
       </View>
+
+      {/* Members Only badge for steward items */}
+      {isStewardItem && (
+        <View style={styles.membersOnlyBadge}>
+          <Text style={styles.membersOnlyText}>Members Only</Text>
+        </View>
+      )}
 
       {/* Product Info */}
       <View style={styles.infoContainer}>
@@ -112,6 +131,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     color: COLORS.crimson,
+  },
+  disabledContainer: {
+    opacity: 0.7,
+  },
+  membersOnlyBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: COLORS.crimson,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    zIndex: 1,
+  },
+  membersOnlyText: {
+    color: COLORS.white,
+    fontSize: 10,
+    fontWeight: '600',
   },
 });
 

@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { getStewardListing, claimStewardListing, createStewardCheckoutSession, fetchChapters } from '@/lib/api';
+import { getStewardListing, getStewardListingPublic, claimStewardListing, createStewardCheckoutSession, fetchChapters } from '@/lib/api';
 import type { StewardListing, Chapter, StewardListingImage } from '@/lib/api';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
@@ -17,6 +17,8 @@ export default function StewardListingPage() {
   const router = useRouter();
   const params = useParams();
   const { data: session, status: sessionStatus } = useSession();
+  const isAuthenticated = sessionStatus === 'authenticated' && session?.user;
+  const isGuest = !isAuthenticated;
   const listingId = parseInt(params.id as string);
   
   const [listing, setListing] = useState<StewardListing | null>(null);
@@ -29,8 +31,13 @@ export default function StewardListingPage() {
   useEffect(() => {
     async function loadListing() {
       try {
+        // Use public endpoint for guests, authenticated endpoint for members
+        const fetchListing = isGuest 
+          ? getStewardListingPublic(listingId)
+          : getStewardListing(listingId);
+        
         const [data, chaptersData] = await Promise.all([
-          getStewardListing(listingId),
+          fetchListing,
           fetchChapters().catch(() => [])
         ]);
         setListing(data);
@@ -50,7 +57,7 @@ export default function StewardListingPage() {
         console.error('Error loading listing:', err);
         if (err.message === 'VERIFICATION_REQUIRED' || err.message.includes('verified')) {
           setError('You must be a verified member to view this listing.');
-        } else if (err.message === 'Not authenticated') {
+        } else if (err.message === 'Not authenticated' && !isGuest) {
           router.push('/login');
           return;
         } else {
@@ -64,7 +71,7 @@ export default function StewardListingPage() {
     if (listingId) {
       loadListing();
     }
-  }, [listingId, router]);
+  }, [listingId, router, isGuest]);
 
   const getChapterName = (chapterId: number | null) => {
     if (!chapterId) return null;
@@ -78,7 +85,8 @@ export default function StewardListingPage() {
 
     // Require authentication for checkout
     if (sessionStatus !== 'authenticated' || !session?.user?.email) {
-      setError('Please sign in to claim this item');
+      // Redirect guests to member setup
+      router.push('/member-setup');
       return;
     }
 
@@ -195,6 +203,21 @@ export default function StewardListingPage() {
                 <h1 className="text-3xl font-display font-bold text-midnight-navy dark:text-gray-100 mb-3">
                   {listing.name}
                 </h1>
+                {/* Members Only badge for guests */}
+                {isGuest && (
+                  <div className="mb-3 p-3 bg-crimson/10 border border-crimson/30 rounded-lg">
+                    <p className="text-crimson font-semibold text-sm">Members Only</p>
+                    <p className="text-midnight-navy/70 dark:text-gray-300 text-xs mt-1">
+                      You can view this listing, but you must be a verified member to claim it.
+                    </p>
+                    <Link
+                      href="/member-setup"
+                      className="inline-block mt-2 text-crimson font-medium hover:underline text-sm"
+                    >
+                      Become a Member →
+                    </Link>
+                  </div>
+                )}
                 {/* Verification badges under title */}
                 <div className="flex flex-wrap items-center gap-2">
                   {stewardMember && (
@@ -302,10 +325,10 @@ export default function StewardListingPage() {
                     </button>
                   ) : (
                     <Link
-                      href="/login"
+                      href="/member-setup"
                       className="w-full bg-crimson text-white py-3 rounded-lg font-semibold hover:bg-crimson/90 transition shadow-md hover:shadow-lg text-center block"
                     >
-                      Sign In to Claim
+                      Login to Claim
                     </Link>
                   )
                 ) : listing.status === 'CLAIMED' ? (

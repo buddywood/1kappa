@@ -78,6 +78,22 @@ export async function fetchProducts(): Promise<Product[]> {
   }
 }
 
+export async function fetchProduct(productId: number): Promise<Product> {
+  try {
+    const res = await fetch(`${API_URL}/api/products/${productId}`);
+    if (!res.ok) {
+      if (res.status === 404) {
+        throw new Error('Product not found');
+      }
+      throw new Error('Failed to fetch product');
+    }
+    return res.json();
+  } catch (error) {
+    console.error('Error fetching product:', error);
+    throw error;
+  }
+}
+
 export async function fetchEvents(): Promise<Event[]> {
   try {
     const res = await fetch(`${API_URL}/api/events`);
@@ -86,6 +102,54 @@ export async function fetchEvents(): Promise<Event[]> {
   } catch (error) {
     console.error('Error fetching events:', error);
     return [];
+  }
+}
+
+export interface SearchResults {
+  products: Product[];
+  events: Event[];
+}
+
+export async function searchPublicItems(query: string): Promise<SearchResults> {
+  try {
+    if (!query.trim()) {
+      return { products: [], events: [] };
+    }
+
+    // Fetch all products and events, then filter client-side
+    // (In a production app, you'd want a dedicated search endpoint)
+    const [products, events] = await Promise.all([
+      fetchProducts(),
+      fetchEvents(),
+    ]);
+
+    const searchLower = query.toLowerCase();
+    
+    const filteredProducts = products.filter((product) => {
+      const nameMatch = product.name?.toLowerCase().includes(searchLower);
+      const descMatch = product.description?.toLowerCase().includes(searchLower);
+      const sellerMatch = product.seller_name?.toLowerCase().includes(searchLower) ||
+                         product.seller_business_name?.toLowerCase().includes(searchLower);
+      return nameMatch || descMatch || sellerMatch;
+    });
+
+    const filteredEvents = events.filter((event) => {
+      const titleMatch = event.title?.toLowerCase().includes(searchLower);
+      const descMatch = event.description?.toLowerCase().includes(searchLower);
+      const locationMatch = event.location?.toLowerCase().includes(searchLower) ||
+                           event.city?.toLowerCase().includes(searchLower) ||
+                           event.state?.toLowerCase().includes(searchLower);
+      const promoterMatch = event.promoter_name?.toLowerCase().includes(searchLower);
+      return titleMatch || descMatch || locationMatch || promoterMatch;
+    });
+
+    return {
+      products: filteredProducts,
+      events: filteredEvents,
+    };
+  } catch (error) {
+    console.error('Error searching public items:', error);
+    return { products: [], events: [] };
   }
 }
 
@@ -99,6 +163,65 @@ export async function fetchTotalDonations(): Promise<number> {
     console.error('Error fetching total donations:', error);
     return 0;
   }
+}
+
+export interface StewardListing {
+  id: number;
+  steward_id: number;
+  name: string;
+  description: string | null;
+  image_url: string | null;
+  shipping_cost_cents: number;
+  chapter_donation_cents: number;
+  sponsoring_chapter_id: number;
+  category_id: number | null;
+  status: 'ACTIVE' | 'CLAIMED' | 'REMOVED';
+  steward?: {
+    id: number;
+    fraternity_member_id: number | null;
+    sponsoring_chapter_id: number;
+    status: string;
+    member?: {
+      id: number;
+      name: string;
+      email: string;
+    } | null;
+  } | null;
+  chapter?: {
+    id: number;
+    name: string;
+  } | null;
+  can_claim?: boolean;
+}
+
+export async function getStewardMarketplacePublic(): Promise<StewardListing[]> {
+  try {
+    const res = await fetch(`${API_URL}/api/stewards/marketplace/public`);
+    if (!res.ok) throw new Error('Failed to fetch steward marketplace');
+    return res.json();
+  } catch (error) {
+    console.error('Error fetching steward marketplace:', error);
+    return [];
+  }
+}
+
+export async function getStewardListingPublic(id: number): Promise<StewardListing> {
+  try {
+    const res = await fetch(`${API_URL}/api/stewards/listings/${id}/public`);
+    if (!res.ok) throw new Error('Failed to fetch steward listing');
+    return res.json();
+  } catch (error) {
+    console.error('Error fetching steward listing:', error);
+    throw error;
+  }
+}
+
+// Helper function to get auth headers (for future use when auth is implemented)
+export async function getAuthHeaders(): Promise<HeadersInit> {
+  // TODO: Get token from auth context when authentication is implemented
+  return {
+    'Content-Type': 'application/json',
+  };
 }
 
 

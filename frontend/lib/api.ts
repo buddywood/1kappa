@@ -823,6 +823,15 @@ export interface SellerWithProducts extends Seller {
   products: Product[];
 }
 
+export async function getSellerWithProducts(sellerId: number): Promise<SellerWithProducts | null> {
+  const res = await fetch(`${API_URL}/api/sellers/${sellerId}/products`);
+  if (!res.ok) {
+    if (res.status === 404) return null;
+    throw new Error('Failed to fetch seller with products');
+  }
+  return res.json();
+}
+
 export async function fetchSellersWithProducts(): Promise<SellerWithProducts[]> {
   const res = await fetch(`${API_URL}/api/sellers/collections`);
   if (!res.ok) throw new Error('Failed to fetch sellers');
@@ -998,6 +1007,24 @@ export async function getStewardMarketplace(): Promise<StewardListing[]> {
       throw new Error('VERIFICATION_REQUIRED');
     }
     throw new Error(error.error || 'Failed to fetch steward marketplace');
+  }
+  return res.json();
+}
+
+export async function getStewardMarketplacePublic(): Promise<StewardListing[]> {
+  const res = await fetch(`${API_URL}/api/stewards/marketplace/public`);
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to fetch steward marketplace');
+  }
+  return res.json();
+}
+
+export async function getStewardListingPublic(id: number): Promise<StewardListing> {
+  const res = await fetch(`${API_URL}/api/stewards/listings/${id}/public`);
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to fetch steward listing');
   }
   return res.json();
 }

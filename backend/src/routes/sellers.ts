@@ -344,6 +344,39 @@ router.get('/collections', async (req: Request, res: Response) => {
   }
 });
 
+// Get a specific seller with their products (public endpoint)
+// This must come before /me routes to avoid route conflicts
+router.get('/:id/products', async (req: Request, res: Response) => {
+  try {
+    const sellerId = parseInt(req.params.id);
+    if (isNaN(sellerId)) {
+      return res.status(400).json({ error: 'Invalid seller ID' });
+    }
+
+    const seller = await getSellerById(sellerId);
+    if (!seller || seller.status !== 'APPROVED') {
+      return res.status(404).json({ error: 'Seller not found or not approved' });
+    }
+
+    const products = await getProductsBySeller(sellerId);
+
+    // Parse social_links if it's a string
+    const socialLinks = typeof seller.social_links === 'string' 
+      ? JSON.parse(seller.social_links) 
+      : (seller.social_links || {});
+
+    res.json({
+      ...seller,
+      social_links: socialLinks,
+      product_count: products.length,
+      products: products,
+    });
+  } catch (error) {
+    console.error('Error fetching seller with products:', error);
+    res.status(500).json({ error: 'Failed to fetch seller with products' });
+  }
+});
+
 // Get current seller's profile (authenticated seller)
 router.get('/me', authenticate, async (req: Request, res: Response) => {
   try {

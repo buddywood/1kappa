@@ -381,6 +381,42 @@ router.get('/me/claims', authenticate, requireSteward, async (req: Request, res:
   }
 });
 
+// Get specific listing (public view-only for guests)
+router.get('/listings/:id/public', async (req: Request, res: Response) => {
+  try {
+    const listingId = parseInt(req.params.id);
+    if (isNaN(listingId)) {
+      return res.status(400).json({ error: 'Invalid listing ID' });
+    }
+
+    const listing = await getStewardListingById(listingId);
+    
+    if (!listing) {
+      return res.status(404).json({ error: 'Listing not found' });
+    }
+
+    // Get steward and chapter info
+    const steward = await getStewardById(listing.steward_id);
+    const member = steward && steward.fraternity_member_id ? await getMemberById(steward.fraternity_member_id) : null;
+    const chapterResult = await pool.query('SELECT * FROM chapters WHERE id = $1', [listing.sponsoring_chapter_id]);
+    const chapter = chapterResult.rows[0];
+
+    // Get listing images
+    const images = await getStewardListingImages(listingId);
+
+    res.json({
+      ...listing,
+      steward: steward ? { ...steward, member } : null,
+      chapter,
+      images,
+      can_claim: false, // Mark as view-only for guests
+    });
+  } catch (error) {
+    console.error('Error fetching steward listing (public):', error);
+    res.status(500).json({ error: 'Failed to fetch steward listing' });
+  }
+});
+
 // Get specific listing (requires verified member)
 router.get('/listings/:id', authenticate, requireVerifiedMember, async (req: Request, res: Response) => {
   try {
@@ -478,6 +514,35 @@ router.delete('/listings/:id', authenticate, requireSteward, async (req: Request
   } catch (error) {
     console.error('Error deleting steward listing:', error);
     res.status(500).json({ error: 'Failed to delete steward listing' });
+  }
+});
+
+// Get marketplace (public view-only for guests)
+router.get('/marketplace/public', async (req: Request, res: Response) => {
+  try {
+    const listings = await getActiveStewardListings();
+    
+    // Enrich with steward and chapter info
+    const enrichedListings = await Promise.all(
+      listings.map(async (listing) => {
+        const steward = await getStewardById(listing.steward_id);
+        const member = steward && steward.fraternity_member_id ? await getMemberById(steward.fraternity_member_id) : null;
+        const chapterResult = await pool.query('SELECT * FROM chapters WHERE id = $1', [listing.sponsoring_chapter_id]);
+        const chapter = chapterResult.rows[0];
+
+        return {
+          ...listing,
+          steward: steward ? { ...steward, member } : null,
+          chapter,
+          can_claim: false, // Mark as view-only for guests
+        };
+      })
+    );
+
+    res.json(enrichedListings);
+  } catch (error) {
+    console.error('Error fetching steward marketplace (public):', error);
+    res.status(500).json({ error: 'Failed to fetch steward marketplace' });
   }
 });
 

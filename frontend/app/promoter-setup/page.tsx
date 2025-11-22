@@ -13,10 +13,20 @@ import SearchableSelect from '../components/SearchableSelect';
 export default function PromoterSetupPage() {
   const router = useRouter();
   const { data: session, status: sessionStatus } = useSession();
+  const isAuthenticated = sessionStatus === 'authenticated' && session?.user;
+  const memberId = (session?.user as any)?.memberId;
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [selectedChapterId, setSelectedChapterId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Redirect guests to member setup
+  useEffect(() => {
+    if (sessionStatus === 'loading') return;
+    if (!isAuthenticated || !memberId) {
+      router.push('/member-setup');
+    }
+  }, [sessionStatus, isAuthenticated, memberId, router]);
 
   useEffect(() => {
     async function loadChapters() {
