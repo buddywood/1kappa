@@ -8,26 +8,26 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-screen.png",
-      "resizeMode": "cover",
-      "backgroundColor": "#000000",
+      "image": "./assets/stacked-logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F7F4E9",
       "dark": {
-        "image": "./assets/splash-screen-dark.png",
-        "resizeMode": "cover",
-        "backgroundColor": "#000000"
+        "image": "./assets/stacked-logo.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#0D0D0F"
       }
     },
     "plugins": [
       [
         "expo-splash-screen",
         {
-          "image": "./assets/splash-screen.png",
-          "resizeMode": "cover",
-          "backgroundColor": "#000000",
+          "image": "./assets/stacked-logo.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#F7F4E9",
           "dark": {
-            "image": "./assets/splash-screen-dark.png",
-            "resizeMode": "cover",
-            "backgroundColor": "#000000"
+            "image": "./assets/stacked-logo.png",
+            "resizeMode": "contain",
+            "backgroundColor": "#0D0D0F"
           }
         }
       ]
@@ -42,7 +42,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#000000"
+        "backgroundColor": "#F7F4E9"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
