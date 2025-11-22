@@ -14,3 +14,4 @@ CREATE INDEX IF NOT EXISTS idx_favorites_product_id ON favorites(product_id);
 
 
 
+

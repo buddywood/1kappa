@@ -1,7 +1,15 @@
 import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, ScrollView, SafeAreaView } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
+import { COLORS } from './lib/constants';
+import Header from './components/Header';
+import HeroBanner from './components/HeroBanner';
+import FeaturedProducts from './components/FeaturedProducts';
+import ImpactBanner from './components/ImpactBanner';
+import FeaturedBrothers from './components/FeaturedBrothers';
+import EventsSection from './components/EventsSection';
+import { Product, Event } from './lib/api';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -18,31 +26,72 @@ export default function App() {
     prepare();
   }, []);
 
+  const handleMenuPress = () => {
+    // Placeholder for menu navigation
+    console.log('Menu pressed');
+  };
+
+  const handleUserPress = () => {
+    // Placeholder for user menu
+    console.log('User pressed');
+  };
+
+  const handleShopPress = () => {
+    // Placeholder for shop navigation
+    console.log('Shop pressed');
+  };
+
+  const handleProductPress = (product: Product) => {
+    // Placeholder for product detail navigation
+    console.log('Product pressed:', product.id);
+  };
+
+  const handleSellerPress = (sellerId: number) => {
+    // Placeholder for seller collection navigation
+    console.log('Seller pressed:', sellerId);
+  };
+
+  const handleEventPress = (event: Event) => {
+    // Placeholder for event detail navigation
+    console.log('Event pressed:', event.id);
+  };
+
+  const handleRSVPPress = (event: Event) => {
+    // Placeholder for RSVP action
+    console.log('RSVP pressed:', event.id);
+  };
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Hello World</Text>
-      <Text style={styles.subtitle}>Welcome to 1Kappa Mobile</Text>
+    <SafeAreaView style={styles.container}>
       <StatusBar style="auto" />
-    </View>
+      <Header onMenuPress={handleMenuPress} onUserPress={handleUserPress} />
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <HeroBanner onShopPress={handleShopPress} />
+        <FeaturedProducts onProductPress={handleProductPress} />
+        <ImpactBanner />
+        <FeaturedBrothers onSellerPress={handleSellerPress} />
+        <EventsSection
+          onEventPress={handleEventPress}
+          onRSVPPress={handleRSVPPress}
+        />
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
+    backgroundColor: COLORS.cream,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 12,
-    color: '#000',
+  scrollView: {
+    flex: 1,
   },
-  subtitle: {
-    fontSize: 18,
-    color: '#666',
+  scrollContent: {
+    paddingBottom: 24,
   },
 });

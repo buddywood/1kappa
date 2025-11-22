@@ -21,3 +21,4 @@ CREATE INDEX IF NOT EXISTS idx_notifications_type ON notifications(type);
 
 
 
+

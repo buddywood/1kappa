@@ -228,16 +228,40 @@ BEGIN
     RAISE NOTICE 'Dropped check_role_foreign_key constraint';
   END IF;
 
+  -- Fix common data issues before adding constraint
+  -- Ensure CONSUMER users have proper nulls set
+  UPDATE users 
+  SET seller_id = NULL, promoter_id = NULL, steward_id = NULL 
+  WHERE role = 'CONSUMER' AND (seller_id IS NOT NULL OR promoter_id IS NOT NULL OR steward_id IS NOT NULL);
+  
+  -- Ensure SELLER users have proper nulls set
+  UPDATE users 
+  SET fraternity_member_id = NULL, promoter_id = NULL, steward_id = NULL 
+  WHERE role = 'SELLER' AND (fraternity_member_id IS NOT NULL OR promoter_id IS NOT NULL OR steward_id IS NOT NULL);
+  
+  -- Ensure PROMOTER users have proper nulls set
+  UPDATE users 
+  SET fraternity_member_id = NULL, seller_id = NULL, steward_id = NULL 
+  WHERE role = 'PROMOTER' AND (fraternity_member_id IS NOT NULL OR seller_id IS NOT NULL OR steward_id IS NOT NULL);
+  
+  -- Ensure ADMIN users have proper nulls set
+  UPDATE users 
+  SET fraternity_member_id = NULL, seller_id = NULL, promoter_id = NULL, steward_id = NULL 
+  WHERE role = 'ADMIN' AND (fraternity_member_id IS NOT NULL OR seller_id IS NOT NULL OR promoter_id IS NOT NULL OR steward_id IS NOT NULL);
+
   -- Recreate with new column name
   ALTER TABLE users ADD CONSTRAINT check_role_foreign_key CHECK (
-    (role = 'CONSUMER' AND 
+    (role = 'CONSUMER' AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL AND (
       (fraternity_member_id IS NOT NULL) OR 
       (fraternity_member_id IS NULL AND onboarding_status != 'ONBOARDING_FINISHED')
-    ) OR
+    )) OR
     (role = 'SELLER' AND seller_id IS NOT NULL AND fraternity_member_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
     (role = 'PROMOTER' AND promoter_id IS NOT NULL AND fraternity_member_id IS NULL AND seller_id IS NULL AND steward_id IS NULL) OR
     (role = 'STEWARD' AND steward_id IS NOT NULL AND fraternity_member_id IS NOT NULL AND (
-      seller_id IS NULL AND promoter_id IS NULL
+      (seller_id IS NULL AND promoter_id IS NULL) OR
+      (seller_id IS NOT NULL AND promoter_id IS NULL) OR
+      (seller_id IS NULL AND promoter_id IS NOT NULL) OR
+      (seller_id IS NOT NULL AND promoter_id IS NOT NULL)
     )) OR
     (role = 'ADMIN' AND fraternity_member_id IS NULL AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL)
   );
