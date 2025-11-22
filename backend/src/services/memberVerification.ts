@@ -303,15 +303,12 @@ async function debugFormElements(page: Page): Promise<void> {
   
   // Get page HTML structure around form
   const formInfo = await page.evaluate(() => {
-    // @ts-expect-error - document is available in browser context
     const form = document.querySelector('form') as HTMLFormElement | null;
-    // @ts-expect-error - document is available in browser context
     const allForms = document.querySelectorAll('form') as NodeListOf<HTMLFormElement>;
     return {
       formCount: allForms.length,
       // outerHTML is available in browser context
       formHTML: form && 'outerHTML' in form ? (form as any).outerHTML.substring(0, 2000) : 'No form element found',
-      // @ts-expect-error - document is available in browser context
       bodyHTML: document.body ? document.body.innerHTML.substring(0, 1000) : '',
     };
   });
@@ -323,11 +320,8 @@ async function debugFormElements(page: Page): Promise<void> {
   
   // Check for Salesforce Community login (common pattern)
   const isSalesforce = await page.evaluate(() => {
-    // @ts-expect-error - window is available in browser context
     return window.location.href.includes('salesforce.com') || 
-           // @ts-expect-error - document is available in browser context
            (document.body ? document.body.innerHTML.includes('salesforce') : false) ||
-           // @ts-expect-error - document is available in browser context
            (document.querySelector('[id*="salesforce"], [class*="salesforce"]') !== null);
   });
   
@@ -985,7 +979,6 @@ export async function searchMember(
       // Use the frame where we found results (main page or iframe)
       const evaluateTarget = targetFrame || page;
       resultTextsArray = await evaluateTarget.evaluate((selector: string) => {
-        // @ts-expect-error - document is available in browser context
         const elements = Array.from(document.querySelectorAll(selector) as any);
         return elements.map((el: any) => ({
           text: (el.textContent || '').trim(),

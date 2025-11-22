@@ -148,7 +148,6 @@ export async function verifySeller(
     
     // Wait for page to fully load and ensure body exists
     await page.waitForFunction(
-      // @ts-expect-error - document is available in browser context
       () => document.body && document.body.innerText.length > 0,
       { timeout: 30000 }
     );
@@ -161,14 +160,11 @@ export async function verifySeller(
     
     try {
       const content = await page.evaluate(() => {
-        // @ts-expect-error - document is available in browser context
         if (!document.body) {
           return { bodyText: '', bodyHTML: '' };
         }
         return {
-          // @ts-expect-error - document is available in browser context
           bodyText: document.body.innerText || document.body.textContent || '',
-          // @ts-expect-error - document is available in browser context
           bodyHTML: document.body.innerHTML || '',
         };
       });
@@ -184,11 +180,9 @@ export async function verifySeller(
       // Try alternative method
       try {
         const textContent = await page.evaluate(() => {
-          // @ts-expect-error - document is available in browser context
           return document.body?.innerText || document.body?.textContent || '';
         });
         const htmlContent = await page.evaluate(() => {
-          // @ts-expect-error - document is available in browser context
           return document.body?.innerHTML || '';
         });
         bodyText = (textContent || '').toLowerCase();

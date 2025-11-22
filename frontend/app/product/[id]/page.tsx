@@ -305,6 +305,7 @@ export default function ProductPage() {
     );
   }
 
+  // Get chapter names for display
   const sponsoringChapterName = getChapterName(product.seller_sponsoring_chapter_id || null);
   const initiatedChapterName = getChapterName(product.seller_initiated_chapter_id || null);
 
@@ -489,7 +490,7 @@ export default function ProductPage() {
                     </button>
                   ) : (
                     <Link
-                      href="/login?redirect=" + encodeURIComponent(`/product/${product.id}`)
+                      href={`/login?redirect=${encodeURIComponent(`/product/${product.id}`)}`}
                       className="w-full bg-crimson text-white py-3 rounded-lg font-semibold hover:bg-crimson/90 transition shadow-md hover:shadow-lg text-center block"
                     >
                       Continue to Checkout

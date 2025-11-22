@@ -11,6 +11,7 @@ import { Checkbox } from '@/components/ui/Checkbox';
 import { FormCard } from '@/components/ui/FormCard';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import VerificationCodeInput from '../components/VerificationCodeInput';
 

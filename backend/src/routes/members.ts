@@ -400,7 +400,7 @@ router.post('/cognito/signin', async (req: Request, res: Response) => {
     let stewardId = user.steward_id || null;
 
     // Get name and headshot from member if available
-    let name: string | null = user.name || null;
+    let name: string | null = null;
     let headshotUrl: string | null = null;
     if (memberId) {
       const memberResult = await pool.query(
@@ -504,7 +504,7 @@ router.post('/cognito/refresh', async (req: Request, res: Response) => {
     let stewardId = user.steward_id || null;
 
     // Get name and headshot from member if available
-    let name: string | null = user.name || null;
+    let name: string | null = null;
     let headshotUrl: string | null = null;
     if (memberId) {
       const memberResult = await pool.query(
@@ -1212,7 +1212,7 @@ router.post('/register', upload.single('headshot'), async (req: Request, res: Re
     if (sellerCheck.rows.length > 0) {
       existingSeller = sellerCheck.rows[0];
       // If seller already has a member profile, block registration
-      if (existingSeller.fraternity_member_id) {
+      if (existingSeller && existingSeller.fraternity_member_id) {
         return res.status(400).json({ 
           error: 'You already have a member profile linked to your seller account' 
         });

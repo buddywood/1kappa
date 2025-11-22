@@ -297,7 +297,6 @@ export async function runSellerVerification() {
       });
       // Wait for page content to load
       await page.waitForFunction(
-        // @ts-expect-error - document is available in browser context
         () => document.body && document.body.innerText.length > 0,
         { timeout: 30000 }
       );
@@ -320,14 +319,11 @@ export async function runSellerVerification() {
     let pageContent: { bodyText: string; bodyHTML: string };
     try {
       pageContent = await page.evaluate(() => {
-        // @ts-expect-error - document is available in browser context
         if (!document.body) {
           return { bodyText: '', bodyHTML: '' };
         }
         return {
-          // @ts-expect-error - document is available in browser context
           bodyText: (document.body.innerText || document.body.textContent || '').toLowerCase(),
-          // @ts-expect-error - document is available in browser context
           bodyHTML: (document.body.innerHTML || '').toLowerCase(),
         };
       });
