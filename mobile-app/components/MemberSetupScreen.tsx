@@ -4,11 +4,13 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
-  Image,
 } from 'react-native';
 import { COLORS } from '../lib/constants';
 import ScreenHeader from './ScreenHeader';
+import PrimaryButton from './ui/PrimaryButton';
+import SecondaryButton from './ui/SecondaryButton';
+import FormCard from './ui/FormCard';
+import SectionHeader from './ui/SectionHeader';
 
 interface MemberSetupScreenProps {
   onBack: () => void;
@@ -32,21 +34,14 @@ export default function MemberSetupScreen({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.logoContainer}>
-          <Image
-            source={require('../assets/stacked-logo.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        </View>
-
-        <Text style={styles.title}>Become a Member</Text>
-        <Text style={styles.subtitle}>
-          Join the 1Kappa community and connect with brothers worldwide. Complete your profile and get verified to unlock all features.
-        </Text>
+        <SectionHeader
+          title="Become a Member"
+          subtitle="Join the 1Kappa community and connect with brothers worldwide. Complete your profile and get verified to unlock all features."
+          logoSource={require('../assets/stacked-logo.png')}
+        />
 
         {/* Qualification Section */}
-        <View style={styles.section}>
+        <FormCard style={styles.section}>
           <Text style={styles.sectionTitle}>Who Can Join?</Text>
           <Text style={styles.sectionText}>
             Membership on 1Kappa is open to all initiated members of Kappa Alpha Psi Fraternity, Inc.
@@ -57,10 +52,10 @@ export default function MemberSetupScreen({
             <Text style={styles.bulletItem}>• You must provide accurate chapter and initiation information</Text>
             <Text style={styles.bulletItem}>• Your membership will be verified before full access is granted</Text>
           </View>
-        </View>
+        </FormCard>
 
         {/* Verification Process Section */}
-        <View style={[styles.section, styles.verificationSection]}>
+        <FormCard style={[styles.section, styles.verificationSection]}>
           <Text style={styles.sectionTitle}>Verification Process</Text>
           
           <View style={styles.stepContainer}>
@@ -104,10 +99,10 @@ export default function MemberSetupScreen({
               <Text style={styles.timelineBold}>Verification Timeline:</Text> Verification typically takes 24-48 hours. You'll receive an email notification once your membership has been verified.
             </Text>
           </View>
-        </View>
+        </FormCard>
 
         {/* Benefits Section */}
-        <View style={styles.section}>
+        <FormCard style={styles.section}>
           <Text style={styles.sectionTitle}>Member Benefits</Text>
           <View style={styles.bulletList}>
             <Text style={styles.bulletItem}>• Connect with brothers worldwide through the member directory</Text>
@@ -117,24 +112,20 @@ export default function MemberSetupScreen({
             <Text style={styles.bulletItem}>• Apply to become a Seller, Promoter, or Steward</Text>
             <Text style={styles.bulletItem}>• Support collegiate chapters through purchases and donations</Text>
           </View>
-        </View>
+        </FormCard>
 
         {/* CTA Buttons */}
         <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={styles.primaryButton}
+          <PrimaryButton
+            title="Start Registration"
             onPress={onStartRegistration}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.primaryButtonText}>Start Registration</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.secondaryButton}
+            style={styles.buttonMargin}
+          />
+          <SecondaryButton
+            title="Already Have an Account?"
             onPress={onLogin}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.secondaryButtonText}>Already Have an Account?</Text>
-          </TouchableOpacity>
+            style={styles.buttonMargin}
+          />
         </View>
       </ScrollView>
     </View>
@@ -154,46 +145,10 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 100,
   },
-  logoContainer: {
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  logo: {
-    width: 120,
-    height: 120,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: COLORS.midnightNavy,
-    marginBottom: 8,
-    textAlign: 'center',
-    letterSpacing: 0.2,
-    paddingHorizontal: 8,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: COLORS.midnightNavy,
-    opacity: 0.7,
-    marginBottom: 24,
-    textAlign: 'center',
-    lineHeight: 22,
-    paddingHorizontal: 8,
-    maxWidth: 280,
-    alignSelf: 'center',
-  },
   section: {
-    backgroundColor: COLORS.white,
-    borderRadius: 16,
-    padding: 20,
     marginBottom: 16,
-    marginHorizontal: 8,
+    marginHorizontal: 0,
     marginTop: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
   },
   sectionTitle: {
     fontSize: 20,
@@ -279,37 +234,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 24,
   },
-  primaryButton: {
-    backgroundColor: COLORS.crimson,
-    borderRadius: 14,
-    paddingVertical: 15,
-    alignItems: 'center',
+  buttonMargin: {
     marginHorizontal: 8,
-    shadowColor: "#000",
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
-  },
-  primaryButtonText: {
-    color: COLORS.white,
-    fontSize: 17,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
-  secondaryButton: {
-    borderWidth: 2,
-    borderColor: COLORS.crimson,
-    borderRadius: 14,
-    paddingVertical: 15,
-    alignItems: 'center',
-    marginHorizontal: 8,
-  },
-  secondaryButtonText: {
-    color: COLORS.crimson,
-    fontSize: 17,
-    fontWeight: '600',
-    letterSpacing: 0.2,
   },
 });
 

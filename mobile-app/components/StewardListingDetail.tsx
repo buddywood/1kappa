@@ -15,6 +15,7 @@ import { StewardListing, getStewardListingPublic, fetchChapters, Chapter } from 
 import { COLORS } from '../lib/constants';
 import { useAuth } from '../lib/auth';
 import ScreenHeader from './ScreenHeader';
+import PrimaryButton from './ui/PrimaryButton';
 
 interface StewardListingDetailProps {
   listingId: number;
@@ -218,32 +219,25 @@ export default function StewardListingDetail({
           </View>
 
           {/* Claim Button */}
-          {listing.status === 'ACTIVE' ? (
-            isGuest ? (
-              <TouchableOpacity
-                style={styles.claimButtonDisabled}
-                disabled={true}
-              >
-                <Text style={styles.claimButtonTextDisabled}>
-                  Sign in to Claim
-                </Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                style={styles.claimButton}
-                onPress={() => {
+          {listing.status === 'ACTIVE' && (
+            <PrimaryButton
+              title={isGuest ? "Sign in to Claim" : "Claim This Item"}
+              onPress={() => {
+                if (!isGuest) {
                   // TODO: Implement claim functionality for authenticated users
                   console.log('Claim listing:', listingId);
-                }}
-              >
-                <Text style={styles.claimButtonText}>Claim This Item</Text>
-              </TouchableOpacity>
-            )
-          ) : listing.status === 'CLAIMED' ? (
+                }
+              }}
+              disabled={isGuest}
+              style={styles.claimButton}
+            />
+          )}
+          {listing.status === 'CLAIMED' && (
             <View style={styles.statusBanner}>
               <Text style={styles.statusText}>This item has been claimed</Text>
             </View>
-          ) : (
+          )}
+          {listing.status !== 'ACTIVE' && listing.status !== 'CLAIMED' && (
             <View style={styles.statusBannerInactive}>
               <Text style={styles.statusTextInactive}>
                 This listing is no longer available
@@ -444,29 +438,7 @@ const styles = StyleSheet.create({
     color: COLORS.crimson,
   },
   claimButton: {
-    backgroundColor: COLORS.crimson,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
     marginBottom: 24,
-  },
-  claimButtonText: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  claimButtonDisabled: {
-    backgroundColor: COLORS.frostGray,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  claimButtonTextDisabled: {
-    color: COLORS.midnightNavy,
-    fontSize: 16,
-    fontWeight: '600',
-    opacity: 0.6,
   },
   statusBanner: {
     backgroundColor: '#DBEAFE',

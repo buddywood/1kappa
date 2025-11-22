@@ -5,12 +5,14 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Image,
   ActivityIndicator,
 } from 'react-native';
 import { COLORS } from '../lib/constants';
 import ScreenHeader from './ScreenHeader';
 import { fetchChapters, Chapter } from '../lib/api';
+import PrimaryButton from './ui/PrimaryButton';
+import FormCard from './ui/FormCard';
+import SectionHeader from './ui/SectionHeader';
 
 interface SellerSetupScreenProps {
   onBack: () => void;
@@ -80,21 +82,14 @@ export default function SellerSetupScreen({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.logoContainer}>
-          <Image
-            source={require('../assets/stacked-logo.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        </View>
-
-        <Text style={styles.title}>Become a Seller</Text>
-        <Text style={styles.subtitle}>
-          Sell products to brothers worldwide and support collegiate chapters through revenue sharing. Every sale creates impact.
-        </Text>
+        <SectionHeader
+          title="Become a Seller"
+          subtitle="Sell products to brothers worldwide and support collegiate chapters through revenue sharing. Every sale creates impact."
+          logoSource={require('../assets/stacked-logo.png')}
+        />
 
         {/* Qualification Section */}
-        <View style={styles.section}>
+        <FormCard style={styles.section}>
           <Text style={styles.sectionTitle}>Who Can Become a Seller?</Text>
           <Text style={styles.sectionText}>
             Selling on 1Kappa is open to verified sellers and verified members who want to share their products with brothers worldwide.
@@ -115,10 +110,10 @@ export default function SellerSetupScreen({
               <Text style={styles.restrictionsBold}>Verified Members:</Text> Can sell any products (Kappa branded or otherwise) as long as you're a verified member of Kappa Alpha Psi.
             </Text>
           </View>
-        </View>
+        </FormCard>
 
         {/* Application Process Section */}
-        <View style={[styles.section, styles.processSection]}>
+        <FormCard style={[styles.section, styles.processSection]}>
           <Text style={styles.sectionTitle}>Application Process</Text>
           
           <View style={styles.stepContainer}>
@@ -162,10 +157,10 @@ export default function SellerSetupScreen({
               <Text style={styles.timelineBold}>Review Timeline:</Text> Applications are typically reviewed within 1-3 business days. You'll receive an email notification once a decision has been made.
             </Text>
           </View>
-        </View>
+        </FormCard>
 
         {/* How It Works Section */}
-        <View style={styles.section}>
+        <FormCard style={styles.section}>
           <Text style={styles.sectionTitle}>How Selling Works</Text>
           <View style={styles.bulletList}>
             <Text style={styles.bulletItem}>• List your products with images, descriptions, and pricing</Text>
@@ -174,7 +169,7 @@ export default function SellerSetupScreen({
             <Text style={styles.bulletItem}>• Stripe Connect handles secure payments</Text>
             <Text style={styles.bulletItem}>• You receive payments directly to your connected account</Text>
           </View>
-        </View>
+        </FormCard>
 
         {/* Chapter Selection */}
         {error && (
@@ -229,22 +224,12 @@ export default function SellerSetupScreen({
         </View>
 
         {/* CTA Button */}
-        <TouchableOpacity
-          style={[
-            styles.continueButton,
-            !selectedChapterId && styles.continueButtonDisabled,
-          ]}
+        <PrimaryButton
+          title="Continue to Application"
           onPress={handleContinue}
           disabled={!selectedChapterId}
-          activeOpacity={0.8}
-        >
-          <Text style={[
-            styles.continueButtonText,
-            !selectedChapterId && styles.continueButtonTextDisabled,
-          ]}>
-            Continue to Application
-          </Text>
-        </TouchableOpacity>
+          style={styles.buttonMargin}
+        />
       </ScrollView>
     </View>
   );
@@ -275,46 +260,10 @@ const styles = StyleSheet.create({
     color: COLORS.midnightNavy,
     opacity: 0.6,
   },
-  logoContainer: {
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  logo: {
-    width: 120,
-    height: 120,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: COLORS.midnightNavy,
-    marginBottom: 8,
-    textAlign: 'center',
-    letterSpacing: 0.2,
-    paddingHorizontal: 8,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: COLORS.midnightNavy,
-    opacity: 0.7,
-    marginBottom: 24,
-    textAlign: 'center',
-    lineHeight: 22,
-    paddingHorizontal: 8,
-    maxWidth: 280,
-    alignSelf: 'center',
-  },
   section: {
-    backgroundColor: COLORS.white,
-    borderRadius: 16,
-    padding: 20,
     marginBottom: 16,
-    marginHorizontal: 8,
+    marginHorizontal: 0,
     marginTop: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
   },
   sectionTitle: {
     fontSize: 20,
@@ -496,32 +445,9 @@ const styles = StyleSheet.create({
     color: COLORS.midnightNavy,
     opacity: 0.6,
   },
-  continueButton: {
-    backgroundColor: COLORS.crimson,
-    borderRadius: 14,
-    paddingVertical: 15,
-    alignItems: 'center',
+  buttonMargin: {
     marginBottom: 24,
     marginHorizontal: 8,
-    shadowColor: "#000",
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
-  },
-  continueButtonDisabled: {
-    backgroundColor: COLORS.frostGray,
-    opacity: 0.5,
-  },
-  continueButtonText: {
-    color: COLORS.white,
-    fontSize: 17,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
-  continueButtonTextDisabled: {
-    color: COLORS.midnightNavy,
-    opacity: 0.5,
   },
 });
 

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../lib/auth';
 import { API_URL, COLORS } from '../lib/constants';
+import PrimaryButton from './ui/PrimaryButton';
 
 interface MemberProfile {
   id: number;
@@ -275,12 +276,11 @@ export default function MemberDashboardScreen({
         </View>
 
         {/* Profile Link */}
-        <TouchableOpacity
-          style={styles.profileButton}
+        <PrimaryButton
+          title="View Full Profile"
           onPress={onNavigateToProfile}
-        >
-          <Text style={styles.profileButtonText}>View Full Profile</Text>
-        </TouchableOpacity>
+          style={styles.profileButton}
+        />
       </ScrollView>
     </View>
   );
@@ -479,23 +479,8 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   profileButton: {
-    backgroundColor: COLORS.crimson,
-    paddingVertical: 15,
-    borderRadius: 14,
-    alignItems: 'center',
     marginHorizontal: 8,
     marginBottom: 24,
-    shadowColor: "#000",
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
-  },
-  profileButtonText: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: COLORS.white,
-    letterSpacing: 0.3,
   },
 });
 

@@ -3,11 +3,15 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from '@/hooks/use-toast';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { TextField } from '@/components/ui/TextField';
+import { PasswordField } from '@/components/ui/PasswordField';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { SecondaryButton } from '@/components/ui/SecondaryButton';
+import { Checkbox } from '@/components/ui/Checkbox';
+import { FormCard } from '@/components/ui/FormCard';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import Image from 'next/image';
 import VerificationCodeInput from '../components/VerificationCodeInput';
 
 function LoginPageContent() {
@@ -19,9 +23,7 @@ function LoginPageContent() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  // PasswordField components handle their own show/hide state internally
   const [needsPasswordChange, setNeedsPasswordChange] = useState(false);
   const [needsVerification, setNeedsVerification] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
@@ -413,32 +415,18 @@ function LoginPageContent() {
 
   return (
     <main className="min-h-screen bg-cream flex items-center justify-center">
-      <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full border border-frost-gray">
-        {/* Icon with animation/glow */}
-        <div className="mb-6 text-center">
-          <div className="inline-block relative">
-            <div className="absolute inset-0 bg-crimson/20 rounded-full blur-xl animate-pulse"></div>
-            <Image
-              src="/header-icon.png"
-              alt="1Kappa Icon"
-              width={64}
-              height={64}
-              className="relative z-10 object-contain animate-pulse"
-              style={{ animationDuration: '3s' }}
-            />
-          </div>
-        </div>
-        
-        <h1 className="text-2xl font-display font-bold mb-2 text-center text-midnight-navy">
-          Welcome to 1KAPPA
-        </h1>
-        <p className="text-sm text-midnight-navy/70 text-center mb-6">
-          {needsPasswordChange
-            ? 'Please set a new password to continue.'
-            : needsVerification
-            ? 'Please verify your email address to continue. Check your email for a verification code.'
-            : 'One Family. One Step. One Kappa.'}
-        </p>
+      <FormCard className="max-w-md w-full">
+        <SectionHeader
+          title="Welcome to 1KAPPA"
+          subtitle={
+            needsPasswordChange
+              ? 'Please set a new password to continue.'
+              : needsVerification
+              ? 'Please verify your email address to continue. Check your email for a verification code.'
+              : 'One Family. One Step. One Kappa.'
+          }
+          logoSource="/header-icon.png"
+        />
         {needsVerification ? (
           <form onSubmit={handleVerification} className="space-y-4">
             <div className="space-y-2">
@@ -468,16 +456,16 @@ function LoginPageContent() {
               </Button>
             </div>
             {error && <div className="text-red-600 text-sm">{error}</div>}
-            <Button
+            <PrimaryButton
               type="submit"
               disabled={loading || verificationCode.length !== 6}
-              className="w-full bg-crimson text-white hover:bg-crimson/90"
+              loading={loading}
+              loadingText="Verifying..."
             >
-              {loading ? 'Verifying...' : 'Verify Email'}
-            </Button>
-            <Button
+              Verify Email
+            </PrimaryButton>
+            <SecondaryButton
               type="button"
-              variant="outline"
               onClick={() => {
                 setNeedsVerification(false);
                 setVerificationCode('');
@@ -486,167 +474,80 @@ function LoginPageContent() {
               className="w-full"
             >
               Back to Login
-            </Button>
+            </SecondaryButton>
           </form>
         ) : !needsPasswordChange ? (
           <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email" className="text-midnight-navy">
-              Email
-            </Label>
-            <Input
+            <TextField
+              label="Email"
               type="email"
-              id="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="text-midnight-navy"
               placeholder="Enter your email"
+              error={error && !password ? error : undefined}
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password" className="text-midnight-navy">
-              Password
-            </Label>
-            <div className="relative">
-              <Input
-                type={showPassword ? 'text' : 'password'}
-                id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="text-midnight-navy pr-10"
-                placeholder="Enter your password"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-midnight-navy/60 hover:text-midnight-navy transition"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-              >
-                {showPassword ? (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                  </svg>
-                ) : (
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                )}
-              </button>
-            </div>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
+            <PasswordField
+              label="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              placeholder="Enter your password"
+              error={error && password ? error : undefined}
+            />
+            <div className="flex items-center justify-between">
+              <Checkbox
                 id="rememberMe"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
-                className="rounded border-frost-gray text-crimson focus:ring-crimson w-4 h-4"
+                label="Remember me"
               />
-              <label htmlFor="rememberMe" className="text-sm text-midnight-navy/70 cursor-pointer">
-                Remember me
-              </label>
-            </div>
-            <Link
-              href="/forgot-password"
-              className="text-sm font-medium text-crimson hover:text-crimson/80 transition underline"
-            >
-              Forgot Password?
-            </Link>
-          </div>
-          {error && <div className="text-red-600 text-sm">{error}</div>}
-          <Button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-crimson text-white hover:bg-crimson/90"
-          >
-            {loading ? 'Logging in...' : 'Login'}
-          </Button>
-        </form>
-        ) : (
-          <form onSubmit={handlePasswordChange} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="newPassword" className="text-midnight-navy">
-                New Password
-              </Label>
-              <div className="relative">
-                <Input
-                  type={showNewPassword ? 'text' : 'password'}
-                  id="newPassword"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required
-                  minLength={8}
-                  className="text-midnight-navy pr-10"
-                  placeholder="Enter your new password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-midnight-navy/60 hover:text-midnight-navy transition"
-                  aria-label={showNewPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showNewPassword ? (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-midnight-navy">
-                Confirm New Password
-              </Label>
-              <div className="relative">
-                <Input
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  id="confirmPassword"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  minLength={8}
-                  className="text-midnight-navy pr-10"
-                  placeholder="Confirm your new password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-midnight-navy/60 hover:text-midnight-navy transition"
-                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showConfirmPassword ? (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  )}
-                </button>
-              </div>
+              <Link
+                href="/forgot-password"
+                className="text-sm font-medium text-crimson hover:text-crimson/80 transition underline"
+              >
+                Forgot Password?
+              </Link>
             </div>
             {error && <div className="text-red-600 text-sm">{error}</div>}
-            <Button
+            <PrimaryButton
               type="submit"
               disabled={loading}
-              className="w-full bg-crimson text-white hover:bg-crimson/90"
+              loading={loading}
+              loadingText="Logging in..."
             >
-              {loading ? 'Changing Password...' : 'Change Password'}
-            </Button>
-            <Button
+              Login
+            </PrimaryButton>
+          </form>
+        ) : (
+          <form onSubmit={handlePasswordChange} className="space-y-4">
+            <PasswordField
+              label="New Password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              required
+              minLength={8}
+              placeholder="Enter your new password"
+            />
+            <PasswordField
+              label="Confirm New Password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              minLength={8}
+              placeholder="Confirm your new password"
+            />
+            {error && <div className="text-red-600 text-sm">{error}</div>}
+            <PrimaryButton
+              type="submit"
+              disabled={loading}
+              loading={loading}
+              loadingText="Changing Password..."
+            >
+              Change Password
+            </PrimaryButton>
+            <SecondaryButton
               type="button"
-              variant="outline"
               onClick={() => {
                 setNeedsPasswordChange(false);
                 setNewPassword('');
@@ -656,7 +557,7 @@ function LoginPageContent() {
               className="w-full"
             >
               Back to Login
-            </Button>
+            </SecondaryButton>
           </form>
         )}
 
@@ -767,7 +668,7 @@ function LoginPageContent() {
           </p>
         </div>
         )}
-      </div>
+      </FormCard>
     </main>
   );
 }

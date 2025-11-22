@@ -22,6 +22,7 @@ import { COLORS } from "../lib/constants";
 import { useAuth } from "../lib/auth";
 import { fetchProduct } from "../lib/api";
 import ScreenHeader from "./ScreenHeader";
+import PrimaryButton from "./ui/PrimaryButton";
 
 interface ProductDetailProps {
   productId: number;
@@ -319,21 +320,13 @@ export default function ProductDetail({
 
             {/* Purchase Button for Authenticated Members */}
             {!isGuest && user?.email && (
-              <TouchableOpacity
+              <PrimaryButton
+                title="Buy Now"
                 onPress={handleCheckout}
+                loading={checkingOut}
                 disabled={checkingOut}
-                style={[
-                  styles.purchaseButton,
-                  checkingOut && styles.purchaseButtonDisabled,
-                ]}
-                activeOpacity={0.8}
-              >
-                {checkingOut ? (
-                  <ActivityIndicator color={COLORS.white} />
-                ) : (
-                  <Text style={styles.purchaseButtonText}>Buy Now</Text>
-                )}
-              </TouchableOpacity>
+                style={styles.purchaseButton}
+              />
             )}
 
             {/* Error Message */}
@@ -508,25 +501,8 @@ const styles = StyleSheet.create({
   },
   purchaseButton: {
     marginTop: 20,
-    backgroundColor: COLORS.crimson,
     borderRadius: 12,
-    paddingVertical: 16,
     paddingHorizontal: 24,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  purchaseButtonDisabled: {
-    opacity: 0.6,
-  },
-  purchaseButtonText: {
-    color: COLORS.white,
-    fontSize: 18,
-    fontWeight: "600",
   },
   errorMessageContainer: {
     marginTop: 16,
