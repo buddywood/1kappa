@@ -105,6 +105,17 @@ export async function fetchProducts(): Promise<Product[]> {
   }
 }
 
+export async function fetchFeaturedProducts(): Promise<Product[]> {
+  try {
+    const res = await fetch(`${API_URL}/api/products/featured`);
+    if (!res.ok) throw new Error('Failed to fetch featured products');
+    return res.json();
+  } catch (error) {
+    console.error('Error fetching featured products:', error);
+    return [];
+  }
+}
+
 export async function fetchProduct(productId: number): Promise<Product> {
   try {
     const res = await fetch(`${API_URL}/api/products/${productId}`);

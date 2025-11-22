@@ -36,6 +36,19 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
+// Get featured products (last 10 products)
+router.get('/featured', async (req: Request, res: Response) => {
+  try {
+    const products = await getActiveProducts();
+    // Return the last 10 products (newest first, so first 10)
+    const featuredProducts = products.slice(0, 10);
+    res.json(featuredProducts);
+  } catch (error) {
+    console.error('Error fetching featured products:', error);
+    res.status(500).json({ error: 'Failed to fetch featured products' });
+  }
+});
+
 // Get all product categories - MUST be before /:id route
 router.get('/categories', async (req: Request, res: Response) => {
   try {
