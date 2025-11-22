@@ -8,11 +8,11 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/stacked-logo.png",
+      "image": "./assets/splash-logo-1024.png",
       "resizeMode": "contain",
-      "backgroundColor": "#F7F4E9",
+      "backgroundColor": "#70110C",
       "dark": {
-        "image": "./assets/stacked-logo.png",
+        "image": "./assets/splash-logo-1024.png",
         "resizeMode": "contain",
         "backgroundColor": "#0D0D0F"
       }
@@ -21,14 +21,14 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/stacked-logo.png",
-          "resizeMode": "contain",
-          "backgroundColor": "#F7F4E9",
+          "image": "./assets/splash-logo-1024.png",
+          "backgroundColor": "#70110C",
           "dark": {
-            "image": "./assets/stacked-logo.png",
+            "image": "./assets/splash-logo-1024.png",
             "resizeMode": "contain",
             "backgroundColor": "#0D0D0F"
-          }
+          },
+          "imageWidth": 300
         }
       ]
     ],
