@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { StatusBar } from "expo-status-bar";
-import { StyleSheet, ScrollView, View, Animated } from "react-native";
+import { StyleSheet, ScrollView, View, Animated, Linking } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import * as SplashScreen from "expo-splash-screen";
 import { COLORS } from "./lib/constants";
@@ -19,6 +19,7 @@ import StewardMarketplaceScreen from "./components/StewardMarketplaceScreen";
 import SellersScreen from "./components/SellersScreen";
 import ProfileScreen from "./components/ProfileScreen";
 import MemberSetupScreen from "./components/MemberSetupScreen";
+import MemberDashboardScreen from "./components/MemberDashboardScreen";
 import SellerSetupScreen from "./components/SellerSetupScreen";
 import BottomTabBar from "./components/BottomTabBar";
 import { Product, Event, StewardListing } from "./lib/api";
@@ -33,6 +34,7 @@ type Screen =
   | "steward-marketplace"
   | "profile"
   | "member-setup"
+  | "member-dashboard"
   | "seller-setup";
 
 export default function App() {
@@ -211,6 +213,29 @@ export default function App() {
             onLogin={() => {
               setProfileInitialMode("login");
               setCurrentScreen("profile");
+            }}
+          />
+        );
+      case "member-dashboard":
+        return (
+          <MemberDashboardScreen
+            onBack={handleBackToHome}
+            onNavigateToProfile={() => {
+              setProfileInitialMode("view");
+              setCurrentScreen("profile");
+            }}
+            onNavigateToSellerSetup={() => setCurrentScreen("seller-setup")}
+            onNavigateToPromoterSetup={() => {
+              // Navigate to web app for promoter setup
+              Linking.openURL(
+                `${process.env.EXPO_PUBLIC_WEB_URL || "http://localhost:3000"}/promoter-setup`
+              );
+            }}
+            onNavigateToStewardSetup={() => {
+              // Navigate to web app for steward setup
+              Linking.openURL(
+                `${process.env.EXPO_PUBLIC_WEB_URL || "http://localhost:3000"}/steward-setup`
+              );
             }}
           />
         );

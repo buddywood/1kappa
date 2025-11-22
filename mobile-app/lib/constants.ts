@@ -12,4 +12,11 @@ export const COLORS = {
 // API base URL - defaults to localhost for development
 export const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
 
+// Web app URL for deep linking
+export const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL || 'http://localhost:3000';
+
+// Cognito Configuration
+export const COGNITO_USER_POOL_ID = process.env.EXPO_PUBLIC_COGNITO_USER_POOL_ID || '';
+export const COGNITO_CLIENT_ID = process.env.EXPO_PUBLIC_COGNITO_CLIENT_ID || '';
+
 

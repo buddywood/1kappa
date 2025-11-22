@@ -25,6 +25,7 @@ function HeaderContent() {
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [notificationCount, setNotificationCount] = useState(0);
   const [sponsoringChapterName, setSponsoringChapterName] = useState<string | null>(null);
+  const [memberVerificationStatus, setMemberVerificationStatus] = useState<string | null>(null);
   
   // Show authenticated menu for any authenticated user (not just fully onboarded)
   const showAuthenticatedMenu = sessionStatus === 'authenticated' && nextAuthSession?.user;
@@ -99,11 +100,14 @@ function HeaderContent() {
   const showBecomeSeller = !showAuthenticatedMenu || !is_seller;
   const showBecomePromoter = !showAuthenticatedMenu || !is_promoter;
   const showBecomeSteward = !showAuthenticatedMenu || !is_steward;
+  // Hide "Become a Member" if user is a verified member
+  const isVerifiedMember = memberVerificationStatus === 'VERIFIED';
   const finalShowBecomeMember = (!showAuthenticatedMenu || 
     (is_seller && !is_fraternity_member)) && 
     !is_promoter && 
     !(is_fraternity_member && !is_seller && !is_promoter && !is_steward) &&
-    !(is_seller && is_fraternity_member);
+    !(is_seller && is_fraternity_member) &&
+    !isVerifiedMember;
 
   useEffect(() => {
     fetchTotalDonations()
@@ -117,7 +121,7 @@ function HeaderContent() {
       });
   }, []);
 
-  // Fetch profile picture when user is authenticated and has a memberId
+  // Fetch profile picture and verification status when user is authenticated and has a memberId
   useEffect(() => {
     const loadProfilePicture = async () => {
       if (showAuthenticatedMenu && (session?.user as any)?.memberId) {
@@ -126,10 +130,15 @@ function HeaderContent() {
           if (profile.headshot_url) {
             setProfilePicture(profile.headshot_url);
           }
+          if (profile.verification_status) {
+            setMemberVerificationStatus(profile.verification_status);
+          }
         } catch (err) {
           // Silently fail - user might not have a profile yet
           console.debug('Could not load profile picture:', err);
         }
+      } else {
+        setMemberVerificationStatus(null);
       }
     };
 
@@ -399,6 +408,18 @@ function HeaderContent() {
 
                     {/* Dashboard Section */}
                     <div className="py-2">
+                      {(is_fraternity_member || memberId) && isVerifiedMember && (
+                        <Link 
+                          href="/member-dashboard" 
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                        >
+                          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                          </svg>
+                          Member Dashboard
+                        </Link>
+                      )}
                       {(is_seller || sellerId) && (
                         <Link 
                           href="/seller-dashboard" 

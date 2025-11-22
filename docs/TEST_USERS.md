@@ -46,12 +46,15 @@ The test users are prefixed with `buddy+` and use the `@ebilly.com` domain. All 
   - ✅ `fraternity_member_id` is NOT NULL (required for CONSUMER role)
 
 **Access:**
+- Member Dashboard (`/member-dashboard`)
 - Shop and browse products
 - Purchase items
 - Favorite items
 - View notifications
 - Access steward marketplace
 - Claim steward listings
+- Connect directory (member-only search)
+- Apply to become Seller, Promoter, or Steward
 
 ---
 
@@ -218,12 +221,17 @@ This creates sample notifications for the test users, including:
 4. Set up Stripe account
 5. View orders and metrics
 
-### Testing Consumer Flow
+### Testing Member Flow
 1. Log in as `buddy+member@ebilly.com`
-2. Browse shop and collections
-3. Favorite items
-4. Attempt to purchase items
-5. View notifications
+2. Navigate to Member Dashboard (`/member-dashboard`)
+3. View verification status and stats
+4. Browse Connect directory (member-only)
+5. Browse shop and collections
+6. Favorite items
+7. Attempt to purchase items
+8. View steward marketplace and claim listings
+9. View notifications
+10. Apply to become Seller, Promoter, or Steward
 
 ### Testing Steward Flow
 1. Log in as `buddy+steward@ebilly.com`
@@ -278,10 +286,35 @@ The script handles existing users gracefully:
 
 ---
 
+## Member Role Testing
+
+For comprehensive member role testing, see:
+- `MEMBER_ROLE_TEST_PLAN.md` - Complete test plan for member functionality
+- `GUEST_ROLE_TEST_PLAN.md` - Test plan for guest functionality
+
+### Additional Member Test Scenarios
+
+To test member verification workflow:
+1. Create a new member with PENDING status
+2. Log in as admin user
+3. Navigate to Admin Dashboard
+4. Verify the member (PENDING → VERIFIED)
+5. Member can now access all member-only features
+
+To test member role transitions:
+1. Log in as `buddy+member@ebilly.com`
+2. Navigate to Member Dashboard
+3. Click "Become a Seller" to apply
+4. Click "Become a Promoter" to apply
+5. Click "Become a Steward" to apply
+6. Member retains all member capabilities
+
 ## Related Documentation
 
 - `LOCAL_SETUP.md` - Local development setup
 - `QUICK_START.md` - Quick start guide
+- `MEMBER_ROLE_TEST_PLAN.md` - Member role test plan
+- `GUEST_ROLE_TEST_PLAN.md` - Guest role test plan
 - `backend/scripts/grant-cognito-permissions.md` - Cognito permissions setup
 - `NEON_TEST_DB_SETUP.md` - Database setup for testing
 

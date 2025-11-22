@@ -7,7 +7,8 @@ import { sendWelcomeEmail } from '../services/email';
 import { authenticate } from '../middleware/auth';
 import { z } from 'zod';
 import { CognitoIdentityProviderClient, SignUpCommand, ConfirmSignUpCommand, ForgotPasswordCommand, ConfirmForgotPasswordCommand, AdminGetUserCommand, AdminConfirmSignUpCommand, ResendConfirmationCodeCommand, ListUsersCommand } from '@aws-sdk/client-cognito-identity-provider';
-import { getUserByCognitoSub, createUser, linkUserToMember, updateUserOnboardingStatusByCognitoSub } from '../db/queries';
+import { getUserByCognitoSub, createUser, linkUserToMember, updateUserOnboardingStatusByCognitoSub, upsertUserOnLogin } from '../db/queries';
+import { authenticateUser, verifyCognitoToken, extractUserInfoFromToken } from '../services/cognito';
 
 const router: ExpressRouter = Router();
 
@@ -355,6 +356,102 @@ router.post('/cognito/verify', async (req: Request, res: Response) => {
       error: error.name === 'CodeMismatchException'
         ? 'Invalid verification code'
         : error.message || 'Failed to verify account'
+    });
+  }
+});
+
+// Cognito SignIn endpoint
+router.post('/cognito/signin', async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    // Authenticate with Cognito
+    const authResponse = await authenticateUser(email, password);
+    
+    if (!authResponse.AuthenticationResult) {
+      return res.status(401).json({ error: 'Authentication failed' });
+    }
+
+    const { IdToken, AccessToken, RefreshToken, ExpiresIn } = authResponse.AuthenticationResult;
+
+    if (!IdToken || !AccessToken) {
+      return res.status(401).json({ error: 'Failed to get authentication tokens' });
+    }
+
+    // Verify and decode the ID token to get user info
+    const payload = await verifyCognitoToken(IdToken);
+    if (!payload) {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    const { cognitoSub, email: tokenEmail } = extractUserInfoFromToken(payload);
+
+    // Upsert user in database (create if doesn't exist, update last_login if exists)
+    const user = await upsertUserOnLogin(cognitoSub, tokenEmail || email);
+
+    // Get user role flags
+    let memberId = user.fraternity_member_id || null;
+    let sellerId = user.seller_id || null;
+    let promoterId = user.promoter_id || null;
+    let stewardId = user.steward_id || null;
+
+    // Get name from member if available
+    let name: string | null = user.name || null;
+    if (!name && memberId) {
+      const memberResult = await pool.query(
+        'SELECT full_name FROM fraternity_members WHERE id = $1',
+        [memberId]
+      );
+      if (memberResult.rows.length > 0) {
+        name = memberResult.rows[0].full_name;
+      }
+    }
+
+    res.json({
+      tokens: {
+        idToken: IdToken,
+        accessToken: AccessToken,
+        refreshToken: RefreshToken || null,
+        expiresIn: ExpiresIn || 3600,
+      },
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        memberId,
+        sellerId,
+        promoterId,
+        stewardId,
+        name,
+        is_fraternity_member: !!memberId,
+        is_seller: !!sellerId,
+        is_promoter: !!promoterId,
+        is_steward: !!stewardId,
+      },
+    });
+  } catch (error: any) {
+    console.error('Cognito SignIn error:', error);
+    
+    // Handle specific Cognito errors
+    if (error.name === 'NotAuthorizedException') {
+      return res.status(401).json({ error: 'Incorrect email or password' });
+    }
+    if (error.name === 'UserNotConfirmedException') {
+      return res.status(403).json({ 
+        error: 'Please verify your email address before signing in',
+        code: 'USER_NOT_CONFIRMED'
+      });
+    }
+    if (error.name === 'UserNotFoundException') {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.status(500).json({ 
+      error: error.message || 'Failed to sign in'
     });
   }
 });
@@ -1636,6 +1733,127 @@ router.put('/profile', authenticate, upload.single('headshot'), async (req: Requ
     }
     console.error('Error updating member profile:', error);
     res.status(500).json({ error: 'Failed to update member profile' });
+  }
+});
+
+// Get member metrics (donations, claims, purchases)
+router.get('/me/metrics', authenticate, async (req: Request, res: Response) => {
+  try {
+    if (!req.user || !req.user.memberId) {
+      return res.status(404).json({ error: 'Member profile not found' });
+    }
+
+    // Get steward claims (donations made through steward marketplace)
+    const claimsResult = await pool.query(
+      `SELECT 
+        COUNT(*) as total_claims,
+        COALESCE(SUM(chapter_donation_cents), 0) as total_donations_cents,
+        COALESCE(SUM(CASE WHEN status = 'PAID' THEN chapter_donation_cents ELSE 0 END), 0) as paid_donations_cents
+       FROM steward_claims
+       WHERE claimant_fraternity_member_id = $1`,
+      [req.user.memberId]
+    );
+
+    // Get orders (purchases from sellers)
+    const ordersResult = await pool.query(
+      `SELECT 
+        COUNT(*) as total_purchases,
+        COALESCE(SUM(total_amount_cents), 0) as total_spent_cents,
+        COALESCE(SUM(CASE WHEN status = 'PAID' THEN total_amount_cents ELSE 0 END), 0) as paid_spent_cents
+       FROM orders o
+       JOIN products p ON o.product_id = p.id
+       JOIN sellers s ON p.seller_id = s.id
+       WHERE s.fraternity_member_id = $1 OR o.buyer_email = $2`,
+      [req.user.memberId, req.user.email]
+    );
+
+    const claims = claimsResult.rows[0];
+    const orders = ordersResult.rows[0];
+
+    res.json({
+      totalClaims: parseInt(claims.total_claims) || 0,
+      totalDonationsCents: parseInt(claims.total_donations_cents) || 0,
+      paidDonationsCents: parseInt(claims.paid_donations_cents) || 0,
+      totalPurchases: parseInt(orders.total_purchases) || 0,
+      totalSpentCents: parseInt(orders.total_spent_cents) || 0,
+      paidSpentCents: parseInt(orders.paid_spent_cents) || 0,
+    });
+  } catch (error) {
+    console.error('Error fetching member metrics:', error);
+    res.status(500).json({ error: 'Failed to fetch member metrics' });
+  }
+});
+
+// Get member recent activity (claims and purchases)
+router.get('/me/activity', authenticate, async (req: Request, res: Response) => {
+  try {
+    if (!req.user || !req.user.memberId) {
+      return res.status(404).json({ error: 'Member profile not found' });
+    }
+
+    // Get recent steward claims
+    const claimsResult = await pool.query(
+      `SELECT 
+        sc.id,
+        sc.listing_id,
+        sl.name as listing_name,
+        sc.chapter_donation_cents,
+        sc.status,
+        sc.created_at,
+        c.name as chapter_name
+       FROM steward_claims sc
+       JOIN steward_listings sl ON sc.listing_id = sl.id
+       JOIN chapters c ON sl.sponsoring_chapter_id = c.id
+       WHERE sc.claimant_fraternity_member_id = $1
+       ORDER BY sc.created_at DESC
+       LIMIT 10`,
+      [req.user.memberId]
+    );
+
+    // Get recent orders
+    const ordersResult = await pool.query(
+      `SELECT 
+        o.id,
+        o.product_id,
+        p.name as product_name,
+        o.total_amount_cents,
+        o.status,
+        o.created_at,
+        s.name as seller_name
+       FROM orders o
+       JOIN products p ON o.product_id = p.id
+       JOIN sellers s ON p.seller_id = s.id
+       WHERE o.buyer_email = $1
+       ORDER BY o.created_at DESC
+       LIMIT 10`,
+      [req.user.email]
+    );
+
+    res.json({
+      claims: claimsResult.rows.map(row => ({
+        id: row.id,
+        type: 'claim',
+        listing_id: row.listing_id,
+        name: row.listing_name,
+        amount_cents: row.chapter_donation_cents,
+        status: row.status,
+        created_at: row.created_at,
+        chapter_name: row.chapter_name,
+      })),
+      purchases: ordersResult.rows.map(row => ({
+        id: row.id,
+        type: 'purchase',
+        product_id: row.product_id,
+        name: row.product_name,
+        amount_cents: row.total_amount_cents,
+        status: row.status,
+        created_at: row.created_at,
+        seller_name: row.seller_name,
+      })),
+    });
+  } catch (error) {
+    console.error('Error fetching member activity:', error);
+    res.status(500).json({ error: 'Failed to fetch member activity' });
   }
 });
 

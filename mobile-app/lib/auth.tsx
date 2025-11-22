@@ -1,21 +1,8 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { API_URL } from './constants';
 
-// AsyncStorage will be installed when needed: npm install @react-native-async-storage/async-storage
-// For now, using a simple in-memory storage
-let memoryStorage: { [key: string]: string | null } = {};
-
-const AsyncStorage = {
-  getItem: async (key: string): Promise<string | null> => {
-    return memoryStorage[key] || null;
-  },
-  setItem: async (key: string, value: string): Promise<void> => {
-    memoryStorage[key] = value;
-  },
-  removeItem: async (key: string): Promise<void> => {
-    delete memoryStorage[key];
-  },
-};
+// Use actual AsyncStorage package
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface User {
   id?: number;
@@ -84,28 +71,67 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
-      // For now, this is a placeholder - actual implementation will need Cognito
-      // This should integrate with AWS Cognito for authentication
-      // For initial implementation, we'll use a simple token-based approach
+      // Import Cognito service
+      let cognitoModule;
+      try {
+        cognitoModule = await import('./cognito');
+      } catch (importError: any) {
+        console.error('Failed to import Cognito module:', importError);
+        throw new Error('Cognito authentication not available. Please ensure amazon-cognito-identity-js is properly installed and configured.');
+      }
       
-      // TODO: Replace with actual Cognito authentication
-      // For now, return an error indicating auth is not yet implemented
-      throw new Error('Authentication not yet implemented. Please use the web app to login.');
+      if (!cognitoModule || !cognitoModule.signIn) {
+        throw new Error('Cognito signIn function not available. Please check your Cognito configuration.');
+      }
       
-      // Once Cognito is integrated:
-      // 1. Authenticate with Cognito
-      // 2. Get tokens (idToken, accessToken)
-      // 3. Call backend /api/users/upsert-on-login
-      // 4. Store token and user info
-      // 5. Update state
+      const { signIn } = cognitoModule;
+      
+      // Authenticate with Cognito directly
+      const { tokens, user } = await signIn(email, password);
+      
+      // Store tokens and user info
+      await AsyncStorage.setItem(TOKEN_KEY, tokens.idToken);
+      await AsyncStorage.setItem(USER_KEY, JSON.stringify({
+        ...user,
+        is_fraternity_member: !!user.memberId,
+        is_seller: !!user.sellerId,
+        is_promoter: !!user.promoterId,
+        is_steward: !!user.stewardId,
+      }));
+      
+      // Update state
+      setToken(tokens.idToken);
+      setUser({
+        ...user,
+        is_fraternity_member: !!user.memberId,
+        is_seller: !!user.sellerId,
+        is_promoter: !!user.promoterId,
+        is_steward: !!user.stewardId,
+      });
     } catch (error: any) {
       console.error('Login error:', error);
+      // If Cognito service is not available, fall back to error message
+      if (error.message?.includes('not yet implemented') || error.message?.includes('Failed to fetch')) {
+        throw new Error('Authentication not yet implemented. Please use the web app to login.');
+      }
       throw error;
     }
   };
 
   const logout = async () => {
     try {
+      // Sign out from Cognito if user email exists
+      if (user?.email) {
+        try {
+          const { signOut } = await import('./cognito');
+          await signOut(user.email);
+        } catch (error) {
+          // Continue with local logout even if Cognito signout fails
+          console.debug('Cognito signout error (continuing with local logout):', error);
+        }
+      }
+      
+      // Clear local storage
       await AsyncStorage.removeItem(TOKEN_KEY);
       await AsyncStorage.removeItem(USER_KEY);
       setToken(null);

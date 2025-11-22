@@ -818,6 +818,62 @@ export async function updateMemberProfile(
   return res.json();
 }
 
+export interface MemberMetrics {
+  totalClaims: number;
+  totalDonationsCents: number;
+  paidDonationsCents: number;
+  totalPurchases: number;
+  totalSpentCents: number;
+  paidSpentCents: number;
+}
+
+export async function getMemberMetrics(): Promise<MemberMetrics> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/members/me/metrics`, {
+    headers,
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to fetch member metrics');
+  }
+  return res.json();
+}
+
+export interface MemberActivity {
+  claims: Array<{
+    id: number;
+    type: 'claim';
+    listing_id: number;
+    name: string;
+    amount_cents: number;
+    status: string;
+    created_at: string;
+    chapter_name: string;
+  }>;
+  purchases: Array<{
+    id: number;
+    type: 'purchase';
+    product_id: number;
+    name: string;
+    amount_cents: number;
+    status: string;
+    created_at: string;
+    seller_name: string;
+  }>;
+}
+
+export async function getMemberActivity(): Promise<MemberActivity> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/members/me/activity`, {
+    headers,
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to fetch member activity');
+  }
+  return res.json();
+}
+
 export interface SellerWithProducts extends Seller {
   product_count: number;
   products: Product[];

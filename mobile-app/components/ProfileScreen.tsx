@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   View,
   Text,
@@ -7,48 +7,166 @@ import {
   TouchableOpacity,
   TextInput,
   Image,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { COLORS } from '../lib/constants';
-import { useAuth } from '../lib/auth';
-import ScreenHeader from './ScreenHeader';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { COLORS } from "../lib/constants";
+import { useAuth } from "../lib/auth";
+import ScreenHeader from "./ScreenHeader";
+
+const REMEMBERED_EMAIL_KEY = "@1kappa:remembered_email";
+const REMEMBER_ME_KEY = "@1kappa:remember_me";
 
 interface ProfileScreenProps {
   onBack: () => void;
-  initialMode?: 'login' | 'register';
+  initialMode?: "login" | "register";
 }
 
 export default function ProfileScreen({
   onBack,
-  initialMode = 'login',
+  initialMode = "login",
 }: ProfileScreenProps) {
   const { isGuest, user, login, logout } = useAuth();
-  const [email, setEmail] = React.useState('');
-  const [password, setPassword] = React.useState('');
-  const [isLogin, setIsLogin] = React.useState(initialMode === 'login');
-  const [name, setName] = React.useState('');
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [isLogin, setIsLogin] = React.useState(initialMode === "login");
+  const [name, setName] = React.useState("");
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [verificationCode, setVerificationCode] = React.useState("");
+  const [needsVerification, setNeedsVerification] = React.useState(false);
+  const [cognitoSub, setCognitoSub] = React.useState<string | null>(null);
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [rememberMe, setRememberMe] = React.useState(false);
+
+  // Load remembered email on mount
+  React.useEffect(() => {
+    const loadRememberedEmail = async () => {
+      try {
+        const rememberedEmail = await AsyncStorage.getItem(
+          REMEMBERED_EMAIL_KEY
+        );
+        const rememberMePreference = await AsyncStorage.getItem(
+          REMEMBER_ME_KEY
+        );
+
+        if (rememberedEmail && rememberMePreference === "true") {
+          setEmail(rememberedEmail);
+          setRememberMe(true);
+        }
+      } catch (error) {
+        console.error("Error loading remembered email:", error);
+      }
+    };
+
+    loadRememberedEmail();
+  }, []);
 
   const handleLogin = async () => {
-    // TODO: Implement actual login logic
-    console.log('Login:', email, password);
-    // For now, just show a placeholder
-    alert('Login functionality coming soon');
+    if (!email || !password) {
+      setError("Please enter both email and password");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      await login(email, password);
+
+      // Save or clear remembered email based on rememberMe preference
+      if (rememberMe) {
+        await AsyncStorage.setItem(REMEMBERED_EMAIL_KEY, email);
+        await AsyncStorage.setItem(REMEMBER_ME_KEY, "true");
+      } else {
+        await AsyncStorage.removeItem(REMEMBERED_EMAIL_KEY);
+        await AsyncStorage.removeItem(REMEMBER_ME_KEY);
+      }
+
+      // Login successful - auth context will update, component will re-render showing profile
+    } catch (err: any) {
+      console.error("Login error:", err);
+      setError(
+        err.message || "Failed to sign in. Please check your credentials."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleRegister = async () => {
-    // TODO: Implement actual registration logic
-    console.log('Register:', name, email, password);
-    // For now, just show a placeholder
-    alert('Registration functionality coming soon');
+    if (!name || !email || !password) {
+      setError("Please fill in all fields");
+      return;
+    }
+
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { signUp } = await import("../lib/cognito");
+      const result = await signUp(email, password);
+      setCognitoSub(result.userSub);
+      setNeedsVerification(true);
+      setError(null);
+    } catch (err: any) {
+      console.error("Registration error:", err);
+      if (err.code === "UsernameExistsException") {
+        setError(
+          "An account with this email already exists. Please sign in instead."
+        );
+        setIsLogin(true);
+      } else {
+        setError(err.message || "Failed to create account. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyEmail = async () => {
+    if (!verificationCode) {
+      setError("Please enter the verification code");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { confirmSignUp } = await import("../lib/cognito");
+      await confirmSignUp(email, verificationCode, cognitoSub || undefined);
+      setNeedsVerification(false);
+      setError(null);
+      // After verification, user can now log in
+      setIsLogin(true);
+      alert("Email verified! Please sign in with your credentials.");
+    } catch (err: any) {
+      console.error("Verification error:", err);
+      if (err.code === "CodeMismatchException") {
+        setError(
+          "Invalid verification code. Please check your email and try again."
+        );
+      } else if (err.code === "ExpiredCodeException") {
+        setError("Verification code has expired. Please request a new one.");
+      } else {
+        setError(err.message || "Failed to verify email. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (!isGuest && user) {
     return (
       <View style={styles.container}>
-        <ScreenHeader
-          title="Profile"
-          onBack={onBack}
-        />
+        <ScreenHeader title="Profile" onBack={onBack} />
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
@@ -59,19 +177,17 @@ export default function ProfileScreen({
                 <Text style={styles.avatarText}>
                   {user.name
                     ? user.name
-                        .split(' ')
+                        .split(" ")
                         .map((n) => n[0])
-                        .join('')
+                        .join("")
                         .toUpperCase()
                         .slice(0, 2)
-                    : user.email?.[0].toUpperCase() || 'U'}
+                    : user.email?.[0].toUpperCase() || "U"}
                 </Text>
               </View>
             </View>
             <Text style={styles.userName}>{user.name || user.email}</Text>
-            {user.email && (
-              <Text style={styles.userEmail}>{user.email}</Text>
-            )}
+            {user.email && <Text style={styles.userEmail}>{user.email}</Text>}
           </View>
 
           <View style={styles.menuSection}>
@@ -103,19 +219,31 @@ export default function ProfileScreen({
 
   return (
     <View style={styles.container}>
-      <ScreenHeader
-        title={isLogin ? 'Login' : 'Sign Up'}
-        onBack={onBack}
-      />
-      <View style={styles.logoContainer}>
-        <Image
-          source={require('../assets/stacked-logo.png')}
-          style={styles.logo}
-          resizeMode="cover"
-        />
-        <Text style={styles.title}>
-          {isLogin ? 'Welcome Back' : 'Create Account'}
-        </Text>
+      <ScreenHeader title={isLogin ? "Login" : "Sign Up"} onBack={onBack} />
+      <View style={styles.headerContainer}>
+        <View style={styles.firstRow}>
+          <View style={styles.logoColumn}>
+            <Image
+              source={require("../assets/icon.png")}
+              style={styles.logo}
+              resizeMode="contain"
+              width={75}
+              height={75}
+            />
+          </View>
+          <View style={styles.textColumn}>
+            <Text style={styles.title}>
+              {isLogin ? "Welcome Back" : "Create Account"}
+            </Text>
+          </View>
+        </View>
+        <View style={styles.secondRow}>
+          <Text style={styles.subtitle}>
+            {isLogin
+              ? "Sign in to access your account"
+              : "Join the brotherhood marketplace"}
+          </Text>
+        </View>
       </View>
       <ScrollView
         style={styles.scrollView}
@@ -124,18 +252,13 @@ export default function ProfileScreen({
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.formContainer}>
-          <Text style={styles.subtitle}>
-            {isLogin
-              ? 'Sign in to access your account'
-              : 'Join the brotherhood marketplace'}
-          </Text>
           {!isLogin && (
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Full Name</Text>
               <TextInput
                 style={styles.input}
                 placeholder="Enter your full name"
-                placeholderTextColor={COLORS.midnightNavy + '60'}
+                placeholderTextColor={COLORS.midnightNavy + "60"}
                 value={name}
                 onChangeText={setName}
                 autoCapitalize="words"
@@ -148,7 +271,7 @@ export default function ProfileScreen({
             <TextInput
               style={styles.input}
               placeholder="Enter your email"
-              placeholderTextColor={COLORS.midnightNavy + '60'}
+              placeholderTextColor={COLORS.midnightNavy + "60"}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -159,25 +282,100 @@ export default function ProfileScreen({
 
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your password"
-              placeholderTextColor={COLORS.midnightNavy + '60'}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCapitalize="none"
-            />
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Enter your password"
+                placeholderTextColor={COLORS.midnightNavy + "60"}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.passwordIcon}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name={showPassword ? "eye-off-outline" : "eye-outline"}
+                  size={24}
+                  color={COLORS.midnightNavy + "80"}
+                />
+              </TouchableOpacity>
+            </View>
           </View>
 
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={isLogin ? handleLogin : handleRegister}
-          >
-            <Text style={styles.primaryButtonText}>
-            {isLogin ? 'Sign In' : 'Create Account'}
-            </Text>
-          </TouchableOpacity>
+          {isLogin && (
+            <TouchableOpacity
+              style={styles.rememberMeContainer}
+              onPress={() => setRememberMe(!rememberMe)}
+              activeOpacity={0.7}
+            >
+              <View
+                style={[styles.checkbox, rememberMe && styles.checkboxChecked]}
+              >
+                {rememberMe && (
+                  <Ionicons name="checkmark" size={18} color={COLORS.white} />
+                )}
+              </View>
+              <Text style={styles.rememberMeText}>Remember me</Text>
+            </TouchableOpacity>
+          )}
+
+          {error && (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
+
+          {needsVerification ? (
+            <>
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Verification Code</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter code from email"
+                  placeholderTextColor={COLORS.midnightNavy + "60"}
+                  value={verificationCode}
+                  onChangeText={setVerificationCode}
+                  keyboardType="number-pad"
+                  autoCapitalize="none"
+                />
+              </View>
+              <TouchableOpacity
+                style={[
+                  styles.primaryButton,
+                  loading && styles.primaryButtonDisabled,
+                ]}
+                onPress={handleVerifyEmail}
+                disabled={loading}
+              >
+                <Text style={styles.primaryButtonText}>
+                  {loading ? "Verifying..." : "Verify Email"}
+                </Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <TouchableOpacity
+              style={[
+                styles.primaryButton,
+                loading && styles.primaryButtonDisabled,
+              ]}
+              onPress={isLogin ? handleLogin : handleRegister}
+              disabled={loading}
+            >
+              <Text style={styles.primaryButtonText}>
+                {loading
+                  ? isLogin
+                    ? "Signing In..."
+                    : "Creating Account..."
+                  : isLogin
+                  ? "Sign In"
+                  : "Create Account"}
+              </Text>
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             style={styles.switchButton}
@@ -186,7 +384,7 @@ export default function ProfileScreen({
             <Text style={styles.switchButtonText}>
               {isLogin
                 ? "Don't have an account? Sign Up"
-                : 'Already have an account? Sign In'}
+                : "Already have an account? Sign In"}
             </Text>
           </TouchableOpacity>
         </View>
@@ -200,17 +398,36 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.cream,
   },
-  logoContainer: {
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
+  headerContainer: {
+    flexDirection: "column",
     paddingTop: 0,
-    paddingBottom: 16,
+    paddingBottom: 24,
     paddingHorizontal: 16,
-    gap: 0,
     backgroundColor: COLORS.cream,
-    marginTop: -64,
+    marginTop: 64,
     marginBottom: 0,
+  },
+  firstRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+    gap: 16,
+  },
+  logoColumn: {
+    width: 75,
+    alignItems: "flex-start",
+    justifyContent: "center",
+  },
+  textColumn: {
+    flex: 1,
+    alignItems: "flex-start",
+    justifyContent: "center",
+    paddingLeft: 1,
+  },
+  secondRow: {
+    width: "100%",
+    alignItems: "center",
   },
   scrollView: {
     flex: 1,
@@ -221,34 +438,34 @@ const styles = StyleSheet.create({
     paddingBottom: 80,
   },
   formContainer: {
-    width: '100%',
+    width: "100%",
     paddingTop: 16,
   },
   logo: {
-    width: 300,
-    height: 300,
+    width: 150,
+    height: 150,
     marginTop: 0,
     marginBottom: 0,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontWeight: "bold",
     color: COLORS.midnightNavy,
-    textAlign: 'center',
+    textAlign: "left",
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: COLORS.midnightNavy,
     opacity: 0.7,
-    marginBottom: 32,
-    textAlign: 'center',
+    textAlign: "left",
+    lineHeight: 20,
   },
   inputContainer: {
     marginBottom: 20,
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: COLORS.midnightNavy,
     marginBottom: 8,
   },
@@ -261,30 +478,73 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.frostGray,
   },
+  passwordContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.frostGray,
+  },
+  passwordInput: {
+    flex: 1,
+    padding: 16,
+    fontSize: 16,
+    color: COLORS.midnightNavy,
+  },
+  passwordIcon: {
+    padding: 16,
+    paddingLeft: 8,
+  },
+  rememberMeContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: COLORS.crimson,
+    backgroundColor: "transparent",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
+  },
+  checkboxChecked: {
+    backgroundColor: COLORS.crimson,
+  },
+  rememberMeText: {
+    fontSize: 14,
+    color: COLORS.midnightNavy,
+    opacity: 0.8,
+  },
   primaryButton: {
     backgroundColor: COLORS.crimson,
     borderRadius: 12,
     padding: 16,
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 8,
     marginBottom: 16,
   },
   primaryButtonText: {
     color: COLORS.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   switchButton: {
     padding: 16,
-    alignItems: 'center',
+    alignItems: "center",
   },
   switchButtonText: {
     color: COLORS.crimson,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   profileSection: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 32,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.frostGray,
@@ -298,17 +558,17 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 40,
     backgroundColor: COLORS.crimson,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   avatarText: {
     color: COLORS.white,
     fontSize: 32,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   userName: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: COLORS.midnightNavy,
     marginBottom: 4,
   },
@@ -320,12 +580,12 @@ const styles = StyleSheet.create({
   menuSection: {
     backgroundColor: COLORS.white,
     borderRadius: 12,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   menuItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.frostGray,
@@ -333,12 +593,12 @@ const styles = StyleSheet.create({
   menuItemText: {
     fontSize: 16,
     color: COLORS.midnightNavy,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   menuItemArrow: {
     fontSize: 18,
     color: COLORS.crimson,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   logoutItem: {
     borderBottomWidth: 0,
@@ -346,5 +606,20 @@ const styles = StyleSheet.create({
   logoutText: {
     color: COLORS.crimson,
   },
+  errorContainer: {
+    backgroundColor: "#FEE2E2",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#FCA5A5",
+  },
+  errorText: {
+    color: "#DC2626",
+    fontSize: 14,
+    textAlign: "center",
+  },
+  primaryButtonDisabled: {
+    opacity: 0.6,
+  },
 });
-
