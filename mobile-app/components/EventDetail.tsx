@@ -109,6 +109,23 @@ export default function EventDetail({
     });
   };
 
+  const formatDressCode = (code: string) => {
+    const dressCodeMap: Record<string, string> = {
+      business: "Business",
+      business_casual: "Business Casual",
+      formal: "Formal",
+      semi_formal: "Semi-Formal",
+      kappa_casual: "Kappa Casual",
+      greek_encouraged: "Greek Encouraged",
+      greek_required: "Greek Required",
+      outdoor: "Outdoor",
+      athletic: "Athletic",
+      comfortable: "Comfortable",
+      all_white: "All White",
+    };
+    return dressCodeMap[code] || code;
+  };
+
   if (loading) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -204,15 +221,28 @@ export default function EventDetail({
         <View style={styles.infoContainer}>
           <Text style={styles.eventTitle}>{event.title}</Text>
 
-          {/* Only show sponsored chapter badge under title */}
-          {sponsoringChapterName && (
-            <View style={styles.badgesContainer}>
+          {/* Badges: Sponsored Chapter and Event Type */}
+          <View style={styles.badgesContainer}>
+            {sponsoringChapterName && (
               <VerificationBadge
                 type="sponsored-chapter"
                 chapterName={sponsoringChapterName}
               />
-            </View>
-          )}
+            )}
+            {event.event_type_id &&
+              (() => {
+                const eventType = eventTypes.find(
+                  (et) => et.id === event.event_type_id
+                );
+                return eventType ? (
+                  <View style={styles.eventTypeBadge}>
+                    <Text style={styles.eventTypeBadgeText}>
+                      {eventType.description}
+                    </Text>
+                  </View>
+                ) : null;
+              })()}
+          </View>
 
           {/* Event Details */}
           <View style={styles.detailsContainer}>
@@ -260,6 +290,32 @@ export default function EventDetail({
                 <Text style={[styles.detailText, styles.priceText]}>
                   ${(event.ticket_price_cents / 100).toFixed(2)}
                 </Text>
+              </View>
+            )}
+            {event.dress_codes && event.dress_codes.length > 0 && (
+              <View style={styles.detailRow}>
+                <Ionicons
+                  name="shirt-outline"
+                  size={20}
+                  color={COLORS.midnightNavy}
+                  style={{ opacity: 0.7 }}
+                />
+                <View style={styles.dressCodeContainer}>
+                  <View style={styles.dressCodeChipWrapper}>
+                    {event.dress_codes.map((code) => (
+                      <View key={code} style={styles.dressCodeChip}>
+                        <Text style={styles.dressCodeChipText}>
+                          {formatDressCode(code)}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                  {event.dress_code_notes && (
+                    <Text style={styles.dressCodeNotes}>
+                      {event.dress_code_notes}
+                    </Text>
+                  )}
+                </View>
               </View>
             )}
           </View>
@@ -706,6 +762,17 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 24,
   },
+  eventTypeBadge: {
+    backgroundColor: COLORS.auroraGold,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  eventTypeBadgeText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: COLORS.midnightNavy,
+  },
   detailsContainer: {
     marginBottom: 24,
     gap: 12,
@@ -725,6 +792,16 @@ const styles = StyleSheet.create({
     color: COLORS.crimson,
     fontWeight: "600",
     opacity: 1,
+  },
+  dressCodeContainer: {
+    flex: 1,
+  },
+  dressCodeNotes: {
+    fontSize: 14,
+    color: COLORS.midnightNavy,
+    opacity: 0.6,
+    marginTop: 4,
+    fontStyle: "italic",
   },
   descriptionContainer: {
     marginBottom: 24,
@@ -982,6 +1059,27 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 16,
+    fontWeight: "600",
+    color: COLORS.midnightNavy,
+  },
+  dressCodeChipWrapper: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    flex: 1,
+    marginHorizontal: -4,
+  },
+  dressCodeChip: {
+    backgroundColor: COLORS.cream,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: COLORS.frostGray,
+    marginHorizontal: 4,
+    marginVertical: 4,
+  },
+  dressCodeChipText: {
+    fontSize: 14,
     fontWeight: "600",
     color: COLORS.midnightNavy,
   },

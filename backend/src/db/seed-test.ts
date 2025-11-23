@@ -340,7 +340,46 @@ function getFutureDate(daysFromNow: number, hours: number = 18): Date {
   return date;
 }
 
-const sampleEvents = [
+interface SampleEventData {
+  title: string;
+  description: string;
+  event_date: Date;
+  location: string;
+  city: string | null;
+  state: string | null;
+  image_url: string | null;
+  ticket_price_cents: number;
+  event_type:
+    | "SOCIAL"
+    | "NETWORKING"
+    | "EDUCATIONAL"
+    | "FUNDRAISING"
+    | "COMMUNITY_SERVICE"
+    | "WELLNESS_SPORTS"
+    | "VIRTUAL"
+    | "CREATIVE_WORKSHOP"
+    | "EXCLUSIVE_VIP";
+  event_audience_type: "CHAPTER" | "ONE_KAPPA" | "GENERAL_PUBLIC";
+  all_day?: boolean;
+  duration_minutes?: number;
+  event_link?: string | null;
+  dress_codes?: Array<
+    | "business"
+    | "business_casual"
+    | "formal"
+    | "semi_formal"
+    | "kappa_casual"
+    | "greek_encouraged"
+    | "greek_required"
+    | "outdoor"
+    | "athletic"
+    | "comfortable"
+    | "all_white"
+  >;
+  dress_code_notes?: string | null;
+}
+
+const sampleEvents: SampleEventData[] = [
   {
     title: "Founders' Day Banquet",
     description:
@@ -352,6 +391,12 @@ const sampleEvents = [
     image_url:
       "https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&h=600&fit=crop",
     ticket_price_cents: 7500, // $75.00
+    event_type: "SOCIAL",
+    event_audience_type: "ONE_KAPPA",
+    all_day: false,
+    duration_minutes: 240, // 4 hours
+    dress_codes: ["formal", "semi_formal"],
+    dress_code_notes: "Black tie optional. Tuxedos or formal suits preferred.",
   },
   {
     title: "Spring Brotherhood Mixer",
@@ -364,7 +409,12 @@ const sampleEvents = [
     image_url:
       "https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&h=600&fit=crop",
     ticket_price_cents: 2500, // $25.00
-    max_attendees: 150,
+    event_type: "NETWORKING",
+    event_audience_type: "ONE_KAPPA",
+    all_day: false,
+    duration_minutes: 180, // 3 hours
+    dress_codes: ["business_casual", "kappa_casual"],
+    dress_code_notes: "Kappa apparel encouraged but not required.",
   },
   {
     title: "Community Service Drive",
@@ -377,7 +427,13 @@ const sampleEvents = [
     image_url:
       "https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=800&h=600&fit=crop",
     ticket_price_cents: 0, // Free event
-    max_attendees: 100,
+    event_type: "COMMUNITY_SERVICE",
+    event_audience_type: "GENERAL_PUBLIC",
+    all_day: true,
+    duration_minutes: 480, // 8 hours
+    dress_codes: ["comfortable", "outdoor"],
+    dress_code_notes:
+      "Wear comfortable clothing suitable for outdoor activities and volunteering.",
   },
   {
     title: "Kappa Leadership Summit",
@@ -390,7 +446,12 @@ const sampleEvents = [
     image_url:
       "https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&h=600&fit=crop",
     ticket_price_cents: 5000, // $50.00
-    max_attendees: 75,
+    event_type: "EDUCATIONAL",
+    event_audience_type: "ONE_KAPPA",
+    all_day: false,
+    duration_minutes: 360, // 6 hours
+    dress_codes: ["business", "business_casual"],
+    dress_code_notes: "Professional attire required for all sessions.",
   },
   {
     title: "Alumni Chapter Golf Tournament",
@@ -403,7 +464,13 @@ const sampleEvents = [
     image_url:
       "https://images.unsplash.com/photo-1535131749006-b7f58c99034b?w=800&h=600&fit=crop",
     ticket_price_cents: 10000, // $100.00
-    max_attendees: 120,
+    event_type: "WELLNESS_SPORTS",
+    event_audience_type: "ONE_KAPPA",
+    all_day: false,
+    duration_minutes: 420, // 7 hours (includes lunch and reception)
+    dress_codes: ["athletic", "outdoor"],
+    dress_code_notes:
+      "Golf attire required on the course. Collared shirts and appropriate golf pants/shorts.",
   },
   {
     title: "Holiday Celebration & Toy Drive",
@@ -416,7 +483,49 @@ const sampleEvents = [
     image_url:
       "https://images.unsplash.com/photo-1482517967863-00e15c9b44be?w=800&h=600&fit=crop",
     ticket_price_cents: 2000, // $20.00
-    max_attendees: 80,
+    event_type: "SOCIAL",
+    event_audience_type: "GENERAL_PUBLIC",
+    all_day: false,
+    duration_minutes: 180, // 3 hours
+    dress_codes: ["business_casual", "comfortable"],
+    dress_code_notes: "Holiday-themed attire welcome!",
+  },
+  {
+    title: "Virtual Chapter Meeting",
+    description:
+      "Monthly chapter meeting held virtually. All active members are expected to attend. Agenda includes chapter business, upcoming events, and brotherhood updates.",
+    event_date: getFutureDate(7, 19),
+    location: "Online",
+    city: null,
+    state: null,
+    image_url:
+      "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=800&h=600&fit=crop",
+    ticket_price_cents: 0,
+    event_type: "VIRTUAL",
+    event_audience_type: "CHAPTER",
+    all_day: false,
+    duration_minutes: 90, // 1.5 hours
+    event_link: "https://zoom.us/j/123456789",
+    dress_codes: ["comfortable"],
+    dress_code_notes: "Business casual recommended for video calls.",
+  },
+  {
+    title: "Fundraising Gala",
+    description:
+      "Elegant fundraising gala to support our scholarship fund. Features dinner, live entertainment, silent auction, and recognition of scholarship recipients. All proceeds go to supporting student members.",
+    event_date: getFutureDate(120, 18),
+    location: "Grand Ballroom, Marriott",
+    city: "Minneapolis",
+    state: "MN",
+    image_url:
+      "https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&h=600&fit=crop",
+    ticket_price_cents: 15000, // $150.00
+    event_type: "FUNDRAISING",
+    event_audience_type: "GENERAL_PUBLIC",
+    all_day: false,
+    duration_minutes: 300, // 5 hours
+    dress_codes: ["formal", "semi_formal"],
+    dress_code_notes: "Black tie preferred. Formal evening wear required.",
   },
 ];
 
@@ -578,7 +687,7 @@ async function seedStewardSellers(): Promise<void> {
           const seasons = ["Fall", "Spring"];
           const season = seasons[Math.floor(Math.random() * seasons.length)];
           const year = 2015 + Math.floor(Math.random() * 10); // Random year between 2015-2024
-          
+
           const memberResult = await pool.query(
             `INSERT INTO fraternity_members (
               email, name, membership_number, registration_status, 
@@ -600,7 +709,9 @@ async function seedStewardSellers(): Promise<void> {
 
         // Ensure memberId is defined before proceeding
         if (!memberId) {
-          throw new Error(`Failed to get or create fraternity_member_id for steward ${stewardData.email}`);
+          throw new Error(
+            `Failed to get or create fraternity_member_id for steward ${stewardData.email}`
+          );
         }
 
         // Check if steward already exists
@@ -646,7 +757,7 @@ async function seedStewardSellers(): Promise<void> {
             await updateStewardStatus(stewardId, "APPROVED");
           }
         }
-        
+
         stewardIndex++; // Increment for next iteration
 
         // Check if seller already exists
@@ -682,11 +793,10 @@ async function seedStewardSellers(): Promise<void> {
           });
           sellerId = seller.id;
           // Approve the seller and set verification_status to VERIFIED
-          await pool.query("UPDATE sellers SET status = $1, verification_status = $2 WHERE id = $3", [
-            "APPROVED",
-            "VERIFIED",
-            sellerId,
-          ]);
+          await pool.query(
+            "UPDATE sellers SET status = $1, verification_status = $2 WHERE id = $3",
+            ["APPROVED", "VERIFIED", sellerId]
+          );
         }
 
         const memberResult = await pool.query(
@@ -848,10 +958,10 @@ async function seedProducts(): Promise<void> {
         }
         // Also ensure verification_status is VERIFIED if not already set (sellers start as VERIFIED)
         if (seller.verification_status !== "VERIFIED") {
-          await pool.query("UPDATE sellers SET verification_status = $1 WHERE id = $2", [
-            "VERIFIED",
-            seller.id,
-          ]);
+          await pool.query(
+            "UPDATE sellers SET verification_status = $1 WHERE id = $2",
+            ["VERIFIED", seller.id]
+          );
         }
 
         // If seller exists but doesn't have a fraternity_member_id and should be a member, create/update member
@@ -937,7 +1047,7 @@ async function seedProducts(): Promise<void> {
             const seasons = ["Fall", "Spring"];
             const season = seasons[Math.floor(Math.random() * seasons.length)];
             const year = 2015 + Math.floor(Math.random() * 10); // Random year between 2015-2024
-            
+
             const memberResult = await pool.query(
               `INSERT INTO fraternity_members (
                 email, name, membership_number, registration_status, 
@@ -974,11 +1084,10 @@ async function seedProducts(): Promise<void> {
         });
 
         // Approve the seller and set verification_status to VERIFIED
-        await pool.query("UPDATE sellers SET status = $1, verification_status = $2 WHERE id = $3", [
-          "APPROVED",
-          "VERIFIED",
-          newSeller.id,
-        ]);
+        await pool.query(
+          "UPDATE sellers SET status = $1, verification_status = $2 WHERE id = $3",
+          ["APPROVED", "VERIFIED", newSeller.id]
+        );
 
         // Update headshot_url and store_logo_url if provided (in case they weren't set during creation)
         if ((sellerData as any).headshot_url) {
@@ -1277,12 +1386,12 @@ async function seedEvents(): Promise<void> {
   const chapters = await getAllChapters();
   const availableChapters = chapters.length > 0 ? chapters : [];
 
-  // Get event types and audience types
+  // Get all event types and audience types for lookup
   const eventTypesResult = await pool.query(
-    "SELECT id FROM event_types WHERE is_active = true ORDER BY id LIMIT 1"
+    "SELECT id, enum FROM event_types WHERE is_active = true"
   );
   const eventAudienceTypesResult = await pool.query(
-    "SELECT id FROM event_audience_types WHERE is_active = true ORDER BY id LIMIT 1"
+    "SELECT id, enum FROM event_audience_types WHERE is_active = true"
   );
 
   if (eventTypesResult.rows.length === 0) {
@@ -1291,12 +1400,19 @@ async function seedEvents(): Promise<void> {
   }
 
   if (eventAudienceTypesResult.rows.length === 0) {
-    console.warn("  ⚠️  No event audience types found. Please seed event audience types first.");
+    console.warn(
+      "  ⚠️  No event audience types found. Please seed event audience types first."
+    );
     return;
   }
 
-  const eventTypeId = eventTypesResult.rows[0].id;
-  const eventAudienceTypeId = eventAudienceTypesResult.rows[0].id;
+  // Create lookup maps
+  const eventTypeMap = new Map(
+    eventTypesResult.rows.map((row) => [row.enum, row.id])
+  );
+  const eventAudienceTypeMap = new Map(
+    eventAudienceTypesResult.rows.map((row) => [row.enum, row.id])
+  );
 
   // Get approved promoters
   const promotersResult = await pool.query(
@@ -1341,7 +1457,31 @@ async function seedEvents(): Promise<void> {
           : null;
 
       if (!sponsoredChapter) {
-        console.log(`  ⚠ Skipping event: ${eventData.title} (no chapters available)`);
+        console.log(
+          `  ⚠ Skipping event: ${eventData.title} (no chapters available)`
+        );
+        continue;
+      }
+
+      // Look up event type and audience type IDs
+      const eventTypeId = eventData.event_type
+        ? eventTypeMap.get(eventData.event_type)
+        : eventTypesResult.rows[0].id;
+      const eventAudienceTypeId = eventData.event_audience_type
+        ? eventAudienceTypeMap.get(eventData.event_audience_type)
+        : eventAudienceTypesResult.rows[0].id;
+
+      if (!eventTypeId) {
+        console.warn(
+          `  ⚠ Skipping event: ${eventData.title} (invalid event_type: ${eventData.event_type})`
+        );
+        continue;
+      }
+
+      if (!eventAudienceTypeId) {
+        console.warn(
+          `  ⚠ Skipping event: ${eventData.title} (invalid event_audience_type: ${eventData.event_audience_type})`
+        );
         continue;
       }
 
@@ -1351,14 +1491,30 @@ async function seedEvents(): Promise<void> {
         description: eventData.description,
         event_date: eventData.event_date,
         location: eventData.location,
-        city: eventData.city,
-        state: eventData.state,
-        image_url: eventData.image_url,
+        city: eventData.city || undefined,
+        state: eventData.state || undefined,
+        image_url: eventData.image_url || undefined,
         sponsored_chapter_id: sponsoredChapter,
         event_type_id: eventTypeId,
         event_audience_type_id: eventAudienceTypeId,
-        dress_codes: ['business_casual'],
-        ticket_price_cents: eventData.ticket_price_cents,
+        all_day: eventData.all_day ?? false,
+        duration_minutes: eventData.duration_minutes || undefined,
+        event_link: eventData.event_link || undefined,
+        dress_codes: (eventData.dress_codes || ["business_casual"]) as Array<
+          | "business"
+          | "business_casual"
+          | "formal"
+          | "semi_formal"
+          | "kappa_casual"
+          | "greek_encouraged"
+          | "greek_required"
+          | "outdoor"
+          | "athletic"
+          | "comfortable"
+          | "all_white"
+        >,
+        dress_code_notes: eventData.dress_code_notes || undefined,
+        ticket_price_cents: eventData.ticket_price_cents || 0,
       });
 
       inserted++;
