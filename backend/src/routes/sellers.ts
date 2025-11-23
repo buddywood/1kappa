@@ -1,12 +1,17 @@
-import { Router, Request, Response } from 'express';
-import type { Router as ExpressRouter } from 'express';
-import multer from 'multer';
-import { createSeller, getActiveProducts, getSellerById, getProductsBySeller } from '../db/queries';
-import pool from '../db/connection';
-import { uploadToS3 } from '../services/s3';
-import { z } from 'zod';
-import { authenticate } from '../middleware/auth';
-import { sendSellerApplicationSubmittedEmail } from '../services/email';
+import { Router, Request, Response } from "express";
+import type { Router as ExpressRouter } from "express";
+import multer from "multer";
+import {
+  createSeller,
+  getActiveProducts,
+  getSellerById,
+  getProductsBySeller,
+} from "../db/queries";
+import pool from "../db/connection";
+import { uploadToS3 } from "../services/s3";
+import { z } from "zod";
+import { authenticate } from "../middleware/auth";
+import { sendSellerApplicationSubmittedEmail } from "../services/email";
 
 const router: ExpressRouter = Router();
 
@@ -18,60 +23,71 @@ const upload = multer({
   },
 });
 
-const sellerApplicationSchema = z.object({
-  name: z.string().min(1),
-  email: z.string().email(),
-  sponsoring_chapter_id: z.number().int().positive(),
-  business_name: z.string().optional().nullable(),
-  business_email: z.string().email().optional().nullable(),
-  kappa_vendor_id: z.string().optional().nullable(),
-  merchandise_type: z.enum(['KAPPA', 'NON_KAPPA']),
-  website: z.string().optional().nullable(),
-  social_links: z.record(z.string()).optional(),
-}).refine((data) => {
-  // If website is provided, it must be a valid URL
-  if (data.website && data.website.trim() !== '') {
-    try {
-      new URL(data.website);
+const sellerApplicationSchema = z
+  .object({
+    name: z.string().min(1),
+    email: z.string().email(),
+    sponsoring_chapter_id: z.number().int().positive(),
+    business_name: z.string().optional().nullable(),
+    business_email: z.string().email().optional().nullable(),
+    kappa_vendor_id: z.string().optional().nullable(),
+    merchandise_type: z.enum(["KAPPA", "NON_KAPPA"]),
+    website: z.string().optional().nullable(),
+    social_links: z.record(z.string()).optional(),
+  })
+  .refine(
+    (data) => {
+      // If website is provided, it must be a valid URL
+      if (data.website && data.website.trim() !== "") {
+        try {
+          new URL(data.website);
+          return true;
+        } catch {
+          return false;
+        }
+      }
       return true;
-    } catch {
-      return false;
+    },
+    {
+      message: "Website must be a valid URL",
+      path: ["website"],
     }
-  }
-  return true;
-}, {
-  message: 'Website must be a valid URL',
-  path: ['website'],
-}).refine((data) => {
-  // Kappa vendor ID is required only for KAPPA merchandise
-  if (data.merchandise_type === 'KAPPA') {
-    return data.kappa_vendor_id && data.kappa_vendor_id.trim().length > 0;
-  }
-  return true;
-}, {
-  message: 'Kappa vendor ID is required for Kappa merchandise',
-  path: ['kappa_vendor_id'],
-});
+  )
+  .refine(
+    (data) => {
+      // Kappa vendor ID is required only for KAPPA merchandise
+      if (data.merchandise_type === "KAPPA") {
+        return data.kappa_vendor_id && data.kappa_vendor_id.trim().length > 0;
+      }
+      return true;
+    },
+    {
+      message: "Kappa vendor ID is required for Kappa merchandise",
+      path: ["kappa_vendor_id"],
+    }
+  );
 
 // Optional authentication middleware - doesn't fail if not authenticated
 const optionalAuthenticate = async (req: Request, res: Response, next: any) => {
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
     // No auth header, continue without user
     return next();
   }
-  
+
   try {
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-    const { verifyCognitoToken, extractUserInfoFromToken } = await import('../services/cognito');
-    const { getUserByCognitoSub } = await import('../db/queries');
-    
+    const { verifyCognitoToken, extractUserInfoFromToken } = await import(
+      "../services/cognito"
+    );
+    const { getUserByCognitoSub } = await import("../db/queries");
+
     // Verify token
     const payload = await verifyCognitoToken(token);
     if (payload) {
       // Extract user info from token
       const { cognitoSub } = extractUserInfoFromToken(payload);
-      
+
       // Get user in database
       const user = await getUserByCognitoSub(cognitoSub);
       if (user) {
@@ -92,214 +108,260 @@ const optionalAuthenticate = async (req: Request, res: Response, next: any) => {
     next();
   } catch (error) {
     // Authentication failed, but continue anyway (optional auth)
-    console.error('Optional auth error (continuing anyway):', error);
+    console.error("Optional auth error (continuing anyway):", error);
     next();
   }
 };
 
-router.post('/apply', optionalAuthenticate, upload.fields([
-  { name: 'headshot', maxCount: 1 },
-  { name: 'store_logo', maxCount: 1 }
-]), async (req: Request, res: Response) => {
-  try {
-    // Helper to convert empty strings to null
-    const toNullIfEmpty = (value: any) => {
-      if (value === undefined || value === null || value === '') return null;
-      return value;
-    };
+router.post(
+  "/apply",
+  optionalAuthenticate,
+  upload.fields([
+    { name: "headshot", maxCount: 1 },
+    { name: "store_logo", maxCount: 1 },
+  ]),
+  async (req: Request, res: Response) => {
+    try {
+      // Helper to convert empty strings to null
+      const toNullIfEmpty = (value: any) => {
+        if (value === undefined || value === null || value === "") return null;
+        return value;
+      };
 
-    // Validate request body first
-    const body = sellerApplicationSchema.parse({
-      ...req.body,
-      sponsoring_chapter_id: parseInt(req.body.sponsoring_chapter_id),
-      business_name: toNullIfEmpty(req.body.business_name),
-      business_email: toNullIfEmpty(req.body.business_email),
-      kappa_vendor_id: toNullIfEmpty(req.body.kappa_vendor_id),
-      merchandise_type: req.body.merchandise_type,
-      website: toNullIfEmpty(req.body.website),
-      social_links: req.body.social_links ? JSON.parse(req.body.social_links) : {},
-    });
+      // Validate request body first
+      const body = sellerApplicationSchema.parse({
+        ...req.body,
+        sponsoring_chapter_id: parseInt(req.body.sponsoring_chapter_id),
+        business_name: toNullIfEmpty(req.body.business_name),
+        business_email: toNullIfEmpty(req.body.business_email),
+        kappa_vendor_id: toNullIfEmpty(req.body.kappa_vendor_id),
+        merchandise_type: req.body.merchandise_type,
+        website: toNullIfEmpty(req.body.website),
+        social_links: req.body.social_links
+          ? JSON.parse(req.body.social_links)
+          : {},
+      });
 
-    // Get member_id from authenticated user if available
-    // If not authenticated, try to look up member by email
-    let memberId: number | null = null;
-    if (req.user) {
-      const { getFraternityMemberIdFromRequest } = await import('../utils/getFraternityMemberId');
-      memberId = await getFraternityMemberIdFromRequest(req);
-    }
-    if (!memberId) {
-      // Try to find member by email if not logged in
-      // This allows verified members to get auto-approved even if they're not logged in
-      const memberResult = await pool.query(
-        'SELECT id, verification_status FROM fraternity_members WHERE email = $1',
-        [body.email]
-      );
-      if (memberResult.rows.length > 0) {
-        memberId = memberResult.rows[0].id;
+      // Get member_id from authenticated user if available
+      // If not authenticated, try to look up member by email
+      let memberId: number | null = null;
+      if (req.user) {
+        const { getFraternityMemberIdFromRequest } = await import(
+          "../utils/getFraternityMemberId"
+        );
+        memberId = await getFraternityMemberIdFromRequest(req);
       }
-    }
-
-    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-    const headshotFile = files?.headshot?.[0];
-    const logoFile = files?.store_logo?.[0];
-
-    // Store logo is required
-    if (!logoFile) {
-      res.status(400).json({ error: 'Store logo is required' });
-      return;
-    }
-
-    // Upload store logo to S3
-    const logoUploadResult = await uploadToS3(
-      logoFile.buffer,
-      logoFile.originalname,
-      logoFile.mimetype,
-      'store-logos'
-    );
-    const storeLogoUrl = logoUploadResult.url;
-
-    // Upload headshot to S3 or use existing URL (optional)
-    let headshotUrl: string | undefined;
-    if (headshotFile) {
-      // New headshot uploaded
-      const uploadResult = await uploadToS3(
-        headshotFile.buffer,
-        headshotFile.originalname,
-        headshotFile.mimetype,
-        'headshots'
-      );
-      headshotUrl = uploadResult.url;
-    } else if (req.body.existing_headshot_url) {
-      // Use existing headshot URL from member profile
-      headshotUrl = req.body.existing_headshot_url;
-    }
-
-    // Create seller record with member_id if available
-    const seller = await createSeller({
-      ...body,
-      fraternity_member_id: memberId,
-      headshot_url: headshotUrl,
-      store_logo_url: storeLogoUrl,
-      social_links: body.social_links || {},
-    });
-
-    // Auto-approve if seller is a verified member (verified members can sell anything)
-    if (memberId) {
-      const memberResult = await pool.query(
-        'SELECT verification_status FROM fraternity_members WHERE id = $1',
-        [memberId]
-      );
-      
-      if (memberResult.rows[0]?.verification_status === 'VERIFIED') {
-        // Auto-approve verified members
-        const { generateInvitationToken } = await import('../utils/tokens');
-        const { updateSellerInvitationToken, linkUserToSeller, getUserByEmail } = await import('../db/queries');
-        
-        // Check if Stripe is configured
-        const stripeKey = process.env.STRIPE_SECRET_KEY;
-        let stripeWarning: string | undefined;
-        
-        // Check if seller already has a Cognito account
-        const existingUser = await getUserByEmail(seller.email);
-        
-        let invitationToken: string | undefined;
-        if (existingUser) {
-          // Seller already has an account - link it to seller role
-          await linkUserToSeller(existingUser.id, seller.id);
-        } else {
-          // Generate invitation token for new seller account
-          invitationToken = generateInvitationToken();
-          await updateSellerInvitationToken(seller.id, invitationToken);
+      if (!memberId) {
+        // Try to find member by email if not logged in
+        // This allows verified members to get auto-approved even if they're not logged in
+        const memberResult = await pool.query(
+          "SELECT id, verification_status FROM fraternity_members WHERE email = $1",
+          [body.email]
+        );
+        if (memberResult.rows.length > 0) {
+          memberId = memberResult.rows[0].id;
         }
+      }
 
-        // Try to create Stripe Connect account if configured
-        if (stripeKey && stripeKey.trim() !== '' && !stripeKey.includes('here')) {
-          try {
-            const { createConnectAccount } = await import('../services/stripe');
-            const account = await createConnectAccount(seller.email);
-            
-            // Update seller status to APPROVED with Stripe account
-            await pool.query(
-              'UPDATE sellers SET status = $1, stripe_account_id = $2 WHERE id = $3',
-              ['APPROVED', account.id, seller.id]
-            );
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      const headshotFile = files?.headshot?.[0];
+      const logoFile = files?.store_logo?.[0];
 
-            // Notify interested users that products are now available
-            const { notifyInterestedUsersForSeller } = await import('../services/notifications');
-            notifyInterestedUsersForSeller(seller.id, seller.name).catch(error => {
-              console.error('Failed to notify interested users:', error);
-            });
+      // Store logo is required
+      if (!logoFile) {
+        res.status(400).json({ error: "Store logo is required" });
+        return;
+      }
 
-            console.log(`Auto-approved verified member seller: ${seller.name} (${seller.email})`);
-          } catch (error: any) {
-            console.error('Error creating Stripe account for seller:', error);
-            
-            // If Stripe fails, still approve but without Stripe account
-            if (error.type === 'StripeAuthenticationError' || error.message?.includes('Invalid API Key')) {
-              console.warn('⚠️  Stripe authentication failed - approving seller without Stripe account');
-              await pool.query(
-                'UPDATE sellers SET status = $1 WHERE id = $2',
-                ['APPROVED', seller.id]
-              );
-              stripeWarning = 'Your seller application was approved, but Stripe payment setup failed. An admin will help you complete Stripe setup before you can receive payments.';
-            } else {
-              // For other errors, still approve but warn
-              await pool.query(
-                'UPDATE sellers SET status = $1 WHERE id = $2',
-                ['APPROVED', seller.id]
-              );
-              stripeWarning = 'Your seller application was approved, but Stripe payment setup encountered an issue. An admin will help you complete Stripe setup before you can receive payments.';
-            }
+      // Upload store logo to S3
+      const logoUploadResult = await uploadToS3(
+        logoFile.buffer,
+        logoFile.originalname,
+        logoFile.mimetype,
+        "store-logos"
+      );
+      const storeLogoUrl = logoUploadResult.url;
+
+      // Upload headshot to S3 or use existing URL (optional)
+      let headshotUrl: string | undefined;
+      if (headshotFile) {
+        // New headshot uploaded
+        const uploadResult = await uploadToS3(
+          headshotFile.buffer,
+          headshotFile.originalname,
+          headshotFile.mimetype,
+          "headshots"
+        );
+        headshotUrl = uploadResult.url;
+      } else if (req.body.existing_headshot_url) {
+        // Use existing headshot URL from member profile
+        headshotUrl = req.body.existing_headshot_url;
+      }
+
+      // Create seller record with member_id if available
+      const seller = await createSeller({
+        ...body,
+        fraternity_member_id: memberId,
+        headshot_url: headshotUrl,
+        store_logo_url: storeLogoUrl,
+        social_links: body.social_links || {},
+      });
+
+      // Auto-approve if seller is a verified member (verified members can sell anything)
+      if (memberId) {
+        const memberResult = await pool.query(
+          "SELECT verification_status FROM fraternity_members WHERE id = $1",
+          [memberId]
+        );
+
+        if (memberResult.rows[0]?.verification_status === "VERIFIED") {
+          // Auto-approve verified members
+          const { generateInvitationToken } = await import("../utils/tokens");
+          const {
+            updateSellerInvitationToken,
+            linkUserToSeller,
+            getUserByEmail,
+          } = await import("../db/queries");
+
+          // Check if Stripe is configured
+          const stripeKey = process.env.STRIPE_SECRET_KEY;
+          let stripeWarning: string | undefined;
+
+          // Check if seller already has a Cognito account
+          const existingUser = await getUserByEmail(seller.email);
+
+          let invitationToken: string | undefined;
+          if (existingUser) {
+            // Seller already has an account - link it to seller role
+            await linkUserToSeller(existingUser.id, seller.id);
+          } else {
+            // Generate invitation token for new seller account
+            invitationToken = generateInvitationToken();
+            await updateSellerInvitationToken(seller.id, invitationToken);
           }
-        } else {
-          // Stripe not configured - approve without Stripe account
-          console.warn('⚠️  Stripe not configured - auto-approving seller without Stripe account. Stripe setup will be required later.');
-          await pool.query(
-            'UPDATE sellers SET status = $1 WHERE id = $2',
-            ['APPROVED', seller.id]
-          );
-          stripeWarning = 'Your seller application was approved, but Stripe payment setup is required before you can receive payments. An admin will help you complete Stripe setup.';
-        }
 
-        // Send approval email
-        const { sendSellerApprovedEmail } = await import('../services/email');
-        sendSellerApprovedEmail(seller.email, seller.name, invitationToken).catch(error => {
-          console.error('Failed to send seller approved email:', error);
-        });
+          // Try to create Stripe Connect account if configured
+          if (
+            stripeKey &&
+            stripeKey.trim() !== "" &&
+            !stripeKey.includes("here")
+          ) {
+            try {
+              const { createConnectAccount } = await import(
+                "../services/stripe"
+              );
+              const account = await createConnectAccount(seller.email);
 
-        // Return the updated seller (with warning if present)
-        const updatedSeller = await getSellerById(seller.id);
-        if (stripeWarning) {
-          return res.status(201).json({
-            ...updatedSeller,
-            warning: stripeWarning,
+              // Update seller status to APPROVED with Stripe account
+              await pool.query(
+                "UPDATE sellers SET status = $1, stripe_account_id = $2 WHERE id = $3",
+                ["APPROVED", account.id, seller.id]
+              );
+
+              // Notify interested users that products are now available
+              const { notifyInterestedUsersForSeller } = await import(
+                "../services/notifications"
+              );
+              notifyInterestedUsersForSeller(seller.id, seller.name).catch(
+                (error) => {
+                  console.error("Failed to notify interested users:", error);
+                }
+              );
+
+              console.log(
+                `Auto-approved verified member seller: ${seller.name} (${seller.email})`
+              );
+            } catch (error: any) {
+              console.error("Error creating Stripe account for seller:", error);
+
+              // If Stripe fails, still approve but without Stripe account
+              if (
+                error.type === "StripeAuthenticationError" ||
+                error.message?.includes("Invalid API Key")
+              ) {
+                console.warn(
+                  "⚠️  Stripe authentication failed - approving seller without Stripe account"
+                );
+                await pool.query(
+                  "UPDATE sellers SET status = $1 WHERE id = $2",
+                  ["APPROVED", seller.id]
+                );
+                stripeWarning =
+                  "Your seller application was approved, but Stripe payment setup failed. An admin will help you complete Stripe setup before you can receive payments.";
+              } else {
+                // For other errors, still approve but warn
+                await pool.query(
+                  "UPDATE sellers SET status = $1 WHERE id = $2",
+                  ["APPROVED", seller.id]
+                );
+                stripeWarning =
+                  "Your seller application was approved, but Stripe payment setup encountered an issue. An admin will help you complete Stripe setup before you can receive payments.";
+              }
+            }
+          } else {
+            // Stripe not configured - approve without Stripe account
+            console.warn(
+              "⚠️  Stripe not configured - auto-approving seller without Stripe account. Stripe setup will be required later."
+            );
+            await pool.query("UPDATE sellers SET status = $1 WHERE id = $2", [
+              "APPROVED",
+              seller.id,
+            ]);
+            stripeWarning =
+              "Your seller application was approved, but Stripe payment setup is required before you can receive payments. An admin will help you complete Stripe setup.";
+          }
+
+          // Send approval email
+          const { sendSellerApprovedEmail } = await import("../services/email");
+          sendSellerApprovedEmail(
+            seller.email,
+            seller.name,
+            invitationToken
+          ).catch((error) => {
+            console.error("Failed to send seller approved email:", error);
           });
+
+          // Return the updated seller (with warning if present)
+          const updatedSeller = await getSellerById(seller.id);
+          if (stripeWarning) {
+            return res.status(201).json({
+              ...updatedSeller,
+              warning: stripeWarning,
+            });
+          }
+          return res.status(201).json(updatedSeller);
         }
-        return res.status(201).json(updatedSeller);
       }
-    }
 
-    // Send confirmation email (don't await - send in background)
-    sendSellerApplicationSubmittedEmail(body.email, body.name).catch(error => {
-      console.error('Failed to send seller application submitted email:', error);
-    });
+      // Send confirmation email (don't await - send in background)
+      sendSellerApplicationSubmittedEmail(body.email, body.name).catch(
+        (error) => {
+          console.error(
+            "Failed to send seller application submitted email:",
+            error
+          );
+        }
+      );
 
-    // Fetch updated seller to return correct status
-    const updatedSeller = await getSellerById(seller.id);
-    res.status(201).json(updatedSeller || seller);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      res.status(400).json({ error: 'Validation error', details: error.errors });
-      return;
+      // Fetch updated seller to return correct status
+      const updatedSeller = await getSellerById(seller.id);
+      res.status(201).json(updatedSeller || seller);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res
+          .status(400)
+          .json({ error: "Validation error", details: error.errors });
+        return;
+      }
+      console.error("Error creating seller application:", error);
+      res.status(500).json({ error: "Failed to create seller application" });
     }
-    console.error('Error creating seller application:', error);
-    res.status(500).json({ error: 'Failed to create seller application' });
   }
-});
+);
 
 // Get all approved sellers (public endpoint)
 // Note: This must come after POST /apply to avoid route conflicts
-router.get('/', async (req: Request, res: Response) => {
+router.get("/", async (req: Request, res: Response) => {
   try {
     const result = await pool.query(
       `SELECT 
@@ -319,30 +381,31 @@ router.get('/', async (req: Request, res: Response) => {
       GROUP BY s.id, s.name, s.business_name, s.headshot_url, s.sponsoring_chapter_id, s.social_links, s.description, s.website, s.status
       ORDER BY s.name ASC`
     );
-    
+
     // Parse social_links if it's a string
     const sellers = result.rows.map((seller) => {
-      const socialLinks = typeof seller.social_links === 'string' 
-        ? JSON.parse(seller.social_links) 
-        : (seller.social_links || {});
-      
+      const socialLinks =
+        typeof seller.social_links === "string"
+          ? JSON.parse(seller.social_links)
+          : seller.social_links || {};
+
       return {
         ...seller,
         social_links: socialLinks,
         product_count: parseInt(seller.product_count) || 0,
       };
     });
-    
+
     res.json(sellers);
   } catch (error) {
-    console.error('Error fetching sellers:', error);
-    res.status(500).json({ error: 'Failed to fetch sellers' });
+    console.error("Error fetching sellers:", error);
+    res.status(500).json({ error: "Failed to fetch sellers" });
   }
 });
 
 // Get all approved sellers with their products for collections page
 // Note: This must come after POST /apply to avoid route conflicts
-router.get('/collections', async (req: Request, res: Response) => {
+router.get("/collections", async (req: Request, res: Response) => {
   try {
     const result = await pool.query(
       `SELECT 
@@ -360,19 +423,20 @@ router.get('/collections', async (req: Request, res: Response) => {
       HAVING COUNT(p.id) > 0
       ORDER BY s.name ASC`
     );
-    
+
     // For each seller, get their products
     const sellersWithProducts = await Promise.all(
       result.rows.map(async (seller) => {
         const productsResult = await pool.query(
-          'SELECT * FROM products WHERE seller_id = $1 ORDER BY created_at DESC',
+          "SELECT * FROM products WHERE seller_id = $1 ORDER BY created_at DESC",
           [seller.id]
         );
         // Parse social_links if it's a string
-        const socialLinks = typeof seller.social_links === 'string' 
-          ? JSON.parse(seller.social_links) 
-          : (seller.social_links || {});
-        
+        const socialLinks =
+          typeof seller.social_links === "string"
+            ? JSON.parse(seller.social_links)
+            : seller.social_links || {};
+
         return {
           ...seller,
           social_links: socialLinks,
@@ -380,16 +444,16 @@ router.get('/collections', async (req: Request, res: Response) => {
         };
       })
     );
-    
+
     res.json(sellersWithProducts);
   } catch (error) {
-    console.error('Error fetching sellers:', error);
-    res.status(500).json({ error: 'Failed to fetch sellers' });
+    console.error("Error fetching sellers:", error);
+    res.status(500).json({ error: "Failed to fetch sellers" });
   }
 });
 
 // Get featured brothers (top 3 member sellers with most active products)
-router.get('/featured', async (req: Request, res: Response) => {
+router.get("/featured", async (req: Request, res: Response) => {
   try {
     const result = await pool.query(
       `SELECT 
@@ -412,13 +476,14 @@ router.get('/featured', async (req: Request, res: Response) => {
       ORDER BY product_count DESC, s.name ASC
       LIMIT 3`
     );
-    
+
     // Parse social_links if it's a string
     const featuredBrothers = result.rows.map((seller) => {
-      const socialLinks = typeof seller.social_links === 'string' 
-        ? JSON.parse(seller.social_links) 
-        : (seller.social_links || {});
-      
+      const socialLinks =
+        typeof seller.social_links === "string"
+          ? JSON.parse(seller.social_links)
+          : seller.social_links || {};
+
       return {
         id: seller.id,
         name: seller.name,
@@ -431,37 +496,40 @@ router.get('/featured', async (req: Request, res: Response) => {
         product_count: parseInt(seller.product_count) || 0,
       };
     });
-    
+
     res.json(featuredBrothers);
   } catch (error: any) {
-    console.error('Error fetching featured brothers:', error);
-    res.status(500).json({ 
-      error: 'Failed to fetch featured brothers',
-      details: error.message || 'Unknown error'
+    console.error("Error fetching featured brothers:", error);
+    res.status(500).json({
+      error: "Failed to fetch featured brothers",
+      details: error.message || "Unknown error",
     });
   }
 });
 
 // Get a specific seller with their products (public endpoint)
 // This must come before /me routes to avoid route conflicts
-router.get('/:id/products', async (req: Request, res: Response) => {
+router.get("/:id/products", async (req: Request, res: Response) => {
   try {
     const sellerId = parseInt(req.params.id);
     if (isNaN(sellerId)) {
-      return res.status(400).json({ error: 'Invalid seller ID' });
+      return res.status(400).json({ error: "Invalid seller ID" });
     }
 
     const seller = await getSellerById(sellerId);
-    if (!seller || seller.status !== 'APPROVED') {
-      return res.status(404).json({ error: 'Seller not found or not approved' });
+    if (!seller || seller.status !== "APPROVED") {
+      return res
+        .status(404)
+        .json({ error: "Seller not found or not approved" });
     }
 
     const products = await getProductsBySeller(sellerId);
 
     // Parse social_links if it's a string
-    const socialLinks = typeof seller.social_links === 'string' 
-      ? JSON.parse(seller.social_links) 
-      : (seller.social_links || {});
+    const socialLinks =
+      typeof seller.social_links === "string"
+        ? JSON.parse(seller.social_links)
+        : seller.social_links || {};
 
     res.json({
       ...seller,
@@ -470,49 +538,53 @@ router.get('/:id/products', async (req: Request, res: Response) => {
       products: products,
     });
   } catch (error) {
-    console.error('Error fetching seller with products:', error);
-    res.status(500).json({ error: 'Failed to fetch seller with products' });
+    console.error("Error fetching seller with products:", error);
+    res.status(500).json({ error: "Failed to fetch seller with products" });
   }
 });
 
 // Get current seller's profile (authenticated seller)
-router.get('/me', authenticate, async (req: Request, res: Response) => {
+router.get("/me", authenticate, async (req: Request, res: Response) => {
   try {
     if (!req.user || !req.user.sellerId) {
-      return res.status(403).json({ error: 'Not a seller' });
+      return res.status(403).json({ error: "Not a seller" });
     }
 
     const seller = await getSellerById(req.user.sellerId);
     if (!seller) {
-      return res.status(404).json({ error: 'Seller not found' });
+      return res.status(404).json({ error: "Seller not found" });
     }
     res.json(seller);
   } catch (error) {
-    console.error('Error fetching seller profile:', error);
-    res.status(500).json({ error: 'Failed to fetch seller profile' });
+    console.error("Error fetching seller profile:", error);
+    res.status(500).json({ error: "Failed to fetch seller profile" });
   }
 });
 
 // Get current seller's products (authenticated seller)
-router.get('/me/products', authenticate, async (req: Request, res: Response) => {
-  try {
-    if (!req.user || !req.user.sellerId) {
-      return res.status(403).json({ error: 'Not a seller' });
-    }
+router.get(
+  "/me/products",
+  authenticate,
+  async (req: Request, res: Response) => {
+    try {
+      if (!req.user || !req.user.sellerId) {
+        return res.status(403).json({ error: "Not a seller" });
+      }
 
-    const products = await getProductsBySeller(req.user.sellerId);
-    res.json(products);
-  } catch (error) {
-    console.error('Error fetching seller products:', error);
-    res.status(500).json({ error: 'Failed to fetch products' });
+      const products = await getProductsBySeller(req.user.sellerId);
+      res.json(products);
+    } catch (error) {
+      console.error("Error fetching seller products:", error);
+      res.status(500).json({ error: "Failed to fetch products" });
+    }
   }
-});
+);
 
 // Get current seller's orders (authenticated seller)
-router.get('/me/orders', authenticate, async (req: Request, res: Response) => {
+router.get("/me/orders", authenticate, async (req: Request, res: Response) => {
   try {
     if (!req.user || !req.user.sellerId) {
-      return res.status(403).json({ error: 'Not a seller' });
+      return res.status(403).json({ error: "Not a seller" });
     }
 
     const result = await pool.query(
@@ -527,16 +599,16 @@ router.get('/me/orders', authenticate, async (req: Request, res: Response) => {
     );
     res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching seller orders:', error);
-    res.status(500).json({ error: 'Failed to fetch orders' });
+    console.error("Error fetching seller orders:", error);
+    res.status(500).json({ error: "Failed to fetch orders" });
   }
 });
 
 // Get current seller's metrics (authenticated seller)
-router.get('/me/metrics', authenticate, async (req: Request, res: Response) => {
+router.get("/me/metrics", authenticate, async (req: Request, res: Response) => {
   try {
     if (!req.user || !req.user.sellerId) {
-      return res.status(403).json({ error: 'Not a seller' });
+      return res.status(403).json({ error: "Not a seller" });
     }
 
     // Get total sales
@@ -547,7 +619,9 @@ router.get('/me/metrics', authenticate, async (req: Request, res: Response) => {
        WHERE p.seller_id = $1 AND o.status = 'PAID'`,
       [req.user.sellerId]
     );
-    const totalSalesCents = parseInt(salesResult.rows[0]?.total_sales_cents || '0');
+    const totalSalesCents = parseInt(
+      salesResult.rows[0]?.total_sales_cents || "0"
+    );
 
     // Get order count
     const ordersResult = await pool.query(
@@ -557,7 +631,7 @@ router.get('/me/metrics', authenticate, async (req: Request, res: Response) => {
        WHERE p.seller_id = $1 AND o.status = 'PAID'`,
       [req.user.sellerId]
     );
-    const orderCount = parseInt(ordersResult.rows[0]?.order_count || '0');
+    const orderCount = parseInt(ordersResult.rows[0]?.order_count || "0");
 
     // Get active listings count
     const listingsResult = await pool.query(
@@ -566,11 +640,15 @@ router.get('/me/metrics', authenticate, async (req: Request, res: Response) => {
        WHERE seller_id = $1`,
       [req.user.sellerId]
     );
-    const activeListings = parseInt(listingsResult.rows[0]?.active_listings || '0');
+    const activeListings = parseInt(
+      listingsResult.rows[0]?.active_listings || "0"
+    );
 
     // Get pending payouts (total sales minus platform fees)
     const platformFeePercent = 0.08; // 8% platform fee
-    const totalPayoutsCents = Math.round(totalSalesCents * (1 - platformFeePercent));
+    const totalPayoutsCents = Math.round(
+      totalSalesCents * (1 - platformFeePercent)
+    );
 
     // Get total undergraduate chapter donations from seller's orders
     // Donations are 3% of order amount, only for orders with collegiate (undergraduate) chapters
@@ -585,7 +663,9 @@ router.get('/me/metrics', authenticate, async (req: Request, res: Response) => {
          AND c.type = 'Collegiate'`,
       [req.user.sellerId]
     );
-    const totalUndergradDonationsCents = parseInt(donationsResult.rows[0]?.total_undergrad_donations_cents || '0');
+    const totalUndergradDonationsCents = parseInt(
+      donationsResult.rows[0]?.total_undergrad_donations_cents || "0"
+    );
 
     res.json({
       totalSalesCents,
@@ -595,214 +675,278 @@ router.get('/me/metrics', authenticate, async (req: Request, res: Response) => {
       totalUndergradDonationsCents,
     });
   } catch (error) {
-    console.error('Error fetching seller metrics:', error);
-    res.status(500).json({ error: 'Failed to fetch metrics' });
+    console.error("Error fetching seller metrics:", error);
+    res.status(500).json({ error: "Failed to fetch metrics" });
   }
 });
 
 // Initiate Stripe onboarding
-router.post('/me/stripe/onboard', authenticate, async (req: Request, res: Response) => {
-  try {
-    if (!req.user || !req.user.sellerId) {
-      return res.status(403).json({ error: 'Not a seller' });
-    }
+router.post(
+  "/me/stripe/onboard",
+  authenticate,
+  async (req: Request, res: Response) => {
+    try {
+      if (!req.user || !req.user.sellerId) {
+        return res.status(403).json({ error: "Not a seller" });
+      }
 
-    const seller = await getSellerById(req.user.sellerId);
-    if (!seller) {
-      return res.status(404).json({ error: 'Seller not found' });
-    }
+      const seller = await getSellerById(req.user.sellerId);
+      if (!seller) {
+        return res.status(404).json({ error: "Seller not found" });
+      }
 
-    // If seller doesn't have a Stripe account, create one
-    let stripeAccountId = seller.stripe_account_id;
-    
-    if (!stripeAccountId) {
-      const { createConnectAccount } = await import('../services/stripe');
-      const account = await createConnectAccount(seller.email);
-      stripeAccountId = account.id;
-      
-      // Update seller with Stripe account ID
-      await pool.query(
-        'UPDATE sellers SET stripe_account_id = $1 WHERE id = $2',
-        [stripeAccountId, seller.id]
+      // If seller doesn't have a Stripe account, create one
+      let stripeAccountId = seller.stripe_account_id;
+
+      if (!stripeAccountId) {
+        const { createConnectAccount } = await import("../services/stripe");
+        const account = await createConnectAccount(seller.email);
+        stripeAccountId = account.id;
+
+        // Update seller with Stripe account ID
+        await pool.query(
+          "UPDATE sellers SET stripe_account_id = $1 WHERE id = $2",
+          [stripeAccountId, seller.id]
+        );
+      }
+
+      // Create account link for onboarding
+      const { createAccountLink } = await import("../services/stripe");
+      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+      const returnUrl = `${frontendUrl}/seller-dashboard/stripe-setup?success=true`;
+      const refreshUrl = `${frontendUrl}/seller-dashboard/stripe-setup?refresh=true`;
+
+      const onboardingUrl = await createAccountLink(
+        stripeAccountId,
+        returnUrl,
+        refreshUrl
       );
+
+      res.json({ url: onboardingUrl });
+    } catch (error: any) {
+      console.error("Error initiating Stripe onboarding:", error);
+      res.status(500).json({ error: "Failed to initiate Stripe onboarding" });
     }
-
-    // Create account link for onboarding
-    const { createAccountLink } = await import('../services/stripe');
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const returnUrl = `${frontendUrl}/seller-dashboard/stripe-setup?success=true`;
-    const refreshUrl = `${frontendUrl}/seller-dashboard/stripe-setup?refresh=true`;
-    
-    const onboardingUrl = await createAccountLink(stripeAccountId, returnUrl, refreshUrl);
-
-    res.json({ url: onboardingUrl });
-  } catch (error: any) {
-    console.error('Error initiating Stripe onboarding:', error);
-    res.status(500).json({ error: 'Failed to initiate Stripe onboarding' });
   }
-});
+);
 
 // Check Stripe account status
-router.get('/me/stripe/status', authenticate, async (req: Request, res: Response) => {
-  try {
-    if (!req.user || !req.user.sellerId) {
-      return res.status(403).json({ error: 'Not a seller' });
-    }
+router.get(
+  "/me/stripe/status",
+  authenticate,
+  async (req: Request, res: Response) => {
+    try {
+      if (!req.user || !req.user.sellerId) {
+        return res.status(403).json({ error: "Not a seller" });
+      }
 
-    const seller = await getSellerById(req.user.sellerId);
-    if (!seller) {
-      return res.status(404).json({ error: 'Seller not found' });
-    }
+      const seller = await getSellerById(req.user.sellerId);
+      if (!seller) {
+        return res.status(404).json({ error: "Seller not found" });
+      }
 
-    if (!seller.stripe_account_id) {
-      return res.json({
-        connected: false,
-        accountId: null,
-        detailsSubmitted: false,
-        chargesEnabled: false,
-        payoutsEnabled: false,
+      if (!seller.stripe_account_id) {
+        return res.json({
+          connected: false,
+          accountId: null,
+          detailsSubmitted: false,
+          chargesEnabled: false,
+          payoutsEnabled: false,
+        });
+      }
+
+      // Fetch account details from Stripe
+      const { stripe } = await import("../services/stripe");
+      const account = await stripe.accounts.retrieve(seller.stripe_account_id);
+
+      res.json({
+        connected: true,
+        accountId: seller.stripe_account_id,
+        detailsSubmitted: account.details_submitted || false,
+        chargesEnabled: account.charges_enabled || false,
+        payoutsEnabled: account.payouts_enabled || false,
+        requirements: account.requirements || null,
       });
+    } catch (error: any) {
+      console.error("Error checking Stripe status:", error);
+      res.status(500).json({ error: "Failed to check Stripe status" });
     }
-
-    // Fetch account details from Stripe
-    const { stripe } = await import('../services/stripe');
-    const account = await stripe.accounts.retrieve(seller.stripe_account_id);
-
-    res.json({
-      connected: true,
-      accountId: seller.stripe_account_id,
-      detailsSubmitted: account.details_submitted || false,
-      chargesEnabled: account.charges_enabled || false,
-      payoutsEnabled: account.payouts_enabled || false,
-      requirements: account.requirements || null,
-    });
-  } catch (error: any) {
-    console.error('Error checking Stripe status:', error);
-    res.status(500).json({ error: 'Failed to check Stripe status' });
   }
-});
+);
 
 // Sync business details from Stripe
-router.post('/me/stripe/sync-business', authenticate, async (req: Request, res: Response) => {
-  try {
-    if (!req.user || !req.user.sellerId) {
-      return res.status(403).json({ error: 'Not a seller' });
-    }
+router.post(
+  "/me/stripe/sync-business",
+  authenticate,
+  async (req: Request, res: Response) => {
+    try {
+      if (!req.user || !req.user.sellerId) {
+        return res.status(403).json({ error: "Not a seller" });
+      }
 
-    const seller = await getSellerById(req.user.sellerId);
-    if (!seller) {
-      return res.status(404).json({ error: 'Seller not found' });
-    }
+      const seller = await getSellerById(req.user.sellerId);
+      if (!seller) {
+        return res.status(404).json({ error: "Seller not found" });
+      }
 
-    if (!seller.stripe_account_id) {
-      return res.status(400).json({ error: 'Stripe account not connected' });
-    }
+      if (!seller.stripe_account_id) {
+        return res.status(400).json({ error: "Stripe account not connected" });
+      }
 
-    // Get business details from Stripe
-    const { getStripeAccountBusinessDetails } = await import('../services/stripe');
-    const businessDetails = await getStripeAccountBusinessDetails(seller.stripe_account_id);
-
-    // Update seller record with business details from Stripe
-    // Only update fields that are null/empty in our database, or if Stripe has new data
-    const updates: string[] = [];
-    const values: any[] = [];
-    let paramIndex = 1;
-
-    if (businessDetails.businessName && (!seller.business_name || seller.business_name.trim() === '')) {
-      updates.push(`business_name = $${paramIndex}`);
-      values.push(businessDetails.businessName);
-      paramIndex++;
-    }
-
-    if (businessDetails.businessEmail && (!seller.business_email || seller.business_email.trim() === '')) {
-      updates.push(`business_email = $${paramIndex}`);
-      values.push(businessDetails.businessEmail);
-      paramIndex++;
-    }
-
-    if (businessDetails.website && (!seller.website || seller.website.trim() === '')) {
-      updates.push(`website = $${paramIndex}`);
-      values.push(businessDetails.website);
-      paramIndex++;
-    }
-
-    if (businessDetails.taxId && (!(seller as any).tax_id || (seller as any).tax_id.trim() === '')) {
-      updates.push(`tax_id = $${paramIndex}`);
-      values.push(businessDetails.taxId);
-      paramIndex++;
-    }
-
-    if (businessDetails.businessPhone && (!(seller as any).business_phone || (seller as any).business_phone.trim() === '')) {
-      updates.push(`business_phone = $${paramIndex}`);
-      values.push(businessDetails.businessPhone);
-      paramIndex++;
-    }
-
-    if (businessDetails.accountType && !(seller as any).stripe_account_type) {
-      updates.push(`stripe_account_type = $${paramIndex}`);
-      values.push(businessDetails.accountType);
-      paramIndex++;
-    }
-
-    // Address fields - only update if they're empty
-    if (businessDetails.businessAddress.line1 && (!(seller as any).business_address_line1 || (seller as any).business_address_line1.trim() === '')) {
-      updates.push(`business_address_line1 = $${paramIndex}`);
-      values.push(businessDetails.businessAddress.line1);
-      paramIndex++;
-    }
-
-    if (businessDetails.businessAddress.line2 && (!(seller as any).business_address_line2 || (seller as any).business_address_line2.trim() === '')) {
-      updates.push(`business_address_line2 = $${paramIndex}`);
-      values.push(businessDetails.businessAddress.line2);
-      paramIndex++;
-    }
-
-    if (businessDetails.businessAddress.city && (!(seller as any).business_city || (seller as any).business_city.trim() === '')) {
-      updates.push(`business_city = $${paramIndex}`);
-      values.push(businessDetails.businessAddress.city);
-      paramIndex++;
-    }
-
-    if (businessDetails.businessAddress.state && (!(seller as any).business_state || (seller as any).business_state.trim() === '')) {
-      updates.push(`business_state = $${paramIndex}`);
-      values.push(businessDetails.businessAddress.state);
-      paramIndex++;
-    }
-
-    if (businessDetails.businessAddress.postal_code && (!(seller as any).business_postal_code || (seller as any).business_postal_code.trim() === '')) {
-      updates.push(`business_postal_code = $${paramIndex}`);
-      values.push(businessDetails.businessAddress.postal_code);
-      paramIndex++;
-    }
-
-    if (businessDetails.businessAddress.country && (!(seller as any).business_country || (seller as any).business_country.trim() === '')) {
-      updates.push(`business_country = $${paramIndex}`);
-      values.push(businessDetails.businessAddress.country);
-      paramIndex++;
-    }
-
-    if (updates.length > 0) {
-      values.push(seller.id);
-      await pool.query(
-        `UPDATE sellers SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${paramIndex} RETURNING *`,
-        values
+      // Get business details from Stripe
+      const { getStripeAccountBusinessDetails } = await import(
+        "../services/stripe"
       );
+      const businessDetails = await getStripeAccountBusinessDetails(
+        seller.stripe_account_id
+      );
+
+      // Update seller record with business details from Stripe
+      // Only update fields that are null/empty in our database, or if Stripe has new data
+      const updates: string[] = [];
+      const values: any[] = [];
+      let paramIndex = 1;
+
+      if (
+        businessDetails.businessName &&
+        (!seller.business_name || seller.business_name.trim() === "")
+      ) {
+        updates.push(`business_name = $${paramIndex}`);
+        values.push(businessDetails.businessName);
+        paramIndex++;
+      }
+
+      if (
+        businessDetails.businessEmail &&
+        (!seller.business_email || seller.business_email.trim() === "")
+      ) {
+        updates.push(`business_email = $${paramIndex}`);
+        values.push(businessDetails.businessEmail);
+        paramIndex++;
+      }
+
+      if (
+        businessDetails.website &&
+        (!seller.website || seller.website.trim() === "")
+      ) {
+        updates.push(`website = $${paramIndex}`);
+        values.push(businessDetails.website);
+        paramIndex++;
+      }
+
+      if (
+        businessDetails.taxId &&
+        (!(seller as any).tax_id || (seller as any).tax_id.trim() === "")
+      ) {
+        updates.push(`tax_id = $${paramIndex}`);
+        values.push(businessDetails.taxId);
+        paramIndex++;
+      }
+
+      if (
+        businessDetails.businessPhone &&
+        (!(seller as any).business_phone ||
+          (seller as any).business_phone.trim() === "")
+      ) {
+        updates.push(`business_phone = $${paramIndex}`);
+        values.push(businessDetails.businessPhone);
+        paramIndex++;
+      }
+
+      if (businessDetails.accountType && !(seller as any).stripe_account_type) {
+        updates.push(`stripe_account_type = $${paramIndex}`);
+        values.push(businessDetails.accountType);
+        paramIndex++;
+      }
+
+      // Address fields - only update if they're empty
+      if (
+        businessDetails.businessAddress.line1 &&
+        (!(seller as any).business_address_line1 ||
+          (seller as any).business_address_line1.trim() === "")
+      ) {
+        updates.push(`business_address_line1 = $${paramIndex}`);
+        values.push(businessDetails.businessAddress.line1);
+        paramIndex++;
+      }
+
+      if (
+        businessDetails.businessAddress.line2 &&
+        (!(seller as any).business_address_line2 ||
+          (seller as any).business_address_line2.trim() === "")
+      ) {
+        updates.push(`business_address_line2 = $${paramIndex}`);
+        values.push(businessDetails.businessAddress.line2);
+        paramIndex++;
+      }
+
+      if (
+        businessDetails.businessAddress.city &&
+        (!(seller as any).business_city ||
+          (seller as any).business_city.trim() === "")
+      ) {
+        updates.push(`business_city = $${paramIndex}`);
+        values.push(businessDetails.businessAddress.city);
+        paramIndex++;
+      }
+
+      if (
+        businessDetails.businessAddress.state &&
+        (!(seller as any).business_state ||
+          (seller as any).business_state.trim() === "")
+      ) {
+        updates.push(`business_state = $${paramIndex}`);
+        values.push(businessDetails.businessAddress.state);
+        paramIndex++;
+      }
+
+      if (
+        businessDetails.businessAddress.postal_code &&
+        (!(seller as any).business_postal_code ||
+          (seller as any).business_postal_code.trim() === "")
+      ) {
+        updates.push(`business_postal_code = $${paramIndex}`);
+        values.push(businessDetails.businessAddress.postal_code);
+        paramIndex++;
+      }
+
+      if (
+        businessDetails.businessAddress.country &&
+        (!(seller as any).business_country ||
+          (seller as any).business_country.trim() === "")
+      ) {
+        updates.push(`business_country = $${paramIndex}`);
+        values.push(businessDetails.businessAddress.country);
+        paramIndex++;
+      }
+
+      if (updates.length > 0) {
+        values.push(seller.id);
+        await pool.query(
+          `UPDATE sellers SET ${updates.join(
+            ", "
+          )}, updated_at = CURRENT_TIMESTAMP WHERE id = $${paramIndex} RETURNING *`,
+          values
+        );
+      }
+
+      // Fetch updated seller
+      const updatedSeller = await getSellerById(seller.id);
+
+      res.json({
+        success: true,
+        seller: updatedSeller,
+        syncedFields:
+          updates.length > 0 ? updates.map((u) => u.split(" = ")[0]) : [],
+        businessDetails,
+      });
+    } catch (error: any) {
+      console.error("Error syncing business details from Stripe:", error);
+      res
+        .status(500)
+        .json({ error: "Failed to sync business details from Stripe" });
     }
-
-    // Fetch updated seller
-    const updatedSeller = await getSellerById(seller.id);
-
-    res.json({
-      success: true,
-      seller: updatedSeller,
-      syncedFields: updates.length > 0 ? updates.map(u => u.split(' = ')[0]) : [],
-      businessDetails,
-    });
-  } catch (error: any) {
-    console.error('Error syncing business details from Stripe:', error);
-    res.status(500).json({ error: 'Failed to sync business details from Stripe' });
   }
-});
+);
 
 export default router;
-
