@@ -15,6 +15,7 @@ jest.mock('../db/queries', () => ({
   getPendingMembersForVerification: jest.fn(),
   createStewardListing: jest.fn(),
   getStewardListingById: jest.fn(),
+  getActiveStewardListings: jest.fn(),
   claimStewardListing: jest.fn(),
   getStewardById: jest.fn(),
   getChapterById: jest.fn(),
@@ -26,40 +27,50 @@ jest.mock('../db/queries', () => ({
 }));
 
 // Mock the auth middleware
-const mockAuthenticate = jest.fn((req: any, res: any, next: any) => {
-  req.user = {
-    id: 1,
-    cognitoSub: 'test-cognito-sub',
-    email: 'test@example.com',
-    role: 'CONSUMER',
-    memberId: 1,
-    sellerId: null,
-    promoterId: null,
-    stewardId: null,
-    features: {},
+jest.mock('../middleware/auth', () => {
+  const mockAuthenticate = jest.fn((req: any, res: any, next: any) => {
+    req.user = {
+      id: 1,
+      cognitoSub: 'test-cognito-sub',
+      email: 'test@example.com',
+      role: 'CONSUMER',
+      memberId: 1,
+      sellerId: null,
+      promoterId: null,
+      stewardId: null,
+      features: {},
+    };
+    next();
+  });
+
+  const mockRequireVerifiedMember = jest.fn((req: any, res: any, next: any) => {
+    if (!req.user || !req.user.memberId) {
+      return res.status(403).json({ error: 'Member profile required' });
+    }
+    next();
+  });
+
+  const mockRequireAdmin = jest.fn((req: any, res: any, next: any) => {
+    if (!req.user || req.user.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    next();
+  });
+
+  const mockRequireSteward = jest.fn((req: any, res: any, next: any) => {
+    if (!req.user || !req.user.stewardId) {
+      return res.status(403).json({ error: 'Steward access required' });
+    }
+    next();
+  });
+
+  return {
+    authenticate: mockAuthenticate,
+    requireVerifiedMember: mockRequireVerifiedMember,
+    requireAdmin: mockRequireAdmin,
+    requireSteward: mockRequireSteward,
   };
-  next();
 });
-
-const mockRequireVerifiedMember = jest.fn((req: any, res: any, next: any) => {
-  if (!req.user || !req.user.memberId) {
-    return res.status(403).json({ error: 'Member profile required' });
-  }
-  next();
-});
-
-const mockRequireAdmin = jest.fn((req: any, res: any, next: any) => {
-  if (!req.user || req.user.role !== 'ADMIN') {
-    return res.status(403).json({ error: 'Admin access required' });
-  }
-  next();
-});
-
-jest.mock('../middleware/auth', () => ({
-  authenticate: mockAuthenticate,
-  requireVerifiedMember: mockRequireVerifiedMember,
-  requireAdmin: mockRequireAdmin,
-}));
 
 // Mock S3 service
 jest.mock('../services/s3', () => ({
@@ -85,8 +96,14 @@ app.use('/api/sellers', sellersRouter);
 app.use('/api/promoters', promotersRouter);
 
 describe('Member Role Functionality', () => {
+  let mockAuthenticate: jest.Mock;
+  
   beforeEach(() => {
     jest.clearAllMocks();
+    // Get the mocked authenticate function
+    const authModule = require('../middleware/auth');
+    mockAuthenticate = authModule.authenticate as jest.Mock;
+    
     // Reset default user for each test
     mockAuthenticate.mockImplementation((req: any, res: any, next: any) => {
       req.user = {
@@ -129,9 +146,9 @@ describe('Member Role Functionality', () => {
       };
 
       getMemberById.mockResolvedValue(mockMember);
-      jest.spyOn(pool, 'query').mockResolvedValue({
+      (jest.spyOn(pool, 'query') as jest.Mock).mockResolvedValue({
         rows: [mockMember],
-      } as any);
+      });
 
       const response = await request(app)
         .get('/api/members/profile')
@@ -143,7 +160,8 @@ describe('Member Role Functionality', () => {
     });
 
     it('should return 404 if member profile not found', async () => {
-      mockAuthenticate.mockImplementation((req: any, res: any, next: any) => {
+      const authModule = require('../middleware/auth');
+      (authModule.authenticate as jest.Mock).mockImplementation((req: any, res: any, next: any) => {
         req.user = {
           id: 1,
           cognitoSub: 'test-cognito-sub',
@@ -178,9 +196,9 @@ describe('Member Role Functionality', () => {
       };
 
       getMemberById.mockResolvedValue(mockMember);
-      jest.spyOn(pool, 'query').mockResolvedValue({
+      (jest.spyOn(pool, 'query') as jest.Mock).mockResolvedValue({
         rows: [{ ...mockMember, name: 'Updated Name' }],
-      } as any);
+      });
 
       const response = await request(app)
         .put('/api/members/profile')
@@ -227,9 +245,9 @@ describe('Member Role Functionality', () => {
         },
       ];
 
-      jest.spyOn(pool, 'query').mockResolvedValue({
+      (jest.spyOn(pool, 'query') as jest.Mock).mockResolvedValue({
         rows: mockMembers,
-      } as any);
+      });
 
       const response = await request(app)
         .get('/api/members/')
@@ -252,9 +270,9 @@ describe('Member Role Functionality', () => {
         },
       ];
 
-      jest.spyOn(pool, 'query').mockResolvedValue({
+      (jest.spyOn(pool, 'query') as jest.Mock).mockResolvedValue({
         rows: mockMembers,
-      } as any);
+      });
 
       const response = await request(app)
         .get('/api/members/?chapter_id=1')
@@ -274,9 +292,9 @@ describe('Member Role Functionality', () => {
         },
       ];
 
-      jest.spyOn(pool, 'query').mockResolvedValue({
+      (jest.spyOn(pool, 'query') as jest.Mock).mockResolvedValue({
         rows: mockMembers,
-      } as any);
+      });
 
       const response = await request(app)
         .get('/api/members/?industry=Technology')
@@ -297,9 +315,9 @@ describe('Member Role Functionality', () => {
         },
       ];
 
-      jest.spyOn(pool, 'query').mockResolvedValue({
+      (jest.spyOn(pool, 'query') as jest.Mock).mockResolvedValue({
         rows: mockMembers,
-      } as any);
+      });
 
       const response = await request(app)
         .get('/api/members/?profession_id=1')
@@ -319,9 +337,9 @@ describe('Member Role Functionality', () => {
         },
       ];
 
-      jest.spyOn(pool, 'query').mockResolvedValue({
+      (jest.spyOn(pool, 'query') as jest.Mock).mockResolvedValue({
         rows: mockMembers,
-      } as any);
+      });
 
       const response = await request(app)
         .get('/api/members/?location=New York')
@@ -332,7 +350,8 @@ describe('Member Role Functionality', () => {
     });
 
     it('should require authentication', async () => {
-      mockAuthenticate.mockImplementation((req: any, res: any, next: any) => {
+      const authModule = require('../middleware/auth');
+      (authModule.authenticate as jest.Mock).mockImplementation((req: any, res: any, next: any) => {
         return res.status(401).json({ error: 'No authorization token provided' });
       });
 
@@ -347,8 +366,9 @@ describe('Member Role Functionality', () => {
   describe('Member Verification Workflow', () => {
     it('should allow admin to update member verification status', async () => {
       const { updateMemberVerification } = require('../db/queries');
+      const authModule = require('../middleware/auth');
       
-      mockAuthenticate.mockImplementation((req: any, res: any, next: any) => {
+      (authModule.authenticate as jest.Mock).mockImplementation((req: any, res: any, next: any) => {
         req.user = {
           id: 1,
           role: 'ADMIN',
@@ -378,7 +398,8 @@ describe('Member Role Functionality', () => {
     });
 
     it('should require admin role for verification', async () => {
-      mockAuthenticate.mockImplementation((req: any, res: any, next: any) => {
+      const authModule = require('../middleware/auth');
+      (authModule.authenticate as jest.Mock).mockImplementation((req: any, res: any, next: any) => {
         req.user = {
           id: 1,
           role: 'CONSUMER', // Not admin
@@ -425,9 +446,9 @@ describe('Member Role Functionality', () => {
       getActiveStewardListings.mockResolvedValue(mockListings);
       getStewardById.mockResolvedValue(mockSteward);
       getMemberById.mockResolvedValue(mockMember);
-      jest.spyOn(pool, 'query').mockResolvedValue({
+      (jest.spyOn(pool, 'query') as jest.Mock).mockResolvedValue({
         rows: [{ id: 1, name: 'Test Chapter' }],
-      } as any);
+      });
 
       const response = await request(app)
         .get('/api/stewards/marketplace')
@@ -437,7 +458,8 @@ describe('Member Role Functionality', () => {
     });
 
     it('should require verified member status for marketplace', async () => {
-      mockRequireVerifiedMember.mockImplementation((req: any, res: any, next: any) => {
+      const authModule = require('../middleware/auth');
+      (authModule.requireVerifiedMember as jest.Mock).mockImplementation((req: any, res: any, next: any) => {
         return res.status(403).json({ error: 'Verified member status required' });
       });
 
@@ -478,7 +500,8 @@ describe('Member Role Functionality', () => {
     });
 
     it('should require verified member status for claiming', async () => {
-      mockRequireVerifiedMember.mockImplementation((req: any, res: any, next: any) => {
+      const authModule = require('../middleware/auth');
+      (authModule.requireVerifiedMember as jest.Mock).mockImplementation((req: any, res: any, next: any) => {
         return res.status(403).json({ error: 'Verified member status required' });
       });
 
@@ -528,7 +551,8 @@ describe('Member Role Functionality', () => {
     });
 
     it('should require verified member status for checkout', async () => {
-      mockRequireVerifiedMember.mockImplementation((req: any, res: any, next: any) => {
+      const authModule = require('../middleware/auth');
+      (authModule.requireVerifiedMember as jest.Mock).mockImplementation((req: any, res: any, next: any) => {
         return res.status(403).json({ error: 'Verified member status required' });
       });
 
@@ -557,9 +581,9 @@ describe('Member Role Functionality', () => {
 
       getMemberById.mockResolvedValue(mockMember);
       createSeller.mockResolvedValue(mockSeller);
-      jest.spyOn(pool, 'query').mockResolvedValue({
+      (jest.spyOn(pool, 'query') as jest.Mock).mockResolvedValue({
         rows: [{ id: 1 }],
-      } as any);
+      });
 
       const response = await request(app)
         .post('/api/sellers/apply')
@@ -619,9 +643,9 @@ describe('Member Role Functionality', () => {
 
       getMemberById.mockResolvedValue(mockMember);
       createSteward.mockResolvedValue(mockSteward);
-      jest.spyOn(pool, 'query').mockResolvedValue({
+      (jest.spyOn(pool, 'query') as jest.Mock).mockResolvedValue({
         rows: [{ id: 1 }],
-      } as any);
+      });
 
       const response = await request(app)
         .post('/api/stewards/apply')
@@ -636,7 +660,8 @@ describe('Member Role Functionality', () => {
 
   describe('Member Data Privacy', () => {
     it('should not expose member details to unauthenticated requests', async () => {
-      mockAuthenticate.mockImplementation((req: any, res: any, next: any) => {
+      const authModule = require('../middleware/auth');
+      (authModule.authenticate as jest.Mock).mockImplementation((req: any, res: any, next: any) => {
         return res.status(401).json({ error: 'No authorization token provided' });
       });
 
@@ -662,9 +687,9 @@ describe('Member Role Functionality', () => {
       ];
 
       // Mock query to only return verified members (as per the WHERE clause)
-      jest.spyOn(pool, 'query').mockResolvedValue({
+      (jest.spyOn(pool, 'query') as jest.Mock).mockResolvedValue({
         rows: [mockMembers[0]], // Only verified member
-      } as any);
+      });
 
       const response = await request(app)
         .get('/api/members/')

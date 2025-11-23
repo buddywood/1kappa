@@ -2,6 +2,7 @@ import request from 'supertest';
 import express from 'express';
 import membersRouter from '../routes/members';
 import stewardsRouter from '../routes/stewards';
+import stewardCheckoutRouter from '../routes/steward-checkout';
 import sellersRouter from '../routes/sellers';
 import promotersRouter from '../routes/promoters';
 import pool from '../db/connection';
@@ -15,6 +16,8 @@ jest.mock('../db/queries', () => ({
   claimStewardListing: jest.fn(),
   getStewardById: jest.fn(),
   getChapterById: jest.fn(),
+  getPlatformSetting: jest.fn(),
+  createStewardClaim: jest.fn(),
   createSeller: jest.fn(),
   createPromoter: jest.fn(),
   createSteward: jest.fn(),
@@ -25,40 +28,50 @@ jest.mock('../db/queries', () => ({
 }));
 
 // Mock the auth middleware
-const mockAuthenticate = jest.fn((req: any, res: any, next: any) => {
-  req.user = {
-    id: 1,
-    cognitoSub: 'test-cognito-sub',
-    email: 'test@example.com',
-    role: 'CONSUMER',
-    memberId: 1,
-    sellerId: null,
-    promoterId: null,
-    stewardId: null,
-    features: {},
+jest.mock('../middleware/auth', () => {
+  const mockAuthenticate = jest.fn((req: any, res: any, next: any) => {
+    req.user = {
+      id: 1,
+      cognitoSub: 'test-cognito-sub',
+      email: 'test@example.com',
+      role: 'CONSUMER',
+      memberId: 1,
+      sellerId: null,
+      promoterId: null,
+      stewardId: null,
+      features: {},
+    };
+    next();
+  });
+
+  const mockRequireVerifiedMember = jest.fn((req: any, res: any, next: any) => {
+    if (!req.user || !req.user.memberId) {
+      return res.status(403).json({ error: 'Member profile required' });
+    }
+    next();
+  });
+
+  const mockRequireAdmin = jest.fn((req: any, res: any, next: any) => {
+    if (!req.user || req.user.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    next();
+  });
+
+  const mockRequireSteward = jest.fn((req: any, res: any, next: any) => {
+    if (!req.user || !req.user.stewardId) {
+      return res.status(403).json({ error: 'Steward access required' });
+    }
+    next();
+  });
+
+  return {
+    authenticate: mockAuthenticate,
+    requireVerifiedMember: mockRequireVerifiedMember,
+    requireAdmin: mockRequireAdmin,
+    requireSteward: mockRequireSteward,
   };
-  next();
 });
-
-const mockRequireVerifiedMember = jest.fn((req: any, res: any, next: any) => {
-  if (!req.user || !req.user.memberId) {
-    return res.status(403).json({ error: 'Member profile required' });
-  }
-  next();
-});
-
-const mockRequireAdmin = jest.fn((req: any, res: any, next: any) => {
-  if (!req.user || req.user.role !== 'ADMIN') {
-    return res.status(403).json({ error: 'Admin access required' });
-  }
-  next();
-});
-
-jest.mock('../middleware/auth', () => ({
-  authenticate: mockAuthenticate,
-  requireVerifiedMember: mockRequireVerifiedMember,
-  requireAdmin: mockRequireAdmin,
-}));
 
 // Mock S3 service
 jest.mock('../services/s3', () => ({
@@ -78,6 +91,7 @@ const app = express();
 app.use(express.json());
 app.use('/api/members', membersRouter);
 app.use('/api/stewards', stewardsRouter);
+app.use('/api/steward-checkout', stewardCheckoutRouter);
 app.use('/api/sellers', sellersRouter);
 app.use('/api/promoters', promotersRouter);
 
@@ -104,9 +118,9 @@ describe('Member Role Integration Tests', () => {
       };
 
       getMemberById.mockResolvedValue(mockMember);
-      jest.spyOn(pool, 'query').mockResolvedValue({
+      (jest.spyOn(pool, 'query') as jest.Mock).mockResolvedValue({
         rows: [mockMember],
-      } as any);
+      });
 
       // Step 2: Admin verifies member
       const verifiedMember = {
@@ -118,6 +132,17 @@ describe('Member Role Integration Tests', () => {
       updateMemberVerification.mockResolvedValue(verifiedMember);
       getMemberById.mockResolvedValue(verifiedMember);
 
+      // Mock the profile query (members route queries pool directly)
+      (jest.spyOn(pool, 'query') as jest.Mock).mockResolvedValueOnce({
+        rows: [{
+          id: 1,
+          name: verifiedMember.name,
+          email: verifiedMember.email,
+          verification_status: 'VERIFIED',
+          headshot_url: null,
+        }],
+      });
+
       // Step 3: Member can access profile
       const profileResponse = await request(app)
         .get('/api/members/profile')
@@ -126,9 +151,9 @@ describe('Member Role Integration Tests', () => {
       expect(profileResponse.body).toHaveProperty('verification_status', 'VERIFIED');
 
       // Step 4: Member can access Connect directory
-      jest.spyOn(pool, 'query').mockResolvedValue({
+      (jest.spyOn(pool, 'query') as jest.Mock).mockResolvedValue({
         rows: [verifiedMember],
-      } as any);
+      });
 
       const connectResponse = await request(app)
         .get('/api/members/')
@@ -204,16 +229,19 @@ describe('Member Role Integration Tests', () => {
 
       getMemberById.mockResolvedValue(mockMember);
       createSeller.mockResolvedValue(mockSeller);
-      jest.spyOn(pool, 'query').mockResolvedValue({
-        rows: [{ id: 1 }],
-      } as any);
+      // Mock: Seller route checks for member by email
+      (jest.spyOn(pool, 'query') as jest.Mock)
+        .mockResolvedValueOnce({ rows: [{ id: 1, verification_status: 'VERIFIED' }] }) // Member lookup by email
+        .mockResolvedValueOnce({ rows: [{ id: 1 }] }); // Other query
 
       const response = await request(app)
         .post('/api/sellers/apply')
         .send({
           name: 'Test Seller',
+          email: 'seller@example.com',
           sponsoring_chapter_id: 1,
           kappa_vendor_id: 'V12345',
+          merchandise_type: 'KAPPA',
         })
         .expect(201);
 
@@ -242,6 +270,9 @@ describe('Member Role Integration Tests', () => {
         .post('/api/promoters/apply')
         .send({
           name: 'Test Promoter',
+          email: 'promoter@example.com',
+          membership_number: 'PROM123',
+          initiated_chapter_id: 1,
           sponsoring_chapter_id: 1,
         })
         .expect(201);
@@ -264,11 +295,16 @@ describe('Member Role Integration Tests', () => {
         status: 'APPROVED',
       };
 
-      getMemberById.mockResolvedValue(mockMember);
+      // Ensure member is VERIFIED (required for steward application)
+      const verifiedMember = {
+        ...mockMember,
+        verification_status: 'VERIFIED',
+      };
+      getMemberById.mockResolvedValue(verifiedMember);
       createSteward.mockResolvedValue(mockSteward);
-      jest.spyOn(pool, 'query').mockResolvedValue({
+      (jest.spyOn(pool, 'query') as jest.Mock).mockResolvedValue({
         rows: [{ id: 1 }],
-      } as any);
+      });
 
       const response = await request(app)
         .post('/api/stewards/apply')
@@ -338,7 +374,10 @@ describe('Member Role Integration Tests', () => {
 
       expect(claimResponse.body).toHaveProperty('success', true);
 
-      // Step 2: Create checkout session
+      // Step 2: Create checkout session (listing should be CLAIMED after step 1)
+      const claimedListing = { ...mockListing, status: 'CLAIMED' };
+      getStewardListingById.mockResolvedValue(claimedListing);
+      
       const checkoutResponse = await request(app)
         .post('/api/steward-checkout/1')
         .expect(200);

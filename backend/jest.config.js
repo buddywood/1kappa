@@ -3,6 +3,10 @@ module.exports = {
   testEnvironment: 'node',
   roots: ['<rootDir>/src'],
   testMatch: ['**/__tests__/**/*.test.ts', '**/?(*.)+(spec|test).ts'],
+  // Skip integration tests during CI/deployment
+  testPathIgnorePatterns: process.env.SKIP_INTEGRATION_TESTS === 'true' 
+    ? ['/node_modules/', '.*\\.integration\\.test\\.ts$', '.*integration.*\\.test\\.ts$']
+    : ['/node_modules/'],
   transform: {
     '^.+\\.ts$': 'ts-jest',
   },

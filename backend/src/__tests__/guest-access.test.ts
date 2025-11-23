@@ -14,9 +14,32 @@ jest.mock('../db/queries', () => ({
 
 // Mock the auth middleware
 jest.mock('../middleware/auth', () => ({
-  authenticate: jest.fn((req, res, next) => next()),
+  authenticate: jest.fn((req, res, next) => {
+    // Check if Authorization header is present
+    if (!req.headers.authorization || !req.headers.authorization.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'No authorization token provided' });
+    }
+    // Set a mock user for authenticated requests
+    req.user = {
+      id: 1,
+      cognitoSub: 'test-sub',
+      email: 'test@example.com',
+      role: 'CONSUMER',
+      memberId: 1,
+      sellerId: null,
+      promoterId: null,
+      stewardId: null,
+      features: {},
+    };
+    next();
+  }),
   requireSteward: jest.fn((req, res, next) => next()),
-  requireVerifiedMember: jest.fn((req, res, next) => next()),
+  requireVerifiedMember: jest.fn((req, res, next) => {
+    if (!req.user || !req.user.memberId) {
+      return res.status(403).json({ error: 'Member profile required' });
+    }
+    next();
+  }),
 }));
 
 const app = express();
@@ -69,9 +92,9 @@ describe('Guest Access to Steward Endpoints', () => {
       getMemberById.mockResolvedValue(mockMember);
 
       // Mock pool.query for chapter lookup
-      jest.spyOn(pool, 'query').mockResolvedValue({
+      (jest.spyOn(pool, 'query') as jest.Mock).mockResolvedValue({
         rows: [{ id: 1, name: 'Test Chapter' }],
-      } as any);
+      });
 
       const response = await request(app)
         .get('/api/stewards/marketplace/public')
@@ -88,7 +111,7 @@ describe('Guest Access to Steward Endpoints', () => {
       const { getActiveStewardListings, getStewardById, getMemberById } = require('../db/queries');
       
       getActiveStewardListings.mockResolvedValue([]);
-      jest.spyOn(pool, 'query').mockResolvedValue({ rows: [] } as any);
+      (jest.spyOn(pool, 'query') as jest.Mock).mockResolvedValue({ rows: [] });
 
       const response = await request(app)
         .get('/api/stewards/marketplace/public')
@@ -135,9 +158,9 @@ describe('Guest Access to Steward Endpoints', () => {
       getMemberById.mockResolvedValue(mockMember);
       getStewardListingImages.mockResolvedValue([]);
 
-      jest.spyOn(pool, 'query').mockResolvedValue({
+      (jest.spyOn(pool, 'query') as jest.Mock).mockResolvedValue({
         rows: [{ id: 1, name: 'Test Chapter' }],
-      } as any);
+      });
 
       const response = await request(app)
         .get('/api/stewards/listings/1/public')

@@ -285,20 +285,23 @@ describe('Registration Flow Tests', () => {
         email: 'member@example.com',
         membership_number: '12345',
         cognito_sub: 'test-cognito-sub-123',
-        initiated_chapter_id: 1,
+        initiated_chapter_id: '1', // Route expects string, will parse to int
         initiated_season: 'Fall',
-        initiated_year: 2020,
+        initiated_year: '2020', // Route expects string, will parse to int
         location: 'New York, NY',
         phone_number: '555-1234',
         industry: 'Technology',
         job_title: 'Software Engineer',
         bio: 'Test bio',
-        address_is_private: false,
-        phone_is_private: false,
+        address_is_private: 'false', // Route expects string 'true'/'false' or boolean
+        phone_is_private: 'false', // Route expects string 'true'/'false' or boolean
         social_links: JSON.stringify({}),
       };
 
-      // Mock: No existing draft
+      // Mock: No existing draft (check by cognito_sub)
+      (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+
+      // Mock: Seller check (no existing seller)
       (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] });
 
       // Mock: No duplicate member
@@ -687,8 +690,13 @@ describe('Registration Flow Tests', () => {
         initiated_chapter_id: 1,
       };
 
-      // Mock: Member already exists
-      (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] }); // No draft
+      // Mock: No existing draft
+      (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+      
+      // Mock: Seller check (no existing seller)
+      (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+      
+      // Mock: Duplicate member exists
       (pool.query as jest.Mock).mockResolvedValueOnce({
         rows: [{ id: 1, email: memberData.email }], // Duplicate member
       });
@@ -733,10 +741,14 @@ describe('Registration Flow Tests', () => {
         initiated_chapter_id: 1,
       };
 
-      // Mock: No draft, no duplicate
-      (pool.query as jest.Mock)
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({ rows: [] });
+      // Mock: No draft
+      (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+      
+      // Mock: Seller check (no existing seller)
+      (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] });
+      
+      // Mock: No duplicate member
+      (pool.query as jest.Mock).mockResolvedValueOnce({ rows: [] });
 
       // Mock: Member creation succeeds
       (pool.query as jest.Mock).mockResolvedValueOnce({
@@ -757,7 +769,7 @@ describe('Registration Flow Tests', () => {
         .send(memberData);
 
       expect(response.status).toBe(500);
-      expect(response.body.code).toBe('USER_LINKING_FAILED');
+      expect(response.body.error).toContain('Failed to link user account');
       // Verify cleanup was attempted
       expect(pool.query).toHaveBeenCalledWith(
         'DELETE FROM fraternity_members WHERE id = $1',
