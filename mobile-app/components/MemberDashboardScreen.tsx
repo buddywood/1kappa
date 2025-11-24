@@ -278,7 +278,7 @@ export default function MemberDashboardScreen({
         {/* Profile Link */}
         <PrimaryButton
           title="View Full Profile"
-          onPress={onNavigateToProfile}
+          onPress={onNavigateToProfile || (() => {})}
           style={styles.profileButton}
         />
       </ScrollView>

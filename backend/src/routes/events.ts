@@ -16,6 +16,7 @@ import {
 import { uploadToS3 } from "../services/s3";
 import { authenticate } from "../middleware/auth";
 import pool from "../db/connection";
+import { parseCityAndState } from "../utils/addressParser";
 
 const router: ExpressRouter = Router();
 
@@ -154,6 +155,15 @@ router.post(
         imageUrl = uploadResult.url;
       }
 
+      // Parse city and state from location if not provided
+      let city = body.city || null;
+      let state = body.state || null;
+      if (!city || !state) {
+        const parsed = parseCityAndState(body.location);
+        city = city || parsed.city;
+        state = state || parsed.state;
+      }
+
       // Create event
       const event = await createEvent({
         promoter_id: req.user.promoterId,
@@ -161,8 +171,8 @@ router.post(
         description: body.description || undefined,
         event_date: new Date(body.event_date),
         location: body.location,
-        city: body.city || undefined,
-        state: body.state || undefined,
+        city: city || undefined,
+        state: state || undefined,
         image_url: imageUrl,
         sponsored_chapter_id: body.sponsored_chapter_id,
         event_type_id: body.event_type_id,
@@ -557,14 +567,23 @@ router.put(
         featuredPaymentStatus = "PAID";
       }
 
+      // Parse city and state from location if not provided
+      let city = body.city || null;
+      let state = body.state || null;
+      if (!city || !state) {
+        const parsed = parseCityAndState(body.location);
+        city = city || parsed.city;
+        state = state || parsed.state;
+      }
+
       // Update event
       const updatedEvent = await updateEvent(eventId, {
         title: body.title,
         description: body.description || null,
         event_date: new Date(body.event_date),
         location: body.location,
-        city: body.city || null,
-        state: body.state || null,
+        city: city,
+        state: state,
         image_url: imageUrl !== undefined ? imageUrl : existingEvent.image_url,
         sponsored_chapter_id: body.sponsored_chapter_id,
         event_type_id: body.event_type_id,

@@ -144,7 +144,6 @@ export const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "700",
     color: COLORS.midnightNavy,
-    marginBottom: 12,
     fontFamily: "System",
     textAlign: "center",
     marginBottom: 16,

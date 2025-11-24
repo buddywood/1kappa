@@ -65,7 +65,7 @@ export default function ImpactBanner() {
     const start = 0;
     const startTime = performance.now();
 
-    const step = (now) => {
+    const step = (now: number) => {
       const progress = Math.min((now - startTime) / duration, 1);
       const value = Math.round(start + (target - start) * progress);
       setDisplayedAmount(value);

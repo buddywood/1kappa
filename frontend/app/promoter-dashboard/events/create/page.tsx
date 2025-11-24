@@ -17,6 +17,7 @@ import {
 } from "@/lib/api";
 import SearchableSelect from "../../../components/SearchableSelect";
 import { SkeletonLoader } from "../../../components/SkeletonLoader";
+import AddressAutocomplete from "../../../components/AddressAutocomplete";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -527,48 +528,14 @@ export default function CreateEventPage() {
             </div>
           )}
 
-          {/* Location */}
-          <div>
-            <Label htmlFor="location">Location *</Label>
-            <Input
-              id="location"
-              value={formData.location}
-              onChange={(e) =>
-                setFormData({ ...formData, location: e.target.value })
-              }
-              placeholder="e.g., 123 Main Street"
-              required
-              className="mt-2"
-            />
-          </div>
-
-          {/* City and State */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="city">City</Label>
-              <Input
-                id="city"
-                value={formData.city}
-                onChange={(e) =>
-                  setFormData({ ...formData, city: e.target.value })
-                }
-                placeholder="e.g., Atlanta"
-                className="mt-2"
-              />
-            </div>
-            <div>
-              <Label htmlFor="state">State</Label>
-              <Input
-                id="state"
-                value={formData.state}
-                onChange={(e) =>
-                  setFormData({ ...formData, state: e.target.value })
-                }
-                placeholder="e.g., GA"
-                className="mt-2"
-              />
-            </div>
-          </div>
+          {/* Location with Google Places Autocomplete */}
+          <AddressAutocomplete
+            location={formData.location}
+            onLocationChange={(value) =>
+              setFormData({ ...formData, location: value })
+            }
+            required
+          />
 
           {/* Event URL */}
           <div>

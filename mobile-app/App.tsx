@@ -64,7 +64,7 @@ export default function App() {
   const [editingEventId, setEditingEventId] = useState<number | null>(null);
   const [currentScreen, setCurrentScreen] = useState<Screen>("home");
   const [profileInitialMode, setProfileInitialMode] = useState<
-    "login" | "register"
+    "login" | "register" | "view"
   >("login");
   const [appIsReady, setAppIsReady] = useState(false);
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -123,6 +123,11 @@ export default function App() {
     setSelectedProductId(null);
     setSelectedListingId(null);
     setSelectedSellerId(null);
+    setSelectedEventId(null);
+  };
+
+  const handleBackToEvents = () => {
+    setCurrentScreen("events");
     setSelectedEventId(null);
   };
 
@@ -216,7 +221,7 @@ export default function App() {
         return selectedEventId ? (
           <EventDetail
             eventId={selectedEventId}
-            onClose={handleBackToHome}
+            onClose={handleBackToEvents}
             onRSVP={(event) => {
               // TODO: Implement RSVP functionality
               console.log("RSVP for event:", event.id);
@@ -281,7 +286,7 @@ export default function App() {
         return (
           <ProfileScreen
             onBack={handleBackToHome}
-            initialMode={profileInitialMode}
+            initialMode={profileInitialMode === "view" ? undefined : profileInitialMode}
             onMyEventsPress={() => setCurrentScreen("my-events")}
           />
         );

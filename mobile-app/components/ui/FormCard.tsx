@@ -4,7 +4,7 @@ import { COLORS, SHADOW, SPACING, RADII } from "../../constants/theme";
 
 interface FormCardProps {
   children: React.ReactNode;
-  style?: ViewStyle;
+  style?: ViewStyle | ViewStyle[];
   variant?: "elevated" | "flat" | "bordered";
   padding?: number;
   borderRadius?: number;

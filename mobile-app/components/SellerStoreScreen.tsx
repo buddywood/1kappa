@@ -30,7 +30,7 @@ const { width } = Dimensions.get('window');
 interface SellerStoreScreenProps {
   sellerId: number;
   onBack: () => void;
-  onProductPress?: (productId: number) => void;
+  onProductPress?: (product: Product) => void;
   onSearchPress?: () => void;
   onUserPress?: () => void;
 }
@@ -216,7 +216,7 @@ export default function SellerStoreScreen({
               <ProductCard
                 key={product.id}
                 product={product}
-                onPress={() => onProductPress?.(product.id)}
+                onPress={() => onProductPress?.(product)}
                 onAddToCart={canAddToCart(product) ? () => addToCart(product) : undefined}
               />
             ))}

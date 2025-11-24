@@ -283,7 +283,7 @@ export default function StewardMarketplaceScreen({
 
             {/* Category List */}
             <FlatList
-              data={[{ id: null, name: 'All Categories' } as ProductCategory, ...filteredCategories]}
+              data={[{ id: 0, name: 'All Categories', display_order: 0, created_at: '', updated_at: '' } as ProductCategory, ...filteredCategories]}
               keyExtractor={(item) => (item.id || 'all').toString()}
               renderItem={({ item }) => (
                 <TouchableOpacity

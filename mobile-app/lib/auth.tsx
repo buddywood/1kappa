@@ -86,6 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(tokens.idToken);
       setUser({
         ...refreshedUser,
+        role: refreshedUser.role as 'ADMIN' | 'SELLER' | 'PROMOTER' | 'GUEST' | 'STEWARD' | undefined,
         is_fraternity_member: !!refreshedUser.memberId,
         is_seller: !!refreshedUser.sellerId,
         is_promoter: !!refreshedUser.promoterId,
@@ -152,6 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setToken(tokens.idToken);
                 setUser({
                   ...refreshedUser,
+                  role: refreshedUser.role as 'ADMIN' | 'SELLER' | 'PROMOTER' | 'GUEST' | 'STEWARD' | undefined,
                   is_fraternity_member: !!refreshedUser.memberId,
                   is_seller: !!refreshedUser.sellerId,
                   is_promoter: !!refreshedUser.promoterId,
@@ -202,6 +204,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setToken(tokens.idToken);
             setUser({
               ...refreshedUser,
+              role: refreshedUser.role as 'ADMIN' | 'SELLER' | 'PROMOTER' | 'GUEST' | 'STEWARD' | undefined,
               is_fraternity_member: !!refreshedUser.memberId,
               is_seller: !!refreshedUser.sellerId,
               is_promoter: !!refreshedUser.promoterId,
@@ -265,6 +268,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(tokens.idToken);
       setUser({
         ...user,
+        role: user.role as 'ADMIN' | 'SELLER' | 'PROMOTER' | 'GUEST' | 'STEWARD' | undefined,
         is_fraternity_member: !!user.memberId,
         is_seller: !!user.sellerId,
         is_promoter: !!user.promoterId,

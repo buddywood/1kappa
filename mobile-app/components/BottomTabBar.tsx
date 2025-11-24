@@ -4,11 +4,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../lib/constants';
 
-type Screen = 'home' | 'shop' | 'events' | 'steward-marketplace' | 'profile';
+type TabScreen = 'home' | 'shop' | 'events' | 'steward-marketplace' | 'profile';
+type Screen = TabScreen | 'my-events' | 'create-event' | 'event-detail' | 'edit-event' | 'seller-store' | 'member-setup' | 'member-dashboard' | 'seller-setup';
 
 interface BottomTabBarProps {
   currentScreen: Screen;
-  onScreenChange: (screen: Screen) => void;
+  onScreenChange: (screen: TabScreen) => void;
 }
 
 export default function BottomTabBar({
@@ -19,35 +20,35 @@ export default function BottomTabBar({
 
   const tabs = [
     { 
-      id: 'home' as Screen, 
+      id: 'home' as TabScreen, 
       label: 'Home', 
       imageSource: require('../assets/icon.png'),
       iconName: null,
       isCenter: false
     },
     { 
-      id: 'events' as Screen, 
+      id: 'events' as TabScreen, 
       label: 'Events', 
       iconName: 'calendar-outline' as keyof typeof Ionicons.glyphMap,
       activeIconName: 'calendar' as keyof typeof Ionicons.glyphMap,
       isCenter: false
     },
     { 
-      id: 'shop' as Screen, 
+      id: 'shop' as TabScreen, 
       label: 'Shop', 
       iconName: 'bag-outline' as keyof typeof Ionicons.glyphMap,
       activeIconName: 'bag' as keyof typeof Ionicons.glyphMap,
       isCenter: true
     },
     { 
-      id: 'steward-marketplace' as Screen, 
+      id: 'steward-marketplace' as TabScreen, 
       label: 'Steward', 
       iconName: 'diamond-outline' as keyof typeof Ionicons.glyphMap,
       activeIconName: 'diamond' as keyof typeof Ionicons.glyphMap,
       isCenter: false
     },
     { 
-      id: 'profile' as Screen, 
+      id: 'profile' as TabScreen, 
       label: 'Profile', 
       iconName: 'person-outline' as keyof typeof Ionicons.glyphMap,
       activeIconName: 'person' as keyof typeof Ionicons.glyphMap,
@@ -70,7 +71,7 @@ export default function BottomTabBar({
           <TouchableOpacity
             key={tab.id}
             style={[styles.tab, isCenter && styles.centerTab]}
-            onPress={() => onScreenChange(tab.id)}
+            onPress={() => onScreenChange(tab.id as TabScreen)}
             activeOpacity={0.7}
           >
             {isCenter ? (

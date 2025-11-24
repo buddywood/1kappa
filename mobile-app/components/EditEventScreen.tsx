@@ -34,6 +34,7 @@ import {
 } from "../lib/api";
 import ScreenHeader from "./ScreenHeader";
 import PrimaryButton from "./ui/PrimaryButton";
+import AddressAutocomplete from "./AddressAutocomplete";
 import { getEventFullSizeUrl } from "../lib/imageUtils";
 
 interface EditEventScreenProps {
@@ -1082,43 +1083,14 @@ export default function EditEventScreen({
           </View>
         )}
 
-        {/* Location */}
-        <View style={styles.section}>
-          <Text style={styles.label}>Location *</Text>
-          <TextInput
-            style={styles.input}
-            value={formData.location}
-            onChangeText={(text) =>
-              setFormData({ ...formData, location: text })
-            }
-            placeholder="e.g., 123 Main Street"
-            placeholderTextColor={COLORS.midnightNavy + "66"}
-          />
-        </View>
-
-        {/* City and State */}
-        <View style={styles.row}>
-          <View style={[styles.section, { flex: 1, marginRight: 8 }]}>
-            <Text style={styles.label}>City</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.city}
-              onChangeText={(text) => setFormData({ ...formData, city: text })}
-              placeholder="e.g., Atlanta"
-              placeholderTextColor={COLORS.midnightNavy + "66"}
-            />
-          </View>
-          <View style={[styles.section, { flex: 1, marginLeft: 8 }]}>
-            <Text style={styles.label}>State</Text>
-            <TextInput
-              style={styles.input}
-              value={formData.state}
-              onChangeText={(text) => setFormData({ ...formData, state: text })}
-              placeholder="e.g., GA"
-              placeholderTextColor={COLORS.midnightNavy + "66"}
-            />
-          </View>
-        </View>
+        {/* Location with Google Places Autocomplete */}
+        <AddressAutocomplete
+          location={formData.location}
+          onLocationChange={(value) =>
+            setFormData({ ...formData, location: value })
+          }
+          required
+        />
 
         {/* Event URL */}
         <View style={styles.section}>
