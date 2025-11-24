@@ -19,6 +19,7 @@ import EventsScreen from "./components/EventsScreen";
 import EventDetail from "./components/EventDetail";
 import MyEventsScreen from "./components/MyEventsScreen";
 import CreateEventScreen from "./components/CreateEventScreen";
+import EditEventScreen from "./components/EditEventScreen";
 import SellerStoreScreen from "./components/SellerStoreScreen";
 import StewardMarketplaceScreen from "./components/StewardMarketplaceScreen";
 import SellersScreen from "./components/SellersScreen";
@@ -39,6 +40,7 @@ type Screen =
   | "event-detail"
   | "my-events"
   | "create-event"
+  | "edit-event"
   | "seller-store"
   | "steward-marketplace"
   | "profile"
@@ -59,6 +61,7 @@ export default function App() {
   const [selectedEventId, setSelectedEventId] = useState<number | null>(
     null
   );
+  const [editingEventId, setEditingEventId] = useState<number | null>(null);
   const [currentScreen, setCurrentScreen] = useState<Screen>("home");
   const [profileInitialMode, setProfileInitialMode] = useState<
     "login" | "register"
@@ -173,6 +176,11 @@ export default function App() {
     setCurrentScreen("event-detail");
   };
 
+  const handleEditEventPress = (eventId: number) => {
+    setEditingEventId(eventId);
+    setCurrentScreen("edit-event");
+  };
+
   const handleRSVPPress = (event: Event) => {
     // Placeholder for RSVP action
     console.log("RSVP pressed:", event.id);
@@ -213,6 +221,7 @@ export default function App() {
               // TODO: Implement RSVP functionality
               console.log("RSVP for event:", event.id);
             }}
+            onEditPress={handleEditEventPress}
           />
         ) : null;
       case "my-events":
@@ -236,6 +245,17 @@ export default function App() {
             }}
           />
         );
+      case "edit-event":
+        return editingEventId ? (
+          <EditEventScreen
+            eventId={editingEventId}
+            onBack={handleBackToHome}
+            onSuccess={() => {
+              setCurrentScreen("my-events");
+              setEditingEventId(null);
+            }}
+          />
+        ) : null;
       case "seller-store":
         return selectedSellerId ? (
           <SellerStoreScreen

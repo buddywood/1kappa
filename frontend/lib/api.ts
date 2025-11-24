@@ -714,6 +714,34 @@ export async function createEvent(formData: FormData): Promise<Event & { checkou
   return parseJsonResponse<Event & { checkout_url?: string; requires_payment?: boolean; payment_error?: string }>(res);
 }
 
+export async function updateEvent(
+  eventId: number,
+  formData: FormData
+): Promise<Event & { checkout_url?: string; requires_payment?: boolean; payment_error?: string }> {
+  const headers = await getAuthHeaders();
+  // Remove Content-Type header when sending FormData - browser will set it automatically with boundary
+  const { 'Content-Type': _, ...headersWithoutContentType } = headers as Record<string, string>;
+  const res = await fetch(`${API_URL}/api/events/${eventId}`, {
+    method: 'PUT',
+    headers: headersWithoutContentType,
+    body: formData,
+  });
+  if (!res.ok) {
+    try {
+      const error = await parseJsonResponse<{ error?: string }>(res);
+      throw new Error(error.error || 'Failed to update event');
+    } catch (err: any) {
+      // If it's already our friendly error, re-throw it
+      if (err.message && !err.message.includes('Unexpected token')) {
+        throw err;
+      }
+      // Otherwise provide a friendly message
+      throw new Error('Failed to update event. Please check your connection and try again.');
+    }
+  }
+  return parseJsonResponse<Event & { checkout_url?: string; requires_payment?: boolean; payment_error?: string }>(res);
+}
+
 export async function fetchPendingPromoters(): Promise<Promoter[]> {
   const headers = await getAuthHeaders();
   const res = await fetch(`${API_URL}/api/admin/promoters/pending`, {

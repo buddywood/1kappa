@@ -367,6 +367,30 @@ export async function createEvent(token: string, formData: FormData): Promise<Ev
   }
 }
 
+export async function updateEvent(
+  token: string,
+  eventId: number,
+  formData: FormData
+): Promise<Event & { checkout_url?: string; requires_payment?: boolean; payment_error?: string }> {
+  try {
+    const res = await fetch(`${API_URL}/api/events/${eventId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || 'Failed to update event');
+    }
+    return res.json();
+  } catch (error) {
+    console.error('Error updating event:', error);
+    throw error;
+  }
+}
+
 export interface SearchResults {
   products: Product[];
   events: Event[];

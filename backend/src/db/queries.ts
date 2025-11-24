@@ -1736,6 +1736,134 @@ export async function getFavoriteProductsByUser(userEmail: string): Promise<Prod
   return result.rows;
 }
 
+export async function updateEvent(
+  eventId: number,
+  updates: {
+    title?: string;
+    description?: string | null;
+    event_date?: Date;
+    location?: string;
+    city?: string | null;
+    state?: string | null;
+    image_url?: string | null;
+    sponsored_chapter_id?: number;
+    event_type_id?: number;
+    event_audience_type_id?: number;
+    all_day?: boolean;
+    duration_minutes?: number | null;
+    event_link?: string | null;
+    is_featured?: boolean;
+    featured_payment_status?: 'UNPAID' | 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED';
+    ticket_price_cents?: number;
+    dress_codes?: ('business' | 'business_casual' | 'formal' | 'semi_formal' | 'kappa_casual' | 'greek_encouraged' | 'greek_required' | 'outdoor' | 'athletic' | 'comfortable' | 'all_white')[];
+    dress_code_notes?: string | null;
+  }
+): Promise<Event> {
+  // Build dynamic UPDATE query based on provided fields
+  const fields: string[] = [];
+  const values: any[] = [];
+  let paramIndex = 1;
+
+  if (updates.title !== undefined) {
+    fields.push(`title = $${paramIndex++}`);
+    values.push(updates.title);
+  }
+  if (updates.description !== undefined) {
+    fields.push(`description = $${paramIndex++}`);
+    values.push(updates.description);
+  }
+  if (updates.event_date !== undefined) {
+    fields.push(`event_date = $${paramIndex++}`);
+    values.push(updates.event_date);
+  }
+  if (updates.location !== undefined) {
+    fields.push(`location = $${paramIndex++}`);
+    values.push(updates.location);
+  }
+  if (updates.city !== undefined) {
+    fields.push(`city = $${paramIndex++}`);
+    values.push(updates.city);
+  }
+  if (updates.state !== undefined) {
+    fields.push(`state = $${paramIndex++}`);
+    values.push(updates.state);
+  }
+  if (updates.image_url !== undefined) {
+    fields.push(`image_url = $${paramIndex++}`);
+    values.push(updates.image_url);
+  }
+  if (updates.sponsored_chapter_id !== undefined) {
+    fields.push(`sponsored_chapter_id = $${paramIndex++}`);
+    values.push(updates.sponsored_chapter_id);
+  }
+  if (updates.event_type_id !== undefined) {
+    fields.push(`event_type_id = $${paramIndex++}`);
+    values.push(updates.event_type_id);
+  }
+  if (updates.event_audience_type_id !== undefined) {
+    fields.push(`event_audience_type_id = $${paramIndex++}`);
+    values.push(updates.event_audience_type_id);
+  }
+  if (updates.all_day !== undefined) {
+    fields.push(`all_day = $${paramIndex++}`);
+    values.push(updates.all_day);
+  }
+  if (updates.duration_minutes !== undefined) {
+    fields.push(`duration_minutes = $${paramIndex++}`);
+    values.push(updates.duration_minutes);
+  }
+  if (updates.event_link !== undefined) {
+    fields.push(`event_link = $${paramIndex++}`);
+    values.push(updates.event_link);
+  }
+  if (updates.ticket_price_cents !== undefined) {
+    fields.push(`ticket_price_cents = $${paramIndex++}`);
+    values.push(updates.ticket_price_cents);
+  }
+  if (updates.dress_codes !== undefined) {
+    fields.push(`dress_codes = $${paramIndex++}`);
+    values.push(JSON.stringify(updates.dress_codes));
+  }
+  if (updates.dress_code_notes !== undefined) {
+    fields.push(`dress_code_notes = $${paramIndex++}`);
+    values.push(updates.dress_code_notes);
+  }
+  if (updates.is_featured !== undefined) {
+    fields.push(`is_featured = $${paramIndex++}`);
+    values.push(updates.is_featured);
+  }
+  if (updates.featured_payment_status !== undefined) {
+    fields.push(`featured_payment_status = $${paramIndex++}`);
+    values.push(updates.featured_payment_status);
+  }
+
+  if (fields.length === 0) {
+    // No fields to update, just return the existing event
+    const existingEvent = await getEventById(eventId);
+    if (!existingEvent) {
+      throw new Error(`Event with ID ${eventId} not found`);
+    }
+    return existingEvent;
+  }
+
+  // Add updated_at timestamp
+  fields.push(`updated_at = CURRENT_TIMESTAMP`);
+
+  // Add eventId as the last parameter
+  values.push(eventId);
+
+  const query = `UPDATE events
+     SET ${fields.join(', ')}
+     WHERE id = $${paramIndex}
+     RETURNING *`;
+
+  const result = await pool.query(query, values);
+  if (result.rows.length === 0) {
+    throw new Error(`Event with ID ${eventId} not found`);
+  }
+  return result.rows[0];
+}
+
 export async function updateEventStatus(
   eventId: number,
   status: 'ACTIVE' | 'CLOSED' | 'CANCELLED'

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { fetchEvents, fetchChapters, type Event, type Chapter } from '@/lib/api';
+import { fetchEvents, fetchEventTypes, type Event, type EventType } from '@/lib/api';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import EventCard from '../components/EventCard';
@@ -15,21 +15,22 @@ function EventsPageContent() {
   const searchParams = useSearchParams();
   const showPromoterHero = searchParams.get('role') === 'promoter';
   const [events, setEvents] = useState<Event[]>([]);
-  const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [eventTypes, setEventTypes] = useState<EventType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<FilterType>('upcoming');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
+  const [selectedEventType, setSelectedEventType] = useState<number | 'all'>('all');
+  const [locationFilter, setLocationFilter] = useState('');
 
   useEffect(() => {
     Promise.all([
       fetchEvents().catch(() => []),
-      fetchChapters().catch(() => [])
+      fetchEventTypes().catch(() => [])
     ])
-      .then(([eventsData, chaptersData]) => {
+      .then(([eventsData, eventTypesData]) => {
         setEvents(eventsData);
-        setChapters(chaptersData);
+        setEventTypes(eventTypesData);
       })
       .catch((err) => {
         console.error('Error fetching events:', err);
@@ -37,12 +38,6 @@ function EventsPageContent() {
       })
       .finally(() => setLoading(false));
   }, []);
-
-  const getChapterName = (chapterId: number | null) => {
-    if (!chapterId) return null;
-    const chapter = chapters.find(c => c.id === chapterId);
-    return chapter?.name || null;
-  };
 
   const filteredEvents = useMemo(() => {
     let filtered = [...events];
@@ -56,20 +51,27 @@ function EventsPageContent() {
     }
     // 'all' shows everything, no date filtering needed
 
-    // Filter by chapter
-    if (selectedChapter) {
-      filtered = filtered.filter(event => event.sponsored_chapter_id === selectedChapter);
+    // Filter by event type
+    if (selectedEventType !== 'all') {
+      filtered = filtered.filter(event => event.event_type_id === selectedEventType);
     }
 
-    // Filter by search query (title, location, description)
+    // Filter by location (city or state)
+    if (locationFilter.trim()) {
+      const location = locationFilter.toLowerCase();
+      filtered = filtered.filter(event => 
+        (event.city && event.city.toLowerCase().includes(location)) ||
+        (event.state && event.state.toLowerCase().includes(location)) ||
+        (event.location && event.location.toLowerCase().includes(location))
+      );
+    }
+
+    // Filter by search query (title, description)
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(event => 
         event.title.toLowerCase().includes(query) ||
-        event.location.toLowerCase().includes(query) ||
-        (event.description && event.description.toLowerCase().includes(query)) ||
-        (event.city && event.city.toLowerCase().includes(query)) ||
-        (event.state && event.state.toLowerCase().includes(query))
+        (event.description && event.description.toLowerCase().includes(query))
       );
     }
 
@@ -84,7 +86,7 @@ function EventsPageContent() {
     });
 
     return filtered;
-  }, [events, filter, searchQuery, selectedChapter]);
+  }, [events, filter, searchQuery, selectedEventType, locationFilter]);
 
   return (
     <div className="min-h-screen bg-cream dark:bg-black text-midnight-navy dark:text-gray-100">
@@ -146,7 +148,7 @@ function EventsPageContent() {
             />
           </div>
 
-          {/* Filter Buttons and Chapter Select */}
+          {/* Filter Buttons */}
           <div className="flex flex-col sm:flex-row gap-4">
             {/* Date Filter */}
             <div className="flex gap-2 bg-white p-1 rounded-lg border border-frost-gray">
@@ -182,19 +184,28 @@ function EventsPageContent() {
               </button>
             </div>
 
-            {/* Chapter Filter */}
+            {/* Event Type Filter */}
             <select
-              value={selectedChapter || ''}
-              onChange={(e) => setSelectedChapter(e.target.value ? parseInt(e.target.value) : null)}
+              value={selectedEventType === 'all' ? '' : selectedEventType}
+              onChange={(e) => setSelectedEventType(e.target.value ? parseInt(e.target.value) : 'all')}
               className="flex-1 px-4 py-2 border border-frost-gray rounded-lg focus:ring-2 focus:ring-crimson focus:border-transparent text-midnight-navy bg-white"
             >
-              <option value="">All Chapters</option>
-              {chapters.map((chapter) => (
-                <option key={chapter.id} value={chapter.id}>
-                  {chapter.name}
+              <option value="">All Event Types</option>
+              {eventTypes.map((type) => (
+                <option key={type.id} value={type.id}>
+                  {type.description}
                 </option>
               ))}
             </select>
+
+            {/* Location Filter */}
+            <input
+              type="text"
+              placeholder="Filter by city or state..."
+              value={locationFilter}
+              onChange={(e) => setLocationFilter(e.target.value)}
+              className="flex-1 px-4 py-2 border border-frost-gray rounded-lg focus:ring-2 focus:ring-crimson focus:border-transparent text-midnight-navy bg-white"
+            />
           </div>
 
           {/* Results Count */}
@@ -202,7 +213,8 @@ function EventsPageContent() {
             <div className="text-sm text-midnight-navy/60">
               Showing {filteredEvents.length} {filteredEvents.length === 1 ? 'event' : 'events'}
               {searchQuery && ` matching "${searchQuery}"`}
-              {selectedChapter && ` from ${getChapterName(selectedChapter)}`}
+              {selectedEventType !== 'all' && ` of type "${eventTypes.find(t => t.id === selectedEventType)?.description || ''}"`}
+              {locationFilter && ` in "${locationFilter}"`}
             </div>
           )}
         </div>
@@ -242,10 +254,10 @@ function EventsPageContent() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
             <h3 className="text-xl font-semibold text-midnight-navy mb-2">
-              {searchQuery || selectedChapter ? 'No events found' : 'No events available'}
+              {searchQuery || selectedEventType !== 'all' || locationFilter ? 'No events found' : 'No events available'}
             </h3>
             <p className="text-midnight-navy/60 mb-6">
-              {searchQuery || selectedChapter
+              {searchQuery || selectedEventType !== 'all' || locationFilter
                 ? 'Try adjusting your filters or search query.'
                 : filter === 'upcoming'
                 ? 'Check back soon for upcoming events!'
@@ -253,11 +265,12 @@ function EventsPageContent() {
                 ? 'No past events to display.'
                 : 'No events available at this time.'}
             </p>
-            {(searchQuery || selectedChapter) && (
+            {(searchQuery || selectedEventType !== 'all' || locationFilter) && (
               <button
                 onClick={() => {
                   setSearchQuery('');
-                  setSelectedChapter(null);
+                  setSelectedEventType('all');
+                  setLocationFilter('');
                   setFilter('all');
                 }}
                 className="bg-crimson text-white px-6 py-2 rounded-full font-semibold hover:bg-crimson/90 transition"
@@ -269,9 +282,8 @@ function EventsPageContent() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredEvents.map((event) => {
-              const chapterName = event.sponsored_chapter_id 
-                ? getChapterName(event.sponsored_chapter_id) 
-                : null;
+              // Get chapter name from event data if available
+              const chapterName = event.chapter_name || null;
               return (
                 <EventCard 
                   key={event.id} 

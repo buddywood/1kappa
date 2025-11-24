@@ -42,6 +42,7 @@ interface EventDetailProps {
   eventId: number;
   onClose: () => void;
   onRSVP?: (event: Event) => void;
+  onEditPress?: (eventId: number) => void;
 }
 
 const { width } = Dimensions.get("window");
@@ -50,6 +51,7 @@ export default function EventDetail({
   eventId,
   onClose,
   onRSVP,
+  onEditPress,
 }: EventDetailProps) {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -497,8 +499,11 @@ export default function EventDetail({
                       styles.buttonWithSpacing,
                     ]}
                     onPress={() => {
-                      // TODO: Navigate to edit screen
-                      console.log("Edit event:", event.id);
+                      if (onEditPress) {
+                        onEditPress(event.id);
+                      } else {
+                        console.log("Edit event:", event.id);
+                      }
                     }}
                     activeOpacity={0.85}
                   >

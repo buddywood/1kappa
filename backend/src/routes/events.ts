@@ -11,6 +11,7 @@ import {
   getAllEventTypes,
   getAllEventAudienceTypes,
   updateEventStatus,
+  updateEvent,
 } from "../db/queries";
 import { uploadToS3 } from "../services/s3";
 import { authenticate } from "../middleware/auth";
@@ -26,7 +27,7 @@ const upload = multer({
   },
 });
 
-const createEventSchema = z.object({
+const eventSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional().nullable(),
   event_date: z.string(),
@@ -60,6 +61,9 @@ const createEventSchema = z.object({
     .min(1),
   dress_code_notes: z.string().optional().nullable(),
 });
+
+// Alias for backward compatibility
+const createEventSchema = eventSchema;
 
 // Create event - requires authenticated promoter (must come before /:id route)
 router.post(
@@ -280,10 +284,12 @@ router.get("/upcoming", async (req: Request, res: Response) => {
         p.fraternity_member_id as promoter_fraternity_member_id,
         p.sponsoring_chapter_id as promoter_sponsoring_chapter_id,
         c.name as chapter_name,
+        eat.description as event_audience_type_description,
         CASE WHEN p.fraternity_member_id IS NOT NULL THEN true ELSE false END as is_fraternity_member
       FROM events e
       JOIN promoters p ON e.promoter_id = p.id
       LEFT JOIN chapters c ON e.sponsored_chapter_id = c.id
+      LEFT JOIN event_audience_types eat ON e.event_audience_type_id = eat.id
       WHERE p.status = 'APPROVED' AND e.status = 'ACTIVE' AND e.event_date >= NOW()
       ORDER BY e.event_date ASC
       LIMIT 5`
@@ -391,6 +397,202 @@ router.get(
     } catch (error) {
       console.error("Error fetching promoter metrics:", error);
       res.status(500).json({ error: "Failed to fetch promoter metrics" });
+    }
+  }
+);
+
+// Update event - requires authenticated promoter and event ownership
+router.put(
+  "/:id",
+  authenticate,
+  upload.single("image"),
+  async (req: Request, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      if (!req.user.promoterId) {
+        return res
+          .status(403)
+          .json({ error: "You must be an approved promoter to edit events" });
+      }
+
+      const eventId = parseInt(req.params.id);
+      if (isNaN(eventId)) {
+        return res.status(400).json({ error: "Invalid event ID" });
+      }
+
+      // Verify event exists and belongs to this promoter
+      const existingEvent = await getEventById(eventId);
+      if (!existingEvent) {
+        return res.status(404).json({ error: "Event not found" });
+      }
+
+      if (existingEvent.promoter_id !== req.user.promoterId) {
+        return res
+          .status(403)
+          .json({ error: "You can only edit your own events" });
+      }
+
+      // Verify event is ACTIVE
+      if (existingEvent.status !== "ACTIVE") {
+        return res
+          .status(403)
+          .json({ error: "Only active events can be edited" });
+      }
+
+      // Check if promoter is approved
+      const promoterResult = await pool.query(
+        "SELECT id, status FROM promoters WHERE id = $1",
+        [req.user.promoterId]
+      );
+
+      if (promoterResult.rows.length === 0) {
+        return res.status(404).json({ error: "Promoter profile not found" });
+      }
+
+      if (promoterResult.rows[0].status !== "APPROVED") {
+        return res
+          .status(403)
+          .json({ error: "You must be an approved promoter to edit events" });
+      }
+
+      // Validate request body
+      if (!req.body.sponsoring_chapter_id) {
+        return res.status(400).json({ error: "Sponsored chapter is required" });
+      }
+
+      const body = eventSchema.parse({
+        ...req.body,
+        sponsored_chapter_id: parseInt(req.body.sponsoring_chapter_id),
+        event_type_id: req.body.event_type_id
+          ? parseInt(req.body.event_type_id)
+          : undefined,
+        event_audience_type_id: req.body.event_audience_type_id
+          ? parseInt(req.body.event_audience_type_id)
+          : undefined,
+        all_day: req.body.all_day === "true" || req.body.all_day === true,
+        duration_minutes: req.body.duration_minutes
+          ? parseInt(req.body.duration_minutes)
+          : undefined,
+        event_link: req.body.event_link || undefined,
+        is_featured:
+          req.body.is_featured === "true" || req.body.is_featured === true,
+        ticket_price_cents: req.body.ticket_price_cents
+          ? parseInt(req.body.ticket_price_cents)
+          : 0,
+        dress_codes: (() => {
+          // Handle array from FormData (dress_codes[] or dress_codes)
+          if (Array.isArray(req.body.dress_codes)) {
+            return req.body.dress_codes;
+          }
+          // Handle single value
+          if (req.body.dress_codes) {
+            return [req.body.dress_codes];
+          }
+          // Handle FormData array notation (dress_codes[])
+          if (req.body["dress_codes[]"]) {
+            return Array.isArray(req.body["dress_codes[]"])
+              ? req.body["dress_codes[]"]
+              : [req.body["dress_codes[]"]];
+          }
+          return ["business_casual"];
+        })(),
+        dress_code_notes: req.body.dress_code_notes || undefined,
+      });
+
+      // Upload image to S3 if provided
+      let imageUrl: string | undefined;
+      if (req.file) {
+        const uploadResult = await uploadToS3(
+          req.file.buffer,
+          req.file.originalname,
+          req.file.mimetype,
+          "events"
+        );
+        imageUrl = uploadResult.url;
+      }
+
+      // Handle featured status and payment
+      let checkoutUrl: string | undefined;
+      let featuredPaymentStatus = existingEvent.featured_payment_status;
+      
+      // If setting to featured and not already paid
+      if (body.is_featured && existingEvent.featured_payment_status !== "PAID") {
+        // Create Stripe checkout session
+        const { createFeaturedEventCheckoutSession } = await import(
+          "../services/stripe-featured-event"
+        );
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+        const promoterResult = await pool.query(
+          "SELECT email FROM promoters WHERE id = $1",
+          [req.user.promoterId]
+        );
+        const promoterEmail = promoterResult.rows[0]?.email || "";
+
+        const checkoutSession = await createFeaturedEventCheckoutSession({
+          eventId: eventId,
+          eventTitle: body.title,
+          promoterEmail: promoterEmail,
+          successUrl: `${frontendUrl}/promoter-dashboard/events?featured=true`,
+          cancelUrl: `${frontendUrl}/promoter-dashboard/events/edit/${eventId}`,
+        });
+
+        // Update event with payment intent ID
+        await pool.query(
+          `UPDATE events 
+         SET stripe_payment_intent_id = $1
+         WHERE id = $2`,
+          [checkoutSession.id, eventId]
+        );
+
+        checkoutUrl = checkoutSession.url || undefined;
+        featuredPaymentStatus = "PENDING";
+      } else if (!body.is_featured) {
+        // If unchecking featured, reset payment status
+        featuredPaymentStatus = "UNPAID";
+      } else if (body.is_featured && existingEvent.featured_payment_status === "PAID") {
+        // Already featured and paid, keep status
+        featuredPaymentStatus = "PAID";
+      }
+
+      // Update event
+      const updatedEvent = await updateEvent(eventId, {
+        title: body.title,
+        description: body.description || null,
+        event_date: new Date(body.event_date),
+        location: body.location,
+        city: body.city || null,
+        state: body.state || null,
+        image_url: imageUrl !== undefined ? imageUrl : existingEvent.image_url,
+        sponsored_chapter_id: body.sponsored_chapter_id,
+        event_type_id: body.event_type_id,
+        event_audience_type_id: body.event_audience_type_id,
+        all_day: body.all_day ?? false,
+        duration_minutes: body.duration_minutes ?? null,
+        event_link: body.event_link ?? null,
+        is_featured: body.is_featured ?? false,
+        featured_payment_status: featuredPaymentStatus,
+        ticket_price_cents: body.ticket_price_cents || 0,
+        dress_codes: body.dress_codes,
+        dress_code_notes: body.dress_code_notes ?? null,
+      });
+
+      return res.status(200).json({
+        ...updatedEvent,
+        checkout_url: checkoutUrl,
+        requires_payment: !!checkoutUrl,
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res
+          .status(400)
+          .json({ error: "Validation error", details: error.errors });
+        return;
+      }
+      console.error("Error updating event:", error);
+      res.status(500).json({ error: "Failed to update event" });
     }
   }
 );
