@@ -151,6 +151,28 @@ CREATE TABLE IF NOT EXISTS promoters (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Event Types reference table (must be created before events table)
+CREATE TABLE IF NOT EXISTS event_types (
+  id SERIAL PRIMARY KEY,
+  enum VARCHAR(50) NOT NULL UNIQUE,
+  description VARCHAR(255) NOT NULL,
+  display_order INTEGER NOT NULL DEFAULT 0,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Event Audience Types reference table (must be created before events table)
+CREATE TABLE IF NOT EXISTS event_audience_types (
+  id SERIAL PRIMARY KEY,
+  enum VARCHAR(50) NOT NULL UNIQUE,
+  description VARCHAR(255) NOT NULL,
+  display_order INTEGER NOT NULL DEFAULT 0,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Events table
 CREATE TABLE IF NOT EXISTS events (
   id SERIAL PRIMARY KEY,
@@ -178,28 +200,6 @@ CREATE TABLE IF NOT EXISTS events (
   ),
   dress_code_notes TEXT,
   status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'CLOSED', 'CANCELLED')),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Event Types reference table
-CREATE TABLE IF NOT EXISTS event_types (
-  id SERIAL PRIMARY KEY,
-  enum VARCHAR(50) NOT NULL UNIQUE,
-  description VARCHAR(255) NOT NULL,
-  display_order INTEGER NOT NULL DEFAULT 0,
-  is_active BOOLEAN NOT NULL DEFAULT true,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Event Audience Types reference table
-CREATE TABLE IF NOT EXISTS event_audience_types (
-  id SERIAL PRIMARY KEY,
-  enum VARCHAR(50) NOT NULL UNIQUE,
-  description VARCHAR(255) NOT NULL,
-  display_order INTEGER NOT NULL DEFAULT 0,
-  is_active BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

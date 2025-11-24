@@ -53,25 +53,28 @@ BEGIN
     WHERE role = 'GUEST' AND (seller_id IS NOT NULL OR promoter_id IS NOT NULL OR steward_id IS NOT NULL);
     
     -- Ensure SELLER users have proper nulls set (for legacy member_id column only)
-    UPDATE users 
-    SET member_id = NULL, promoter_id = NULL, steward_id = NULL 
-    WHERE role = 'SELLER' 
-      AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='member_id')
-      AND (member_id IS NOT NULL OR promoter_id IS NOT NULL OR steward_id IS NOT NULL);
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='member_id') THEN
+      UPDATE users 
+      SET member_id = NULL, promoter_id = NULL, steward_id = NULL 
+      WHERE role = 'SELLER' 
+        AND (member_id IS NOT NULL OR promoter_id IS NOT NULL OR steward_id IS NOT NULL);
+    END IF;
     
     -- Ensure PROMOTER users have proper nulls set (for legacy member_id column only)
-    UPDATE users 
-    SET member_id = NULL, seller_id = NULL, steward_id = NULL 
-    WHERE role = 'PROMOTER' 
-      AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='member_id')
-      AND (member_id IS NOT NULL OR seller_id IS NOT NULL OR steward_id IS NOT NULL);
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='member_id') THEN
+      UPDATE users 
+      SET member_id = NULL, seller_id = NULL, steward_id = NULL 
+      WHERE role = 'PROMOTER' 
+        AND (member_id IS NOT NULL OR seller_id IS NOT NULL OR steward_id IS NOT NULL);
+    END IF;
     
     -- Ensure ADMIN users have proper nulls set (for legacy member_id column only)
-    UPDATE users 
-    SET member_id = NULL, seller_id = NULL, promoter_id = NULL, steward_id = NULL 
-    WHERE role = 'ADMIN' 
-      AND EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='member_id')
-      AND (member_id IS NOT NULL OR seller_id IS NOT NULL OR promoter_id IS NOT NULL OR steward_id IS NOT NULL);
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='member_id') THEN
+      UPDATE users 
+      SET member_id = NULL, seller_id = NULL, promoter_id = NULL, steward_id = NULL 
+      WHERE role = 'ADMIN' 
+        AND (member_id IS NOT NULL OR seller_id IS NOT NULL OR promoter_id IS NOT NULL OR steward_id IS NOT NULL);
+    END IF;
     
     -- Add the new constraint allowing role coexistence for STEWARD
     -- Note: fraternity_member_id is NOT in users table - it's kept on role-specific tables
