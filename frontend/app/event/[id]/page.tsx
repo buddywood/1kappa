@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { fetchEvent, fetchChapters, fetchEventTypes } from "@/lib/api";
 import type { Event, Chapter, EventType } from "@/lib/api";
+import { getEventFullSizeUrl } from "@/lib/imageUtils";
 import Image from "next/image";
 import Link from "next/link";
 import Header from "../../components/Header";
@@ -202,20 +203,152 @@ export default function EventPage() {
       <Header />
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto bg-white dark:bg-black rounded-lg shadow-lg dark:shadow-black/50 overflow-hidden border border-frost-gray dark:border-gray-900">
-          <div className="md:flex">
-            {/* Event Image + Overlay */}
-            <div className="md:w-1/2 relative h-64 md:min-h-[420px] md:h-full overflow-hidden">
-              {event.image_url ? (
-                <Image
-                  src={event.image_url}
-                  alt={event.title}
-                  fill
-                  className="object-cover"
+          {/* Hero Section - Full Width */}
+          <div className="relative h-64 md:min-h-[420px] overflow-hidden">
+            {event.image_url ? (
+              <Image
+                src={getEventFullSizeUrl(event.image_url) || event.image_url}
+                alt={event.title}
+                fill
+                className="object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-crimson/20 to-aurora-gold/20 dark:from-crimson/10 dark:to-aurora-gold/10 flex items-center justify-center">
+                <svg
+                  className="w-24 h-24 text-crimson/40 dark:text-crimson/20"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+              </div>
+            )}
+
+            {/* Gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent pointer-events-none" />
+
+            {/* Bottom-left date pill */}
+            <div className="absolute bottom-4 left-4 flex flex-col gap-1">
+              <span className="inline-flex items-center px-3 py-1 rounded-full bg-black/40 text-xs font-semibold text-white backdrop-blur-sm">
+                {formatDate(event.event_date)}
+              </span>
+              <span className="inline-flex items-center px-3 py-1 rounded-full bg-black/40 text-[11px] text-white backdrop-blur-sm">
+                {formatTime(event.event_date)}{" "}
+                {event.location && (
+                  <span className="ml-1 opacity-80">
+                    •{" "}
+                    {event.city && event.state
+                      ? `${event.city}, ${event.state}`
+                      : event.location}
+                  </span>
+                )}
+              </span>
+            </div>
+
+            {/* Bottom-right event type pill */}
+            {eventType && (
+              <div className="absolute bottom-4 right-4">
+                <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-aurora-gold/90 text-xs font-semibold text-midnight-navy shadow-md">
+                  {eventType.description}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Title + Badges Section */}
+          <div className="mt-6 mb-4 px-6">
+            <h1 className="text-3xl font-display font-bold text-midnight-navy dark:text-gray-100 mb-3">
+              {event.title}
+            </h1>
+            {/* Badges: Sponsored Chapter */}
+            <div className="flex flex-wrap items-center gap-2">
+              {sponsoringChapterName && (
+                <VerificationBadge
+                  type="sponsored-chapter"
+                  chapterName={sponsoringChapterName}
                 />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-crimson/20 to-aurora-gold/20 dark:from-crimson/10 dark:to-aurora-gold/10 flex items-center justify-center">
+              )}
+            </div>
+          </div>
+
+          {/* Content Container */}
+          <div className="px-6">
+            {/* Event Details Grid */}
+            <h2 className="text-sm font-semibold tracking-wide text-midnight-navy/70 dark:text-gray-400 uppercase mb-4">
+              Event Details
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div className="flex items-center gap-2 text-midnight-navy/70 dark:text-gray-300">
+                <svg
+                  className="w-5 h-5 text-midnight-navy/70"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+                <span className="font-medium">
+                  {formatDate(event.event_date)}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-midnight-navy/70 dark:text-gray-300">
+                <svg
+                  className="w-5 h-5 text-midnight-navy/70"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <span>{formatTime(event.event_date)}</span>
+              </div>
+              <div className="flex items-center gap-2 text-midnight-navy/70 dark:text-gray-300 md:col-span-2">
+                <svg
+                  className="w-5 h-5 text-midnight-navy/70"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+                <span>{event.location}</span>
+                {event.city && event.state && (
+                  <span className="text-midnight-navy/50 dark:text-gray-500">
+                    • {event.city}, {event.state}
+                  </span>
+                )}
+              </div>
+              {event.ticket_price_cents > 0 && (
+                <div className="flex items-center gap-2 text-midnight-navy/70 dark:text-gray-300">
                   <svg
-                    className="w-24 h-24 text-crimson/40 dark:text-crimson/20"
+                    className="w-5 h-5 text-midnight-navy/70"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -224,205 +357,75 @@ export default function EventPage() {
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={2}
-                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                   </svg>
+                  <span className="font-semibold text-crimson">
+                    ${(event.ticket_price_cents / 100).toFixed(2)}
+                  </span>
                 </div>
               )}
 
-              {/* Gradient overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent pointer-events-none" />
+              {/* Dress Code */}
+              {event.dress_codes && event.dress_codes.length > 0 && (
+                <div className="flex items-start gap-3 text-midnight-navy/80 dark:text-gray-300 md:col-span-2">
+                  {/* Shirt Icon */}
+                  <svg
+                    className="w-5 h-5 mt-1 text-midnight-navy/70"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9.5 3L8 5 5 4l-1 3 3 2v9a2 2 0 002 2h6a2 2 0 002-2v-9l3-2-1-3-3 1-1.5-2h-4z"
+                    />
+                  </svg>
 
-              {/* Bottom-left date pill */}
-              <div className="absolute bottom-4 left-4 flex flex-col gap-1">
-                <span className="inline-flex items-center px-3 py-1 rounded-full bg-black/40 text-xs font-semibold text-white backdrop-blur-sm">
-                  {formatDate(event.event_date)}
-                </span>
-                <span className="inline-flex items-center px-3 py-1 rounded-full bg-black/30 text-[11px] text-white backdrop-blur-sm">
-                  {formatTime(event.event_date)}{" "}
-                  {event.location && (
-                    <span className="ml-1 opacity-80">
-                      •{" "}
-                      {event.city && event.state
-                        ? `${event.city}, ${event.state}`
-                        : event.location}
-                    </span>
-                  )}
-                </span>
-              </div>
+                  <div className="flex-1">
+                    {/* Chips */}
+                    <div className="flex flex-wrap gap-2 mb-1">
+                      {event.dress_codes.map((code) => (
+                        <span
+                          key={code}
+                          className="inline-flex items-center px-3 py-1 rounded-full border border-frost-gray bg-cream/70 text-xs font-semibold text-midnight-navy"
+                        >
+                          {formatDressCode(code)}
+                        </span>
+                      ))}
+                    </div>
 
-              {/* Bottom-right event type pill */}
-              {eventType && (
-                <div className="absolute bottom-4 right-4">
-                  <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-aurora-gold/90 text-xs font-semibold text-midnight-navy shadow-md">
-                    {eventType.description}
-                  </span>
+                    {/* Optional Notes */}
+                    {event.dress_code_notes && (
+                      <p className="text-xs text-midnight-navy/60 dark:text-gray-400 italic">
+                        {event.dress_code_notes}
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
 
-            <div className="md:w-1/2 p-8">
-              <div className="mb-4">
-                <h1 className="text-3xl font-display font-bold text-midnight-navy dark:text-gray-100 mb-3">
-                  {event.title}
-                </h1>
-                {/* Badges: Sponsored Chapter and Event Type */}
-                <div className="flex flex-wrap items-center gap-2">
-                  {sponsoringChapterName && (
-                    <VerificationBadge
-                      type="sponsored-chapter"
-                      chapterName={sponsoringChapterName}
-                    />
-                  )}
-                  {eventType && (
-                    <div className="bg-aurora-gold text-white text-sm font-semibold px-3 py-1.5 rounded-full">
-                      {eventType.description}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Event Details */}
-              <h2 className="text-sm font-semibold tracking-wide text-midnight-navy/70 dark:text-gray-400 uppercase mb-2">
-                Event Details
-              </h2>
-              <div className="mb-6 space-y-3">
-                <div className="flex items-center gap-2 text-midnight-navy/70 dark:text-gray-300">
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    />
-                  </svg>
-                  <span className="font-medium">
-                    {formatDate(event.event_date)}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-midnight-navy/70 dark:text-gray-300">
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  <span>{formatTime(event.event_date)}</span>
-                </div>
-                <div className="flex items-center gap-2 text-midnight-navy/70 dark:text-gray-300">
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                  </svg>
-                  <span>{event.location}</span>
-                  {event.city && event.state && (
-                    <span className="text-midnight-navy/50 dark:text-gray-500">
-                      • {event.city}, {event.state}
-                    </span>
-                  )}
-                </div>
-                {event.ticket_price_cents > 0 && (
-                  <div className="flex items-center gap-2 text-midnight-navy/70 dark:text-gray-300">
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    <span className="font-semibold text-crimson">
-                      ${(event.ticket_price_cents / 100).toFixed(2)}
-                    </span>
-                  </div>
-                )}
-
-                {/* Dress Code */}
-                {event.dress_codes && event.dress_codes.length > 0 && (
-                  <div className="flex items-start gap-3 text-midnight-navy/80 dark:text-gray-300">
-                    {/* Shirt Icon */}
-                    <svg
-                      className="w-5 h-5 mt-1"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9.5 3L8 5 5 4l-1 3 3 2v9a2 2 0 002 2h6a2 2 0 002-2v-9l3-2-1-3-3 1-1.5-2h-4z"
-                      />
-                    </svg>
-
-                    <div className="flex-1">
-                      {/* Chips */}
-                      <div className="flex flex-wrap gap-2 mb-1">
-                        {event.dress_codes.map((code) => (
-                          <span
-                            key={code}
-                            className="inline-flex items-center px-3 py-1 rounded-full border border-frost-gray bg-cream/70 text-xs font-semibold text-midnight-navy"
-                          >
-                            {formatDressCode(code)}
-                          </span>
-                        ))}
-                      </div>
-
-                      {/* Optional Notes */}
-                      {event.dress_code_notes && (
-                        <p className="text-xs text-midnight-navy/60 dark:text-gray-400 italic">
-                          {event.dress_code_notes}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {event.description && (
-                <p className="text-midnight-navy/70 dark:text-gray-300 mb-6 whitespace-pre-line">
+            {/* Description */}
+            {event.description && (
+              <div className="mt-6 px-6">
+                <p className="text-base leading-relaxed text-midnight-navy/70 dark:text-gray-300 whitespace-pre-line">
                   {event.description}
                 </p>
-              )}
+              </div>
+            )}
 
-              {/* Subtle divider */}
-              <div className="border-t border-frost-gray/50 dark:border-gray-800/50 mb-6"></div>
+            {/* Divider */}
+            {event.description && (
+              <div className="border-t border-frost-gray/50 dark:border-gray-800/50 mt-6"></div>
+            )}
 
-              {/* Promoter info with badges */}
-              {event.promoter_name && (
-                <section className="mb-6 p-4 bg-cream/60 dark:bg-gray-900/60 rounded-lg border border-frost-gray dark:border-gray-800">
+            {/* Promoter Block */}
+            {event.promoter_name && (
+              <section className="px-6 mt-6">
+                <div className="p-5 bg-cream/60 dark:bg-gray-900/60 rounded-lg border border-frost-gray dark:border-gray-800">
                   <h2 className="text-sm font-semibold tracking-wide text-midnight-navy/70 dark:text-gray-400 uppercase mb-2">
                     Promoter
                   </h2>
@@ -487,116 +490,116 @@ export default function EventPage() {
                       </p>
                     </div>
                   </div>
-                </section>
-              )}
-
-              {/* Event Countdown */}
-              <div className="mb-6 p-4 bg-cream/60 dark:bg-gray-900/60 rounded-lg border border-frost-gray dark:border-gray-800">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-semibold text-midnight-navy dark:text-gray-200">
-                    Time Remaining
-                  </span>
-                  <div className="h-1 w-16 rounded-full bg-crimson" />
                 </div>
-                <EventCountdown eventDate={event.event_date} />
-              </div>
+              </section>
+            )}
 
-              {/* Google Map - Show for non-promoters viewing non-virtual events */}
-              {showMap && (
-                <section className="mb-6 rounded-lg overflow-hidden border border-frost-gray dark:border-gray-800 bg-cream/40 dark:bg-gray-900/40">
-                  <div className="px-4 py-3 border-b border-frost-gray/60 dark:border-gray-800 flex items-center justify-between">
-                    <h2 className="text-sm font-semibold tracking-wide text-midnight-navy/80 dark:text-gray-300 uppercase">
-                      Location
-                    </h2>
-                    <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                        `${event.location}${
-                          event.city && event.state
-                            ? `, ${event.city}, ${event.state}`
-                            : ""
-                        }`
-                      )}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs font-semibold text-crimson hover:text-crimson/80"
-                    >
-                      Open in Google Maps →
-                    </a>
-                  </div>
-                  <div className="h-[300px]">
-                    {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ? (
-                      <iframe
-                        width="100%"
-                        height="100%"
-                        style={{ border: 0 }}
-                        loading="lazy"
-                        allowFullScreen
-                        referrerPolicy="no-referrer-when-downgrade"
-                        src={getGoogleMapsEmbedUrl()}
-                        className="w-full h-full"
-                      />
-                    ) : (
-                      <div className="h-full bg-cream/50 flex items-center justify-center">
-                        <span className="text-midnight-navy/70 dark:text-gray-300 text-sm">
-                          Map preview unavailable. Use the link above to open in
-                          Google Maps.
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </section>
+            {/* Event Countdown */}
+            <div className="mx-6 my-6 p-4 bg-cream/60 dark:bg-gray-900/60 rounded-lg border border-frost-gray dark:border-gray-800">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-semibold text-midnight-navy dark:text-gray-200">
+                  Time Remaining
+                </span>
+                <div className="h-1 w-16 rounded-full bg-crimson" />
+              </div>
+              <EventCountdown eventDate={event.event_date} />
+            </div>
+
+            {/* Google Map - Show for non-promoters viewing non-virtual events */}
+            {showMap && (
+              <section className="mt-6 rounded-lg overflow-hidden border border-frost-gray dark:border-gray-800">
+                <div className="px-4 py-3 border-b border-frost-gray/60 dark:border-gray-800 flex items-center justify-between bg-cream/40 dark:bg-gray-900/40">
+                  <h2 className="text-sm font-semibold tracking-wide text-midnight-navy/80 dark:text-gray-300 uppercase">
+                    Location
+                  </h2>
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                      `${event.location}${
+                        event.city && event.state
+                          ? `, ${event.city}, ${event.state}`
+                          : ""
+                      }`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-semibold text-crimson hover:text-crimson/80"
+                  >
+                    Open in Google Maps →
+                  </a>
+                </div>
+                <div className="h-[300px] bg-cream/40 dark:bg-gray-900/40">
+                  {process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ? (
+                    <iframe
+                      width="100%"
+                      height="100%"
+                      style={{ border: 0 }}
+                      loading="lazy"
+                      allowFullScreen
+                      referrerPolicy="no-referrer-when-downgrade"
+                      src={getGoogleMapsEmbedUrl()}
+                      className="w-full h-full"
+                    />
+                  ) : (
+                    <div className="h-full bg-cream/50 dark:bg-gray-900/50 flex items-center justify-center">
+                      <span className="text-midnight-navy/70 dark:text-gray-300 text-sm">
+                        Map preview unavailable. Use the link above to open in
+                        Google Maps.
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {/* Action Buttons */}
+            <div className="px-6 pb-10 space-y-3 mt-6">
+              {isEventOwner ? (
+                // Promoter owns active event: Edit and Share buttons
+                <>
+                  <Link
+                    href={`/promoter-dashboard/events/edit/${event.id}`}
+                    className="block w-full"
+                  >
+                    <Button className="w-full bg-crimson text-white py-3 rounded-lg font-semibold hover:bg-crimson/90 transition shadow-md hover:shadow-lg flex items-center justify-center">
+                      <Edit className="w-4 h-4 mr-2" />
+                      Edit Event
+                    </Button>
+                  </Link>
+                  <Button
+                    onClick={() => setShowShareModal(true)}
+                    className="w-full bg-midnight-navy text-white py-3 rounded-lg font-semibold hover:bg-midnight-navy/90 transition shadow-md hover:shadow-lg flex items-center justify-center"
+                  >
+                    <Share2 className="w-4 h-4 mr-2" />
+                    Share
+                  </Button>
+                </>
+              ) : (
+                // Non-promoter: Share, Add to Calendar, Message Promoter (disabled)
+                <>
+                  <Button
+                    onClick={() => setShowShareModal(true)}
+                    className="w-full bg-crimson text-white py-3 rounded-lg font-semibold hover:bg-crimson/90 transition shadow-md hover:shadow-lg flex items-center justify-center"
+                  >
+                    <Share2 className="w-4 h-4 mr-2" />
+                    Share
+                  </Button>
+                  <Button
+                    onClick={() => setShowCalendarModal(true)}
+                    variant="outline"
+                    className="w-full border-2 border-crimson text-crimson py-3 rounded-lg font-semibold hover:bg-crimson/10 transition flex items-center justify-center"
+                  >
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Add to Calendar
+                  </Button>
+                  <Button
+                    disabled
+                    className="w-full bg-frost-gray text-midnight-navy/50 py-3 rounded-lg font-semibold cursor-not-allowed opacity-60 flex items-center justify-center"
+                  >
+                    <Mail className="w-4 h-4 mr-2" />
+                    Message Promoter
+                  </Button>
+                </>
               )}
-
-              {/* Action Buttons */}
-              <div className="space-y-3">
-                {isEventOwner ? (
-                  // Promoter owns active event: Edit and Share buttons
-                  <>
-                    <Link
-                      href={`/promoter-dashboard/events/edit/${event.id}`}
-                      className="block w-full"
-                    >
-                      <Button className="w-full bg-crimson text-white py-3 rounded-lg font-semibold hover:bg-crimson/90 transition shadow-md hover:shadow-lg flex items-center justify-center">
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit Event
-                      </Button>
-                    </Link>
-                    <Button
-                      onClick={() => setShowShareModal(true)}
-                      className="w-full bg-midnight-navy text-white py-3 rounded-lg font-semibold hover:bg-midnight-navy/90 transition shadow-md hover:shadow-lg flex items-center justify-center"
-                    >
-                      <Share2 className="w-4 h-4 mr-2" />
-                      Share
-                    </Button>
-                  </>
-                ) : (
-                  // Non-promoter: Share, Add to Calendar, Message Promoter (disabled)
-                  <>
-                    <Button
-                      onClick={() => setShowShareModal(true)}
-                      className="w-full bg-crimson text-white py-3 rounded-lg font-semibold hover:bg-crimson/90 transition shadow-md hover:shadow-lg flex items-center justify-center"
-                    >
-                      <Share2 className="w-4 h-4 mr-2" />
-                      Share
-                    </Button>
-                    <Button
-                      onClick={() => setShowCalendarModal(true)}
-                      variant="outline"
-                      className="w-full border-2 border-crimson text-crimson py-3 rounded-lg font-semibold hover:bg-crimson/10 transition flex items-center justify-center"
-                    >
-                      <Calendar className="w-4 h-4 mr-2" />
-                      Add to Calendar
-                    </Button>
-                    <Button
-                      disabled
-                      className="w-full bg-frost-gray text-midnight-navy/50 py-3 rounded-lg font-semibold cursor-not-allowed opacity-60 flex items-center justify-center"
-                    >
-                      <Mail className="w-4 h-4 mr-2" />
-                      Message Promoter
-                    </Button>
-                  </>
-                )}
-              </div>
             </div>
           </div>
         </div>

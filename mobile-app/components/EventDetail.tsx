@@ -1,8 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   Image,
   TouchableOpacity,
@@ -10,6 +9,7 @@ import {
   Dimensions,
   Modal,
   Linking,
+  Animated,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -22,7 +22,7 @@ import {
   EventType,
 } from "../lib/api";
 import { COLORS, WEB_URL } from "../lib/constants";
-import { SHADOW } from "../constants/theme";
+import { getEventFullSizeUrl } from "../lib/imageUtils";
 import { useAuth } from "../lib/auth";
 import ScreenHeader from "./ScreenHeader";
 import VerificationBadge from "./VerificationBadge";
@@ -36,6 +36,7 @@ import {
   generateSocialShareUrls,
 } from "../lib/eventUtils";
 import QRCode from "react-native-qrcode-svg";
+import { styles } from "./EventDetailStyles";
 
 interface EventDetailProps {
   eventId: number;
@@ -57,15 +58,18 @@ export default function EventDetail({
   const [eventTypes, setEventTypes] = useState<EventType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [imageLoading, setImageLoading] = useState(true);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const loadEvent = async () => {
       try {
         setLoading(true);
         setError(null);
+        setImageLoading(true);
         const [eventData, chaptersData, eventTypesData] = await Promise.all([
           fetchEvent(eventId),
           fetchChapters().catch(() => []),
@@ -84,6 +88,31 @@ export default function EventDetail({
 
     loadEvent();
   }, [eventId]);
+
+  // Reset image loading when event changes
+  useEffect(() => {
+    if (event?.id) {
+      setImageLoading(true);
+      shimmerAnim.setValue(0);
+    }
+  }, [event?.id, event?.image_url]);
+
+  // Shimmer animation for skeleton loader
+  useEffect(() => {
+    if (imageLoading && event?.image_url) {
+      const shimmer = Animated.loop(
+        Animated.timing(shimmerAnim, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: true,
+        })
+      );
+      shimmer.start();
+      return () => shimmer.stop();
+    } else {
+      shimmerAnim.setValue(0);
+    }
+  }, [imageLoading, event?.image_url, shimmerAnim]);
 
   const getChapterName = (chapterId: number | null) => {
     if (!chapterId) return null;
@@ -128,7 +157,7 @@ export default function EventDetail({
 
   if (loading) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={styles.container}>
         <ScreenHeader title="Event Details" onBack={onClose} />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.crimson} />
@@ -139,7 +168,7 @@ export default function EventDetail({
 
   if (error || !event) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={styles.container}>
         <ScreenHeader title="Event Details" onBack={onClose} />
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{error || "Event not found"}</Text>
@@ -190,7 +219,7 @@ export default function EventDetail({
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={styles.container}>
       <ScreenHeader title="Event Details" onBack={onClose} />
       <ScrollView
         style={styles.scrollView}
@@ -199,11 +228,35 @@ export default function EventDetail({
       >
         {/* Event Image */}
         <View style={styles.imageContainer}>
-          {event.image_url ? (
+          {imageLoading && event?.image_url && (
+            <View style={styles.imageSkeleton}>
+              <Animated.View
+                style={[
+                  styles.shimmer,
+                  {
+                    transform: [
+                      {
+                        translateX: shimmerAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [-width, width],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              />
+            </View>
+          )}
+          {event?.image_url ? (
             <Image
-              source={{ uri: event.image_url }}
-              style={styles.image}
+              key={`img-${event.id}`}
+              source={{
+                uri: getEventFullSizeUrl(event.image_url) || event.image_url,
+              }}
+              style={[styles.image, imageLoading && styles.imageHidden]}
               resizeMode="cover"
+              onLoadStart={() => setImageLoading(true)}
+              onLoadEnd={() => setImageLoading(false)}
             />
           ) : (
             <View style={styles.imagePlaceholder}>
@@ -215,290 +268,325 @@ export default function EventDetail({
               />
             </View>
           )}
+          <View style={styles.fullImageGradient} />
         </View>
-
         {/* Event Info */}
-        <View style={styles.infoContainer}>
-          <Text style={styles.eventTitle}>{event.title}</Text>
+        <View style={styles.contentCard}>
+          <View style={styles.infoContainer}>
+            <Text style={styles.eventTitle}>{event.title}</Text>
 
-          {/* Badges: Sponsored Chapter and Event Type */}
-          <View style={styles.badgesContainer}>
-            {sponsoringChapterName && (
-              <VerificationBadge
-                type="sponsored-chapter"
-                chapterName={sponsoringChapterName}
-              />
-            )}
-            {event.event_type_id &&
-              (() => {
-                const eventType = eventTypes.find(
-                  (et) => et.id === event.event_type_id
-                );
-                return eventType ? (
-                  <View style={styles.eventTypeBadge}>
-                    <Text style={styles.eventTypeBadgeText}>
-                      {eventType.description}
-                    </Text>
-                  </View>
-                ) : null;
-              })()}
-          </View>
-
-          {/* Event Details */}
-          <View style={styles.detailsContainer}>
-            <View style={styles.detailRow}>
-              <Ionicons
-                name="calendar-outline"
-                size={20}
-                color={COLORS.midnightNavy}
-                style={{ opacity: 0.7 }}
-              />
-              <Text style={styles.detailText}>
-                {formatDate(event.event_date)}
-              </Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Ionicons
-                name="time-outline"
-                size={20}
-                color={COLORS.midnightNavy}
-                style={{ opacity: 0.7 }}
-              />
-              <Text style={styles.detailText}>
-                {formatTime(event.event_date)}
-              </Text>
-            </View>
-            <View style={styles.detailRow}>
-              <Ionicons
-                name="location-outline"
-                size={20}
-                color={COLORS.midnightNavy}
-                style={{ opacity: 0.7 }}
-              />
-              <Text style={styles.detailText}>
-                {event.location}
-                {event.city && event.state && `, ${event.city}, ${event.state}`}
-              </Text>
-            </View>
-            {event.ticket_price_cents > 0 && (
-              <View style={styles.detailRow}>
-                <Ionicons
-                  name="ticket-outline"
-                  size={20}
-                  color={COLORS.crimson}
+            {/* Badges: Sponsored Chapter and Event Type */}
+            <View style={styles.badgesContainer}>
+              {sponsoringChapterName && (
+                <VerificationBadge
+                  type="sponsored-chapter"
+                  chapterName={sponsoringChapterName}
                 />
-                <Text style={[styles.detailText, styles.priceText]}>
-                  ${(event.ticket_price_cents / 100).toFixed(2)}
-                </Text>
-              </View>
-            )}
-            {event.dress_codes && event.dress_codes.length > 0 && (
+              )}
+              {event.event_type_id &&
+                (() => {
+                  const eventType = eventTypes.find(
+                    (et) => et.id === event.event_type_id
+                  );
+                  return eventType ? (
+                    <View style={styles.eventTypeBadge}>
+                      <Text style={styles.eventTypeBadgeText}>
+                        {eventType.description}
+                      </Text>
+                    </View>
+                  ) : null;
+                })()}
+            </View>
+
+            {/* Event Details */}
+            <View style={styles.detailsGrid}>
               <View style={styles.detailRow}>
                 <Ionicons
-                  name="shirt-outline"
+                  name="calendar-outline"
                   size={20}
                   color={COLORS.midnightNavy}
                   style={{ opacity: 0.7 }}
                 />
-                <View style={styles.dressCodeContainer}>
-                  <View style={styles.dressCodeChipWrapper}>
-                    {event.dress_codes.map((code) => (
-                      <View key={code} style={styles.dressCodeChip}>
-                        <Text style={styles.dressCodeChipText}>
-                          {formatDressCode(code)}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                  {event.dress_code_notes && (
-                    <Text style={styles.dressCodeNotes}>
-                      {event.dress_code_notes}
-                    </Text>
-                  )}
-                </View>
-              </View>
-            )}
-          </View>
-
-          {/* Description */}
-          {event.description && (
-            <View style={styles.descriptionContainer}>
-              <Text style={styles.description}>{event.description}</Text>
-            </View>
-          )}
-
-          {/* Divider */}
-          <View style={styles.divider} />
-
-          {/* Promoter info */}
-          {event.promoter_name && (
-            <View style={styles.promoterContainer}>
-              <View style={styles.promoterNameRow}>
-                <Text style={styles.promoterLabel}>
-                  Promoted by{" "}
-                  {event.promoter_fraternity_member_id ? "Brother " : ""}
-                  {event.promoter_name}
+                <Text style={styles.detailText}>
+                  {formatDate(event.event_date)}
                 </Text>
-                <UserRoleBadges
-                  is_member={event.is_fraternity_member}
-                  is_seller={event.is_seller}
-                  is_promoter={event.is_promoter}
-                  is_steward={event.is_steward}
-                  size="md"
-                />
               </View>
-              {/* Verification badges under name */}
-              {event.promoter_fraternity_member_id && (
-                <View style={styles.promoterBadgesContainer}>
-                  <VerificationBadge type="brother" />
-                  {event.promoter_initiated_chapter_id && (
-                    <VerificationBadge
-                      type="initiated-chapter"
-                      chapterName={
-                        initiatedChapterName ||
-                        `Chapter ${event.promoter_initiated_chapter_id}`
-                      }
-                      season={event.promoter_initiated_season || null}
-                      year={event.promoter_initiated_year || null}
-                    />
-                  )}
+              <View style={styles.detailRow}>
+                <Ionicons
+                  name="time-outline"
+                  size={20}
+                  color={COLORS.midnightNavy}
+                  style={{ opacity: 0.7 }}
+                />
+                <Text style={styles.detailText}>
+                  {formatTime(event.event_date)}
+                </Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Ionicons
+                  name="location-outline"
+                  size={20}
+                  color={COLORS.midnightNavy}
+                  style={{ opacity: 0.7 }}
+                />
+                <Text style={styles.detailText}>
+                  {event.location}
+                  {event.city &&
+                    event.state &&
+                    `, ${event.city}, ${event.state}`}
+                </Text>
+              </View>
+              {event.ticket_price_cents > 0 && (
+                <View style={styles.detailRow}>
+                  <Ionicons
+                    name="ticket-outline"
+                    size={20}
+                    color={COLORS.crimson}
+                  />
+                  <Text style={[styles.detailText, styles.priceText]}>
+                    ${(event.ticket_price_cents / 100).toFixed(2)}
+                  </Text>
+                </View>
+              )}
+              {event.dress_codes && event.dress_codes.length > 0 && (
+                <View style={styles.detailRow}>
+                  <Ionicons
+                    name="shirt-outline"
+                    size={20}
+                    color={COLORS.midnightNavy}
+                    style={{ opacity: 0.7 }}
+                  />
+                  <View style={styles.dressCodeContainer}>
+                    <View style={styles.dressCodeChipWrapper}>
+                      {event.dress_codes.map((code) => (
+                        <View key={code} style={styles.dressCodeChip}>
+                          <Text style={styles.dressCodeChipText}>
+                            {formatDressCode(code)}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                    {event.dress_code_notes && (
+                      <Text style={styles.dressCodeNotes}>
+                        {event.dress_code_notes}
+                      </Text>
+                    )}
+                  </View>
                 </View>
               )}
             </View>
-          )}
 
-          {/* Event Countdown */}
-          <View style={styles.countdownContainer}>
-            <Text style={styles.countdownLabel}>Time Remaining</Text>
-            <EventCountdown eventDate={event.event_date} />
-          </View>
+            {/* Description */}
+            {event.description && (
+              <View style={styles.descriptionContainer}>
+                <Text style={styles.description}>{event.description}</Text>
+              </View>
+            )}
 
-          {/* Google Map - Show for non-promoters viewing non-virtual events */}
-          {showMap && (
-            <View style={styles.mapContainer}>
-              <TouchableOpacity
-                style={styles.mapButton}
-                onPress={handleOpenMap}
-                activeOpacity={0.8}
-              >
-                <View style={styles.mapPlaceholder}>
-                  <Ionicons
-                    name="map-outline"
-                    size={32}
-                    color={COLORS.crimson}
-                  />
-                  <Text style={styles.mapText}>View on Google Maps</Text>
-                  <Text style={styles.mapLocationText}>
-                    {event.location}
-                    {event.city &&
-                      event.state &&
-                      `, ${event.city}, ${event.state}`}
-                  </Text>
+            {/* Divider */}
+            <View style={styles.divider} />
+
+            {/* Promoter info */}
+            {event.promoter_name && (
+              <View style={styles.promoterContainer}>
+                <View style={styles.promoterCard}>
+                  <Text style={styles.promoterSectionLabel}>Promoter</Text>
+                  <View style={styles.promoterContent}>
+                    <View style={styles.promoterAvatar}>
+                      <Text style={styles.promoterAvatarText}>
+                        {event.promoter_name
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")
+                          .slice(0, 2)
+                          .toUpperCase()}
+                      </Text>
+                    </View>
+                    <View style={styles.promoterInfo}>
+                      <View style={styles.promoterNameRow}>
+                        <Text style={styles.promoterLabel}>
+                          Promoted by{" "}
+                          {event.promoter_fraternity_member_id
+                            ? "Brother "
+                            : ""}
+                          {event.promoter_name}
+                        </Text>
+                        {/* Role badges - show all applicable roles */}
+                        {(event.is_fraternity_member !== undefined ||
+                          event.is_promoter !== undefined) && (
+                          <UserRoleBadges
+                            is_member={event.is_fraternity_member}
+                            is_seller={event.is_seller}
+                            is_promoter={event.is_promoter}
+                            is_steward={event.is_steward}
+                            size="md"
+                          />
+                        )}
+                      </View>
+
+                      {/* Verification badges under name */}
+                      {event.promoter_fraternity_member_id && (
+                        <View style={styles.promoterBadgesContainer}>
+                          <VerificationBadge type="brother" />
+                          {event.promoter_initiated_chapter_id && (
+                            <VerificationBadge
+                              type="initiated-chapter"
+                              chapterName={
+                                initiatedChapterName ||
+                                `Chapter ${event.promoter_initiated_chapter_id}`
+                              }
+                              season={event.promoter_initiated_season || null}
+                              year={event.promoter_initiated_year || null}
+                            />
+                          )}
+                        </View>
+                      )}
+
+                      <Text style={styles.promoterDisclaimer}>
+                        This event is organized by the host and is not managed,
+                        endorsed, or certified by 1Kappa or any national
+                        organization.
+                      </Text>
+                    </View>
+                  </View>
                 </View>
-              </TouchableOpacity>
-            </View>
-          )}
+              </View>
+            )}
 
-          {/* Action Buttons */}
-          <View style={styles.actionButtonsContainer}>
-            {isEventOwner ? (
-              // Promoter owns active event: Edit and Share buttons
-              <>
+            {/* Event Countdown */}
+            <View style={styles.countdownContainer}>
+              <Text style={styles.countdownLabel}>Time Remaining</Text>
+              <EventCountdown eventDate={event.event_date} />
+            </View>
+
+            {/* Google Map - Show for non-promoters viewing non-virtual events */}
+            {showMap && (
+              <View style={styles.mapContainer}>
                 <TouchableOpacity
-                  style={[
-                    styles.primaryButton,
-                    styles.actionButton,
-                    styles.buttonWithSpacing,
-                  ]}
-                  onPress={() => {
-                    // TODO: Navigate to edit screen
-                    console.log("Edit event:", event.id);
-                  }}
-                  activeOpacity={0.85}
-                >
-                  <Ionicons
-                    name="create-outline"
-                    size={20}
-                    color={COLORS.white}
-                    style={{ marginRight: 8 }}
-                  />
-                  <Text style={styles.primaryButtonText}>Edit Event</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.primaryButton,
-                    styles.actionButton,
-                    styles.shareButton,
-                  ]}
-                  onPress={() => setShowShareModal(true)}
-                  activeOpacity={0.85}
-                >
-                  <Ionicons
-                    name="share-outline"
-                    size={20}
-                    color={COLORS.white}
-                    style={{ marginRight: 8 }}
-                  />
-                  <Text style={styles.primaryButtonText}>Share</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              // Non-promoter: Share, Add to Calendar, Message Promoter (disabled)
-              <>
-                <TouchableOpacity
-                  style={[
-                    styles.primaryButton,
-                    styles.actionButton,
-                    styles.buttonWithSpacing,
-                  ]}
-                  onPress={() => setShowShareModal(true)}
-                  activeOpacity={0.85}
-                >
-                  <Ionicons
-                    name="share-outline"
-                    size={20}
-                    color={COLORS.white}
-                    style={{ marginRight: 8 }}
-                  />
-                  <Text style={styles.primaryButtonText}>Share</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.secondaryButton,
-                    styles.actionButton,
-                    styles.buttonWithSpacing,
-                  ]}
-                  onPress={() => setShowCalendarModal(true)}
+                  style={styles.mapButton}
+                  onPress={handleOpenMap}
                   activeOpacity={0.8}
                 >
-                  <Ionicons
-                    name="calendar-outline"
-                    size={20}
-                    color={COLORS.crimson}
-                    style={{ marginRight: 8 }}
-                  />
-                  <Text style={styles.secondaryButtonText}>
-                    Add to Calendar
-                  </Text>
+                  <View style={styles.mapPlaceholder}>
+                    <Ionicons
+                      name="map-outline"
+                      size={32}
+                      color={COLORS.crimson}
+                    />
+                    <Text style={styles.mapText}>View on Google Maps</Text>
+                    <Text style={styles.mapLocationText}>
+                      {event.location}
+                      {event.city &&
+                        event.state &&
+                        `, ${event.city}, ${event.state}`}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.disabledButton, styles.actionButton]}
-                  disabled={true}
-                >
-                  <Ionicons
-                    name="mail-outline"
-                    size={20}
-                    color={COLORS.midnightNavy}
-                    style={{ marginRight: 8, opacity: 0.5 }}
-                  />
-                  <Text style={styles.disabledButtonText}>
-                    Message Promoter
-                  </Text>
-                </TouchableOpacity>
-              </>
+              </View>
             )}
+
+            {/* Action Buttons */}
+            <View style={styles.actionButtonsContainer}>
+              {isEventOwner ? (
+                // Promoter owns active event: Edit and Share buttons
+                <>
+                  <TouchableOpacity
+                    style={[
+                      styles.primaryButton,
+                      styles.actionButton,
+                      styles.buttonWithSpacing,
+                    ]}
+                    onPress={() => {
+                      // TODO: Navigate to edit screen
+                      console.log("Edit event:", event.id);
+                    }}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons
+                      name="create-outline"
+                      size={20}
+                      color={COLORS.white}
+                      style={{ marginRight: 8 }}
+                    />
+                    <Text style={styles.primaryButtonText}>Edit Event</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.primaryButton,
+                      styles.actionButton,
+                      styles.shareButton,
+                    ]}
+                    onPress={() => setShowShareModal(true)}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons
+                      name="share-outline"
+                      size={20}
+                      color={COLORS.white}
+                      style={{ marginRight: 8 }}
+                    />
+                    <Text style={styles.primaryButtonText}>Share</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                // Non-promoter: Share, Add to Calendar, Message Promoter (disabled)
+                <>
+                  <TouchableOpacity
+                    style={[
+                      styles.primaryButton,
+                      styles.actionButton,
+                      styles.buttonWithSpacing,
+                    ]}
+                    onPress={() => setShowShareModal(true)}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons
+                      name="share-outline"
+                      size={20}
+                      color={COLORS.white}
+                      style={{ marginRight: 8 }}
+                    />
+                    <Text style={styles.primaryButtonText}>Share</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.secondaryButton,
+                      styles.actionButton,
+                      styles.buttonWithSpacing,
+                    ]}
+                    onPress={() => setShowCalendarModal(true)}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons
+                      name="calendar-outline"
+                      size={20}
+                      color={COLORS.crimson}
+                      style={{ marginRight: 8 }}
+                    />
+                    <Text style={styles.secondaryButtonText}>
+                      Add to Calendar
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.disabledButton, styles.actionButton]}
+                    disabled={true}
+                  >
+                    <Ionicons
+                      name="mail-outline"
+                      size={20}
+                      color={COLORS.midnightNavy}
+                      style={{ marginRight: 8, opacity: 0.5 }}
+                    />
+                    <Text style={styles.disabledButtonText}>
+                      Message Promoter
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
           </View>
         </View>
+        {/* end of contentCard */}
       </ScrollView>
 
       {/* Share Modal */}
@@ -701,386 +789,3 @@ export default function EventDetail({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.cream,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 100,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    color: COLORS.midnightNavy,
-    textAlign: "center",
-  },
-  imageContainer: {
-    width: "100%",
-    height: 300,
-    backgroundColor: COLORS.frostGray,
-  },
-  image: {
-    width: "100%",
-    height: "100%",
-  },
-  imagePlaceholder: {
-    width: "100%",
-    height: "100%",
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: `${COLORS.crimson}20`,
-  },
-  infoContainer: {
-    padding: 20,
-    backgroundColor: COLORS.white,
-  },
-  eventTitle: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: COLORS.midnightNavy,
-    marginBottom: 12,
-    fontFamily: "System",
-  },
-  badgesContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 24,
-  },
-  eventTypeBadge: {
-    backgroundColor: COLORS.auroraGold,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  eventTypeBadgeText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: COLORS.midnightNavy,
-  },
-  detailsContainer: {
-    marginBottom: 24,
-    gap: 12,
-  },
-  detailRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  detailText: {
-    fontSize: 16,
-    color: COLORS.midnightNavy,
-    opacity: 0.7,
-    flex: 1,
-  },
-  priceText: {
-    color: COLORS.crimson,
-    fontWeight: "600",
-    opacity: 1,
-  },
-  dressCodeContainer: {
-    flex: 1,
-  },
-  dressCodeNotes: {
-    fontSize: 14,
-    color: COLORS.midnightNavy,
-    opacity: 0.6,
-    marginTop: 4,
-    fontStyle: "italic",
-  },
-  descriptionContainer: {
-    marginBottom: 24,
-  },
-  description: {
-    fontSize: 16,
-    color: COLORS.midnightNavy,
-    opacity: 0.7,
-    lineHeight: 24,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.frostGray,
-    opacity: 0.5,
-    marginVertical: 24,
-  },
-  promoterContainer: {
-    backgroundColor: `${COLORS.cream}80`,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.frostGray,
-    marginBottom: 24,
-  },
-  promoterNameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 8,
-  },
-  promoterBadgesContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 8,
-  },
-  promoterLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.midnightNavy,
-  },
-  supportText: {
-    fontSize: 12,
-    color: COLORS.midnightNavy,
-    opacity: 0.7,
-  },
-  chapterNameBold: {
-    fontWeight: "600",
-  },
-  countdownContainer: {
-    backgroundColor: `${COLORS.cream}80`,
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.frostGray,
-    marginBottom: 16,
-  },
-  countdownLabel: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: COLORS.midnightNavy,
-    marginBottom: 8,
-  },
-  maxAttendeesText: {
-    fontSize: 14,
-    color: COLORS.midnightNavy,
-    opacity: 0.6,
-    marginBottom: 24,
-  },
-  rsvpButton: {
-    marginTop: 8,
-  },
-  mapContainer: {
-    marginBottom: 16,
-    borderRadius: 12,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: COLORS.frostGray,
-  },
-  mapButton: {
-    width: "100%",
-  },
-  mapPlaceholder: {
-    height: 200,
-    backgroundColor: `${COLORS.cream}80`,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  mapText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: COLORS.midnightNavy,
-    marginTop: 12,
-  },
-  mapLocationText: {
-    fontSize: 14,
-    color: COLORS.midnightNavy,
-    opacity: 0.7,
-    marginTop: 8,
-    textAlign: "center",
-  },
-  actionButtonsContainer: {
-    marginTop: 8,
-  },
-  actionButton: {
-    width: "100%",
-  },
-  buttonWithSpacing: {
-    marginBottom: 12,
-  },
-  primaryButton: {
-    backgroundColor: COLORS.crimson,
-    borderRadius: 14,
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "center",
-    ...SHADOW.button,
-  },
-  primaryButtonText: {
-    color: COLORS.white,
-    fontSize: 17,
-    fontWeight: "700",
-    letterSpacing: 0.3,
-  },
-  shareButton: {
-    backgroundColor: COLORS.midnightNavy,
-  },
-  secondaryButton: {
-    backgroundColor: COLORS.white,
-    borderRadius: 14,
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: COLORS.crimson,
-    ...SHADOW.input,
-  },
-  secondaryButtonText: {
-    color: COLORS.crimson,
-    fontSize: 17,
-    fontWeight: "700",
-    letterSpacing: 0.3,
-  },
-  disabledButton: {
-    backgroundColor: COLORS.frostGray,
-    borderRadius: 14,
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "center",
-    opacity: 0.6,
-  },
-  disabledButtonText: {
-    color: COLORS.midnightNavy,
-    fontSize: 17,
-    fontWeight: "600",
-    letterSpacing: 0.3,
-    opacity: 0.5,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: COLORS.white,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: "80%",
-    paddingBottom: 20,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.frostGray,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: COLORS.midnightNavy,
-  },
-  modalCloseButton: {
-    padding: 4,
-  },
-  shareOptionsContainer: {
-    padding: 20,
-  },
-  shareOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    backgroundColor: `${COLORS.cream}40`,
-    marginBottom: 12,
-  },
-  shareOptionText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: COLORS.midnightNavy,
-    marginLeft: 12,
-  },
-  shareSectionDivider: {
-    height: 1,
-    backgroundColor: COLORS.frostGray,
-    marginVertical: 20,
-  },
-  shareSectionTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.midnightNavy,
-    opacity: 0.7,
-    marginBottom: 12,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  qrCodeContainer: {
-    padding: 20,
-    alignItems: "center",
-  },
-  qrCodeTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: COLORS.midnightNavy,
-    marginBottom: 24,
-  },
-  qrCodeWrapper: {
-    backgroundColor: COLORS.white,
-    padding: 20,
-    borderRadius: 12,
-    marginBottom: 16,
-  },
-  qrCodeUrl: {
-    fontSize: 12,
-    color: COLORS.midnightNavy,
-    opacity: 0.6,
-    marginBottom: 24,
-    textAlign: "center",
-  },
-  backButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    backgroundColor: COLORS.frostGray,
-  },
-  backButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: COLORS.midnightNavy,
-  },
-  dressCodeChipWrapper: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    flex: 1,
-    marginHorizontal: -4,
-  },
-  dressCodeChip: {
-    backgroundColor: COLORS.cream,
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: COLORS.frostGray,
-    marginHorizontal: 4,
-    marginVertical: 4,
-  },
-  dressCodeChipText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.midnightNavy,
-  },
-});

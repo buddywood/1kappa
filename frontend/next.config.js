@@ -25,6 +25,10 @@ const nextConfig = {
       },
       {
         protocol: 'https',
+        hostname: '**.cloudfront.net',
+      },
+      {
+        protocol: 'https',
         hostname: 'ui-avatars.com',
         pathname: '/api/**',
       },

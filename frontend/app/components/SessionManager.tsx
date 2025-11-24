@@ -12,9 +12,12 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
-const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
-const WARNING_TIME_MS = 5 * 60 * 1000; // Show warning 5 minutes before expiry
+const DEFAULT_SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes (default)
+const REMEMBER_ME_SESSION_TIMEOUT_MS = 30 * 24 * 60 * 60 * 1000; // 30 days (when remember me is checked)
+const DEFAULT_WARNING_TIME_MS = 5 * 60 * 1000; // Show warning 5 minutes before expiry (for short sessions)
+const REMEMBER_ME_WARNING_TIME_MS = 24 * 60 * 60 * 1000; // Show warning 1 day before expiry (for long sessions)
 const SESSION_START_KEY = 'session_start_time';
+const REMEMBER_ME_KEY = 'remember_me';
 
 export default function SessionManager() {
   const { data: session, update } = useSession();
@@ -22,6 +25,24 @@ export default function SessionManager() {
   const [showDialog, setShowDialog] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
+  
+  // Check if remember me is enabled
+  const getSessionTimeout = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      const rememberMe = localStorage.getItem(REMEMBER_ME_KEY) === 'true';
+      return rememberMe ? REMEMBER_ME_SESSION_TIMEOUT_MS : DEFAULT_SESSION_TIMEOUT_MS;
+    }
+    return DEFAULT_SESSION_TIMEOUT_MS;
+  }, []);
+
+  // Get appropriate warning time based on session length
+  const getWarningTime = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      const rememberMe = localStorage.getItem(REMEMBER_ME_KEY) === 'true';
+      return rememberMe ? REMEMBER_ME_WARNING_TIME_MS : DEFAULT_WARNING_TIME_MS;
+    }
+    return DEFAULT_WARNING_TIME_MS;
+  }, []);
 
   const handleLogout = useCallback(async () => {
     setShowDialog(false);
@@ -66,11 +87,12 @@ export default function SessionManager() {
     // Initialize session start time - check localStorage first, then set if not exists
     if (sessionStartTime === null && typeof window !== 'undefined') {
       const stored = localStorage.getItem(SESSION_START_KEY);
+      const sessionTimeout = getSessionTimeout();
       if (stored) {
         const storedTime = parseInt(stored, 10);
         // Check if stored session is still valid
         const elapsed = Date.now() - storedTime;
-        if (elapsed < SESSION_TIMEOUT_MS) {
+        if (elapsed < sessionTimeout) {
           setSessionStartTime(storedTime);
         } else {
           // Stored session expired, start fresh
@@ -90,13 +112,15 @@ export default function SessionManager() {
     const checkSession = () => {
       if (!sessionStartTime) return;
 
+      const sessionTimeout = getSessionTimeout();
+      const warningTime = getWarningTime();
       const elapsed = Date.now() - sessionStartTime;
-      const remaining = SESSION_TIMEOUT_MS - elapsed;
+      const remaining = sessionTimeout - elapsed;
       
       setTimeRemaining(Math.max(0, remaining));
 
-      // Show warning dialog when 5 minutes remaining
-      if (remaining <= WARNING_TIME_MS && remaining > 0 && !showDialog) {
+      // Show warning dialog when warning time remaining
+      if (remaining <= warningTime && remaining > 0 && !showDialog) {
         setShowDialog(true);
       }
 
@@ -111,7 +135,7 @@ export default function SessionManager() {
     checkSession(); // Initial check
 
     return () => clearInterval(interval);
-  }, [session, sessionStartTime, showDialog, handleLogout]);
+  }, [session, sessionStartTime, showDialog, handleLogout, getSessionTimeout, getWarningTime]);
 
   const formatTimeRemaining = (ms: number) => {
     const minutes = Math.floor(ms / 60000);

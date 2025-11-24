@@ -15,15 +15,21 @@ import path from "path";
 // Load environment variables
 dotenv.config({ path: path.join(__dirname, "../../.env.local") });
 
-// Sample product data with category mappings
+// Helper function to generate S3 URL
+function getS3ImageUrl(key: string): string {
+  const bucket = process.env.AWS_S3_BUCKET_NAME || "1kappa-uploads";
+  const region = process.env.AWS_REGION || "us-east-1";
+  return `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
+}
+
+// Sample product data with category mappings - using real S3 images
 const sampleProducts = [
   {
     name: "Kappa Alpha Psi Embroidered Polo",
     description:
       "Premium cotton polo shirt with embroidered Kappa Alpha Psi logo. Perfect for chapter events and casual wear. Available in multiple colors.",
     price_cents: 4500, // $45.00
-    image_url:
-      "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500&h=500&fit=crop",
+    image_url: getS3ImageUrl("products/4df62c41-fb96-45f1-bd10-58bfc2993d1a-kappashirt1a.png"),
     category: "Apparel",
   },
   {
@@ -31,8 +37,7 @@ const sampleProducts = [
     description:
       "Limited edition commemorative pin celebrating the founding of Kappa Alpha Psi. Gold-plated with intricate detailing.",
     price_cents: 2500, // $25.00
-    image_url:
-      "https://images.unsplash.com/photo-1611652022419-a9419f74343d?w=500&h=500&fit=crop",
+    image_url: getS3ImageUrl("products/415f672f-be3e-49c3-9bae-1213f1e2a7ab-sample_merch1.png"),
     category: "Accessories",
   },
   {
@@ -40,8 +45,7 @@ const sampleProducts = [
     description:
       "Comfortable fleece hoodie with screen-printed Kappa Alpha Psi design. Perfect for chilly chapter meetings and casual outings.",
     price_cents: 5500, // $55.00
-    image_url:
-      "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=500&h=500&fit=crop",
+    image_url: getS3ImageUrl("products/2adf45a0-1908-4558-b1a9-876859099084-sample_merch2.png"),
     category: "Outerwear",
   },
   {
@@ -49,8 +53,7 @@ const sampleProducts = [
     description:
       "Set of 3 premium cotton t-shirts featuring different Kappa Alpha Psi designs. Great for everyday wear and chapter events.",
     price_cents: 3500, // $35.00
-    image_url:
-      "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500&h=500&fit=crop",
+    image_url: getS3ImageUrl("products/bc23755b-3c89-43a8-a679-299d6f2cb17f-kappashirt1b.png"),
     category: "Apparel",
   },
   {
@@ -58,8 +61,7 @@ const sampleProducts = [
     description:
       "Genuine leather wallet with embossed Kappa Alpha Psi letters. Features multiple card slots and cash compartment.",
     price_cents: 4500, // $45.00
-    image_url:
-      "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=500&h=500&fit=crop",
+    image_url: getS3ImageUrl("products/364752d7-3cf6-413c-a1c3-83c3feb960c2-sample_merch3.png"),
     category: "Accessories",
   },
   {
@@ -67,8 +69,7 @@ const sampleProducts = [
     description:
       "Ceramic coffee mug with custom chapter name and Kappa Alpha Psi logo. Microwave and dishwasher safe.",
     price_cents: 1800, // $18.00
-    image_url:
-      "https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?w=500&h=500&fit=crop",
+    image_url: getS3ImageUrl("products/21fc876b-3112-4053-b797-c25b1be0ed0b-sample_merch4.png"),
     category: "Home Goods",
   },
   {
@@ -76,8 +77,7 @@ const sampleProducts = [
     description:
       "Adjustable snapback cap with embroidered Kappa Alpha Psi logo. One size fits all. Perfect for outdoor events.",
     price_cents: 2800, // $28.00
-    image_url:
-      "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=500&h=500&fit=crop",
+    image_url: getS3ImageUrl("products/778772a1-9394-442c-b699-743b171a2341-sample_merch5.png"),
     category: "Accessories",
   },
   {
@@ -85,8 +85,7 @@ const sampleProducts = [
     description:
       "Elegant silk tie featuring Kappa Alpha Psi colors and subtle pattern. Perfect for formal chapter events and banquets.",
     price_cents: 3800, // $38.00
-    image_url:
-      "https://images.unsplash.com/photo-1594938291220-94d21225f65a?w=500&h=500&fit=crop",
+    image_url: getS3ImageUrl("products/8d9c7579-f998-416c-b843-1c3b3b3a211d-kappa-cigar1b.png"),
     category: "Apparel",
   },
   {
@@ -94,8 +93,7 @@ const sampleProducts = [
     description:
       "Durable canvas tote bag with screen-printed Kappa Alpha Psi design. Perfect for carrying books, gym gear, or groceries.",
     price_cents: 2200, // $22.00
-    image_url:
-      "https://images.unsplash.com/photo-1591561954557-26941169b49e?w=500&h=500&fit=crop",
+    image_url: getS3ImageUrl("products/d1c87439-5397-46bd-bf6a-b26916d91fc1-kappa-cigar1a.png"),
     category: "Accessories",
   },
   {
@@ -103,8 +101,7 @@ const sampleProducts = [
     description:
       "Stainless steel insulated water bottle with custom chapter engraving. Keeps drinks cold for 24 hours or hot for 12 hours.",
     price_cents: 3200, // $32.00
-    image_url:
-      "https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=500&h=500&fit=crop",
+    image_url: getS3ImageUrl("products/5dfb4bfb-8fbf-4be4-a478-88e4d3a85af6-sample_merch1.png"),
     category: "Accessories",
   },
   {
@@ -112,8 +109,7 @@ const sampleProducts = [
     description:
       "Brass keychain with engraved Kappa Alpha Psi letters. Makes a great gift for brothers or pledges.",
     price_cents: 1200, // $12.00
-    image_url:
-      "https://images.unsplash.com/photo-1606761568499-6d2451b23c66?w=500&h=500&fit=crop",
+    image_url: getS3ImageUrl("products/740f56e0-146e-4025-975e-6fa596bc5fd7-sample_merch3.png"),
     category: "Accessories",
   },
   {
@@ -121,8 +117,7 @@ const sampleProducts = [
     description:
       "Set of 20 vinyl stickers featuring various Kappa Alpha Psi designs. Waterproof and weather-resistant.",
     price_cents: 1500, // $15.00
-    image_url:
-      "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&h=500&fit=crop",
+    image_url: getS3ImageUrl("products/84ede5d7-4eb6-4857-8513-b4503793b107-sample_merch4.png"),
     category: "Accessories",
   },
   {
@@ -130,8 +125,7 @@ const sampleProducts = [
     description:
       "Protective phone case with Kappa Alpha Psi logo. Compatible with iPhone and Samsung models. Available in multiple colors.",
     price_cents: 2500, // $25.00
-    image_url:
-      "https://images.unsplash.com/photo-1556656793-08538906a9f8?w=500&h=500&fit=crop",
+    image_url: getS3ImageUrl("products/98884723-d334-436d-9cc1-6922f1503d73-sample_merch4.png"),
     category: "Electronics",
   },
   {
@@ -139,8 +133,7 @@ const sampleProducts = [
     description:
       "Premium leather-bound notebook with custom chapter name embossed on the cover. Perfect for taking notes at meetings.",
     price_cents: 2800, // $28.00
-    image_url:
-      "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=500&h=500&fit=crop",
+    image_url: getS3ImageUrl("products/9a4e76ef-b57e-4f60-9a20-ac134f826db4-sample_merch2.png"),
     category: "Books & Media",
   },
   {
@@ -148,8 +141,7 @@ const sampleProducts = [
     description:
       "Protective laptop sleeve with Kappa Alpha Psi design. Fits 13-15 inch laptops. Padded interior for extra protection.",
     price_cents: 4200, // $42.00
-    image_url:
-      "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=500&h=500&fit=crop",
+    image_url: getS3ImageUrl("products/a97a52c2-eade-4454-8b1f-3ea000d48fbc-sample_merch1.png"),
     category: "Electronics",
   },
   {
@@ -157,8 +149,7 @@ const sampleProducts = [
     description:
       "Hardcover book chronicling the history of Kappa Alpha Psi. Includes photos, stories, and important milestones.",
     price_cents: 3500, // $35.00
-    image_url:
-      "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=500&h=500&fit=crop",
+    image_url: getS3ImageUrl("products/ad290749-27e2-4cef-ac34-07ff090ce00e-sample_merch5.png"),
     category: "Books & Media",
   },
   // Additional products for non-member sellers (non-kappa branded)
@@ -167,8 +158,7 @@ const sampleProducts = [
     description:
       "Stylish canvas tote bag featuring Kappa Alpha Psi colors. Perfect for everyday use.",
     price_cents: 2800, // $28.00
-    image_url:
-      "https://images.unsplash.com/photo-1591561954557-26941169b49e?w=500&h=500&fit=crop",
+    image_url: getS3ImageUrl("products/c31ee9e9-9a55-4eb4-a9ec-35c1b68d6cbc-sample_merch3.png"),
     category: "Accessories",
     seller_email: "sarah.mitchell@example.com", // Assign to non-member seller
     is_kappa_branded: false, // Not explicitly branded
@@ -178,8 +168,7 @@ const sampleProducts = [
     description:
       "Set of 5 vintage-style Kappa Alpha Psi pins. Collectible items perfect for display.",
     price_cents: 3200, // $32.00
-    image_url:
-      "https://images.unsplash.com/photo-1611652022419-a9419f74343d?w=500&h=500&fit=crop",
+    image_url: getS3ImageUrl("products/c758379d-5ade-456c-bc6f-16d2c25fe3af-sample_merch5.png"),
     category: "Accessories",
     seller_email: "sarah.mitchell@example.com",
     is_kappa_branded: true, // Has "Kappa" in name, so branded
@@ -189,8 +178,7 @@ const sampleProducts = [
     description:
       "Beautiful hardcover coffee table book showcasing Kappa Alpha Psi history and achievements.",
     price_cents: 4500, // $45.00
-    image_url:
-      "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=500&h=500&fit=crop",
+    image_url: getS3ImageUrl("products/d090f4dd-36d8-425c-b4ba-ff47f244450c-sample_merch2.png"),
     category: "Books & Media",
     seller_email: "michael.chen@example.com", // Assign to non-member seller
     is_kappa_branded: true, // Mentions Kappa Alpha Psi
@@ -200,8 +188,7 @@ const sampleProducts = [
     description:
       "Elegant timepiece with custom Kappa Alpha Psi engraving. Perfect gift for special occasions.",
     price_cents: 8500, // $85.00
-    image_url:
-      "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&h=500&fit=crop",
+    image_url: getS3ImageUrl("products/d1a90fcc-02ae-42ac-9d0e-ede81e745677-sample_merch1.png"),
     category: "Accessories",
     seller_email: "michael.chen@example.com",
   },
@@ -388,8 +375,7 @@ const sampleEvents: SampleEventData[] = [
     location: "Minneapolis Convention Center",
     city: "Minneapolis",
     state: "MN",
-    image_url:
-      "https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&h=600&fit=crop",
+    image_url: getS3ImageUrl("events/108e9cbe-981d-479e-a917-bd47a9749dcc-kevDaBarber.png"),
     ticket_price_cents: 7500, // $75.00
     event_type: "SOCIAL",
     event_audience_type: "ONE_KAPPA",
@@ -406,8 +392,7 @@ const sampleEvents: SampleEventData[] = [
     location: "St. Paul Event Center",
     city: "St. Paul",
     state: "MN",
-    image_url:
-      "https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&h=600&fit=crop",
+    image_url: getS3ImageUrl("events/108e9cbe-981d-479e-a917-bd47a9749dcc-kevDaBarber.png"),
     ticket_price_cents: 2500, // $25.00
     event_type: "NETWORKING",
     event_audience_type: "ONE_KAPPA",
@@ -424,8 +409,7 @@ const sampleEvents: SampleEventData[] = [
     location: "University of Minnesota Campus",
     city: "Minneapolis",
     state: "MN",
-    image_url:
-      "https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=800&h=600&fit=crop",
+    image_url: getS3ImageUrl("events/108e9cbe-981d-479e-a917-bd47a9749dcc-kevDaBarber.png"),
     ticket_price_cents: 0, // Free event
     event_type: "COMMUNITY_SERVICE",
     event_audience_type: "GENERAL_PUBLIC",
@@ -443,8 +427,7 @@ const sampleEvents: SampleEventData[] = [
     location: "Hilton Downtown",
     city: "Minneapolis",
     state: "MN",
-    image_url:
-      "https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&h=600&fit=crop",
+    image_url: getS3ImageUrl("events/108e9cbe-981d-479e-a917-bd47a9749dcc-kevDaBarber.png"),
     ticket_price_cents: 5000, // $50.00
     event_type: "EDUCATIONAL",
     event_audience_type: "ONE_KAPPA",
@@ -461,8 +444,7 @@ const sampleEvents: SampleEventData[] = [
     location: "Prestige Golf Club",
     city: "Bloomington",
     state: "MN",
-    image_url:
-      "https://images.unsplash.com/photo-1535131749006-b7f58c99034b?w=800&h=600&fit=crop",
+    image_url: getS3ImageUrl("events/108e9cbe-981d-479e-a917-bd47a9749dcc-kevDaBarber.png"),
     ticket_price_cents: 10000, // $100.00
     event_type: "WELLNESS_SPORTS",
     event_audience_type: "ONE_KAPPA",
@@ -480,8 +462,7 @@ const sampleEvents: SampleEventData[] = [
     location: "Community Center",
     city: "St. Paul",
     state: "MN",
-    image_url:
-      "https://images.unsplash.com/photo-1482517967863-00e15c9b44be?w=800&h=600&fit=crop",
+    image_url: getS3ImageUrl("events/108e9cbe-981d-479e-a917-bd47a9749dcc-kevDaBarber.png"),
     ticket_price_cents: 2000, // $20.00
     event_type: "SOCIAL",
     event_audience_type: "GENERAL_PUBLIC",
@@ -498,8 +479,7 @@ const sampleEvents: SampleEventData[] = [
     location: "Online",
     city: null,
     state: null,
-    image_url:
-      "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=800&h=600&fit=crop",
+    image_url: getS3ImageUrl("events/108e9cbe-981d-479e-a917-bd47a9749dcc-kevDaBarber.png"),
     ticket_price_cents: 0,
     event_type: "VIRTUAL",
     event_audience_type: "CHAPTER",
@@ -517,8 +497,7 @@ const sampleEvents: SampleEventData[] = [
     location: "Grand Ballroom, Marriott",
     city: "Minneapolis",
     state: "MN",
-    image_url:
-      "https://images.unsplash.com/photo-1511578314322-379afb476865?w=800&h=600&fit=crop",
+    image_url: getS3ImageUrl("events/108e9cbe-981d-479e-a917-bd47a9749dcc-kevDaBarber.png"),
     ticket_price_cents: 15000, // $150.00
     event_type: "FUNDRAISING",
     event_audience_type: "GENERAL_PUBLIC",

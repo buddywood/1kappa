@@ -174,6 +174,27 @@ export default StyleSheet.create({
     width: "100%",
     height: "100%",
   },
+  eventImageHidden: {
+    opacity: 0,
+  },
+  eventImageSkeleton: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: COLORS.frostGray,
+    overflow: "hidden",
+  },
+  eventImageShimmer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: "50%",
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+  },
   eventImagePlaceholder: {
     alignItems: "center",
     justifyContent: "center",
@@ -300,6 +321,12 @@ export default StyleSheet.create({
     fontSize: 13,
     color: COLORS.crimson,
     fontWeight: "600",
+  },
+  eventDistanceLabel: {
+    fontSize: 12,
+    color: COLORS.midnightNavy,
+    opacity: 0.6,
+    marginTop: 6,
   },
   ticketPrice: {
     color: COLORS.crimson,

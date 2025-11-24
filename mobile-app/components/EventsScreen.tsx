@@ -19,7 +19,14 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Animated } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../lib/constants";
-import { fetchEvents, Event, Chapter, fetchChapters } from "../lib/api";
+import {
+  fetchEvents,
+  Event,
+  Chapter,
+  fetchChapters,
+  fetchEventTypes,
+  EventType,
+} from "../lib/api";
 import { API_URL } from "../lib/constants";
 import ScreenHeader from "./ScreenHeader";
 
@@ -30,16 +37,6 @@ interface EventsScreenProps {
   onUserPress?: () => void;
 }
 
-// Event types - can be expanded later if event_type field is added to database
-const EVENT_TYPES = [
-  { id: "all", name: "All Types" },
-  { id: "social", name: "Social" },
-  { id: "professional", name: "Professional" },
-  { id: "community", name: "Community Service" },
-  { id: "fundraising", name: "Fundraising" },
-  { id: "educational", name: "Educational" },
-];
-
 export default function EventsScreen({
   onBack,
   onEventPress,
@@ -48,8 +45,11 @@ export default function EventsScreen({
 }: EventsScreenProps) {
   const [events, setEvents] = useState<Event[]>([]);
   const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [eventTypes, setEventTypes] = useState<EventType[]>([]);
   const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
-  const [selectedEventType, setSelectedEventType] = useState<string>("all");
+  const [selectedEventType, setSelectedEventType] = useState<number | "all">(
+    "all"
+  );
   const [chapterSearchQuery, setChapterSearchQuery] = useState("");
   const [eventTypeSearchQuery, setEventTypeSearchQuery] = useState("");
   const [showChapterPicker, setShowChapterPicker] = useState(false);
@@ -211,14 +211,16 @@ export default function EventsScreen({
   const reloadEvents = async () => {
     try {
       setRefreshing(true);
-      const [eventsData, chaptersData] = await Promise.all([
+      const [eventsData, chaptersData, eventTypesData] = await Promise.all([
         fetchEvents(),
         fetch(`${API_URL}/api/chapters/active-collegiate`)
           .then((res) => res.json())
           .catch(() => []),
+        fetchEventTypes().catch(() => []),
       ]);
       setEvents(eventsData);
       setChapters(chaptersData);
+      setEventTypes(eventTypesData);
       await geocodeAllEvents(eventsData);
       if (userLocation) {
         computeEventDistances();
@@ -233,14 +235,16 @@ export default function EventsScreen({
     const loadData = async () => {
       try {
         setLoading(true);
-        const [eventsData, chaptersData] = await Promise.all([
+        const [eventsData, chaptersData, eventTypesData] = await Promise.all([
           fetchEvents(),
           fetch(`${API_URL}/api/chapters/active-collegiate`)
             .then((res) => res.json())
             .catch(() => []),
+          fetchEventTypes().catch(() => []),
         ]);
         setEvents(eventsData);
         setChapters(chaptersData);
+        setEventTypes(eventTypesData);
         await geocodeAllEvents(eventsData);
         if (userLocation) {
           computeEventDistances();
@@ -266,16 +270,24 @@ export default function EventsScreen({
     );
   }, [chapters, chapterSearchQuery]);
 
+  // Build event types list with "All Types" option
+  const eventTypesWithAll = useMemo(() => {
+    return [
+      { id: "all" as const, description: "All Types" },
+      ...eventTypes.map((et) => ({ id: et.id, description: et.description })),
+    ];
+  }, [eventTypes]);
+
   // Filter event types by search query
   const filteredEventTypes = useMemo(() => {
     if (!eventTypeSearchQuery.trim()) {
-      return EVENT_TYPES;
+      return eventTypesWithAll;
     }
     const query = eventTypeSearchQuery.toLowerCase();
-    return EVENT_TYPES.filter((type) =>
-      type.name.toLowerCase().includes(query)
+    return eventTypesWithAll.filter((type) =>
+      type.description.toLowerCase().includes(query)
     );
-  }, [eventTypeSearchQuery]);
+  }, [eventTypesWithAll, eventTypeSearchQuery]);
 
   // Filter events by selected chapter, event type, and near me
   const filteredEvents = useMemo(() => {
@@ -287,9 +299,10 @@ export default function EventsScreen({
       );
     }
 
-    // Note: Event type filtering is placeholder - will need event_type field in database
     if (selectedEventType !== "all") {
-      // Placeholder for future event_type filter
+      filtered = filtered.filter(
+        (event) => event.event_type_id === selectedEventType
+      );
     }
 
     if (nearMeEnabled && userLocation) {
@@ -334,7 +347,8 @@ export default function EventsScreen({
     : null;
 
   const selectedEventTypeName =
-    EVENT_TYPES.find((t) => t.id === selectedEventType)?.name || "All Types";
+    eventTypesWithAll.find((t) => t.id === selectedEventType)?.description ||
+    "All Types";
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -539,7 +553,7 @@ export default function EventsScreen({
             {/* Event Type List */}
             <FlatList
               data={filteredEventTypes}
-              keyExtractor={(item) => item.id}
+              keyExtractor={(item) => item.id.toString()}
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={styles.chapterItem}
@@ -549,7 +563,7 @@ export default function EventsScreen({
                     setEventTypeSearchQuery("");
                   }}
                 >
-                  <Text style={styles.chapterItemText}>{item.name}</Text>
+                  <Text style={styles.chapterItemText}>{item.description}</Text>
                   {selectedEventType === item.id && (
                     <Ionicons
                       name="checkmark"

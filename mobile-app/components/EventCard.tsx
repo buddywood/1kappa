@@ -1,8 +1,18 @@
-import React, { useState } from "react";
-import { View, Text, Image, TouchableOpacity, ActivityIndicator } from "react-native";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  Animated,
+  Dimensions,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../lib/constants";
+import { getEventThumbnailUrl } from "../lib/imageUtils";
 import styles from "./EventsScreenStyles";
+
+const { width } = Dimensions.get("window");
 
 interface EventCardProps {
   event: any;
@@ -20,9 +30,33 @@ export default function EventCard({
   distanceMiles,
 }: EventCardProps) {
   const [imageLoading, setImageLoading] = useState(true);
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
   const date = new Date(event.event_date);
   const month = date.toLocaleString("en-US", { month: "short" }).toUpperCase();
   const day = date.getDate();
+
+  // Reset image loading state when event changes
+  useEffect(() => {
+    setImageLoading(true);
+    shimmerAnim.setValue(0);
+  }, [event.id, event.image_url]);
+
+  // Shimmer animation for skeleton loader
+  useEffect(() => {
+    if (imageLoading && event.image_url) {
+      const shimmer = Animated.loop(
+        Animated.timing(shimmerAnim, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: true,
+        })
+      );
+      shimmer.start();
+      return () => shimmer.stop();
+    } else {
+      shimmerAnim.setValue(0);
+    }
+  }, [imageLoading, event.image_url, shimmerAnim]);
 
   return (
     <TouchableOpacity
@@ -32,17 +66,34 @@ export default function EventCard({
     >
       <View style={styles.eventImageWrapper}>
         {imageLoading && event.image_url && (
-          <View style={[styles.eventImage, { position: 'absolute', backgroundColor: COLORS.frostGray, justifyContent: 'center', alignItems: 'center' }]}>
-            <ActivityIndicator size="large" color={COLORS.crimson} />
+          <View style={styles.eventImageSkeleton}>
+            <Animated.View
+              style={[
+                styles.eventImageShimmer,
+                {
+                  transform: [
+                    {
+                      translateX: shimmerAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [-width, width],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            />
           </View>
         )}
         {event.image_url ? (
           <Image
-            source={{ uri: event.image_url }}
-            style={styles.eventImage}
+            key={`${event.id}-${event.image_url}`}
+            source={{
+              uri: getEventThumbnailUrl(event.image_url) || event.image_url,
+            }}
+            style={[styles.eventImage, imageLoading && styles.eventImageHidden]}
             resizeMode="cover"
-            onLoad={() => setImageLoading(false)}
-            onError={() => setImageLoading(false)}
+            onLoadStart={() => setImageLoading(true)}
+            onLoadEnd={() => setImageLoading(false)}
           />
         ) : (
           <View style={[styles.eventImage, styles.eventImagePlaceholder]}>
@@ -151,7 +202,10 @@ export default function EventCard({
               color={COLORS.midnightNavy}
             />
             <Text style={styles.eventTagText}>
-              {event.event_audience_type_description || (event.chapter_name ? "Hosted by chapter" : "Open to all members")}
+              {event.event_audience_type_description ||
+                (event.chapter_name
+                  ? "Hosted by chapter"
+                  : "Open to all members")}
             </Text>
           </View>
 
