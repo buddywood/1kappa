@@ -38,7 +38,6 @@ jobs:
       - name: Run unit tests
         run: npm test
 
-
   # ============================================================
   # BACKEND QUALITY CHECKS (Lint + TypeScript + Tests)
   # ============================================================
@@ -62,7 +61,7 @@ jobs:
         run: npm install
 
       - name: Run ESLint
-        run: npm run lint || true   # allow warnings
+        run: npm run lint || true # allow warnings
 
       - name: TypeScript type check
         run: npm run type-check
@@ -70,8 +69,7 @@ jobs:
       - name: Run unit tests
         run: npm test
         env:
-          SKIP_INTEGRATION_TESTS: 'true'
-
+          SKIP_INTEGRATION_TESTS: "true"
 
   # ============================================================
   # PREVIEW ENVIRONMENT – DB MIGRATIONS + SEEDING
@@ -114,7 +112,6 @@ jobs:
       - name: Run migrations + seeding
         run: ./scripts/migrate.sh
 
-
   # ============================================================
   # PRODUCTION ENVIRONMENT – DB MIGRATIONS
   # ============================================================
@@ -152,7 +149,6 @@ jobs:
       - name: Run database migrations
         run: ./scripts/migrate.sh
 
-
   # ============================================================
   # PREVIEW FRONTEND DEPLOYMENT (Vercel)
   # ============================================================
@@ -173,7 +169,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
@@ -194,7 +190,6 @@ jobs:
           NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL || 'http://localhost:3000' }}
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'development-secret-key' }}
         run: vercel deploy --token=${{ secrets.VERCEL_TOKEN }} --yes
-
 
   # ============================================================
   # PREVIEW BACKEND DEPLOYMENT (Heroku)
@@ -222,7 +217,6 @@ jobs:
           heroku_email: ${{ secrets.HEROKU_EMAIL }}
           branch: development
 
-
   # ============================================================
   # PRODUCTION FRONTEND DEPLOYMENT (Vercel)
   # ============================================================
@@ -240,7 +234,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
@@ -261,7 +255,6 @@ jobs:
           NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL || 'http://localhost:3000' }}
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'development-secret-key' }}
         run: vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
-
 
   # ============================================================
   # PRODUCTION BACKEND DEPLOYMENT (Heroku)
