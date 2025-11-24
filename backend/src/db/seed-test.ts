@@ -644,7 +644,7 @@ async function seedStewardSellers(): Promise<void> {
           [stewardData.email]
         );
 
-        let memberId: number;
+        let memberId: number | undefined;
         if (existingMember.rows.length > 0) {
           memberId = existingMember.rows[0].id;
           // Update member with initiated chapter if not set
@@ -683,13 +683,18 @@ async function seedStewardSellers(): Promise<void> {
               year,
             ]
           );
-          memberId = memberResult.rows[0]?.id;
+          if (!memberResult.rows[0] || !memberResult.rows[0].id) {
+            throw new Error(
+              `Failed to create fraternity_member for steward ${stewardData.email} - INSERT did not return an id`
+            );
+          }
+          memberId = memberResult.rows[0].id;
         }
 
         // Ensure memberId is defined before proceeding
-        if (!memberId) {
+        if (!memberId || typeof memberId !== 'number') {
           throw new Error(
-            `Failed to get or create fraternity_member_id for steward ${stewardData.email}`
+            `Failed to get or create fraternity_member_id for steward ${stewardData.email} - memberId is ${memberId}`
           );
         }
 
