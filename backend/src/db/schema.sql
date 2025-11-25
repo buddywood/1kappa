@@ -121,6 +121,7 @@ CREATE TABLE IF NOT EXISTS product_attribute_values (
 );
 
 -- Orders table
+-- Note: buyer_email will be changed to user_id by migration 040
 CREATE TABLE IF NOT EXISTS orders (
   id SERIAL PRIMARY KEY,
   product_id INTEGER NOT NULL REFERENCES products(id),
@@ -267,17 +268,22 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   -- Ensure only one foreign key is set based on role
+  -- Note: SELLER users can have fraternity_member_id (sellers can be fraternity members)
+  -- Note: PROMOTER users must have fraternity_member_id (promoters must be fraternity members)
   CONSTRAINT check_role_foreign_key CHECK (
-    (role = 'GUEST' AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
-    (role = 'SELLER' AND seller_id IS NOT NULL AND fraternity_member_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
-    (role = 'PROMOTER' AND promoter_id IS NOT NULL AND fraternity_member_id IS NULL AND seller_id IS NULL AND steward_id IS NULL) OR
-    (role = 'STEWARD' AND steward_id IS NOT NULL AND (
+    (role = 'GUEST' AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL AND (
+      (fraternity_member_id IS NOT NULL) OR 
+      (fraternity_member_id IS NULL AND onboarding_status != 'ONBOARDING_FINISHED')
+    )) OR
+    (role = 'SELLER' AND seller_id IS NOT NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
+    (role = 'PROMOTER' AND promoter_id IS NOT NULL AND fraternity_member_id IS NOT NULL AND seller_id IS NULL AND steward_id IS NULL) OR
+    (role = 'STEWARD' AND steward_id IS NOT NULL AND fraternity_member_id IS NOT NULL AND (
       (seller_id IS NULL AND promoter_id IS NULL) OR
       (seller_id IS NOT NULL AND promoter_id IS NULL) OR
       (seller_id IS NULL AND promoter_id IS NOT NULL) OR
       (seller_id IS NOT NULL AND promoter_id IS NOT NULL)
     )) OR
-    (role = 'ADMIN' AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL)
+    (role = 'ADMIN' AND fraternity_member_id IS NULL AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL)
   )
 );
 

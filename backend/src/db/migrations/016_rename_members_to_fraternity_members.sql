@@ -53,6 +53,14 @@ BEGIN
              WHERE table_name = 'users' AND column_name = 'member_id') THEN
     ALTER TABLE users RENAME COLUMN member_id TO fraternity_member_id;
     RAISE NOTICE 'Renamed users.member_id to fraternity_member_id';
+  ELSIF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'users' AND column_name = 'fraternity_member_id') THEN
+    -- If neither member_id nor fraternity_member_id exists, add it
+    -- This handles cases where the column wasn't created in the initial schema
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'fraternity_members') THEN
+      ALTER TABLE users ADD COLUMN fraternity_member_id INTEGER REFERENCES fraternity_members(id) ON DELETE SET NULL;
+      RAISE NOTICE 'Added users.fraternity_member_id column';
+    END IF;
   END IF;
 
   -- Steward claims table
@@ -203,12 +211,16 @@ BEGIN
   END IF;
 
   -- Users
-  IF EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_users_member_id') THEN
-    ALTER INDEX idx_users_member_id RENAME TO idx_users_fraternity_member_id;
-    RAISE NOTICE 'Renamed index idx_users_member_id';
-  ELSE
-    CREATE INDEX IF NOT EXISTS idx_users_fraternity_member_id ON users(fraternity_member_id);
-    RAISE NOTICE 'Created index idx_users_fraternity_member_id';
+  -- Only create index if fraternity_member_id column exists
+  IF EXISTS (SELECT 1 FROM information_schema.columns 
+             WHERE table_name = 'users' AND column_name = 'fraternity_member_id') THEN
+    IF EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_users_member_id') THEN
+      ALTER INDEX idx_users_member_id RENAME TO idx_users_fraternity_member_id;
+      RAISE NOTICE 'Renamed index idx_users_member_id';
+    ELSIF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_users_fraternity_member_id') THEN
+      CREATE INDEX idx_users_fraternity_member_id ON users(fraternity_member_id);
+      RAISE NOTICE 'Created index idx_users_fraternity_member_id';
+    END IF;
   END IF;
 
   -- Steward claims claimant
@@ -234,15 +246,15 @@ BEGIN
   SET seller_id = NULL, promoter_id = NULL, steward_id = NULL 
   WHERE role = 'GUEST' AND (seller_id IS NOT NULL OR promoter_id IS NOT NULL OR steward_id IS NOT NULL);
   
-  -- Ensure SELLER users have proper nulls set
+  -- Ensure SELLER users have proper nulls set (sellers can be fraternity members, so fraternity_member_id can be set)
   UPDATE users 
-  SET fraternity_member_id = NULL, promoter_id = NULL, steward_id = NULL 
-  WHERE role = 'SELLER' AND (fraternity_member_id IS NOT NULL OR promoter_id IS NOT NULL OR steward_id IS NOT NULL);
+  SET promoter_id = NULL, steward_id = NULL 
+  WHERE role = 'SELLER' AND (promoter_id IS NOT NULL OR steward_id IS NOT NULL);
   
-  -- Ensure PROMOTER users have proper nulls set
+  -- Ensure PROMOTER users have proper nulls set (promoters must be fraternity members, so fraternity_member_id should be set)
   UPDATE users 
-  SET fraternity_member_id = NULL, seller_id = NULL, steward_id = NULL 
-  WHERE role = 'PROMOTER' AND (fraternity_member_id IS NOT NULL OR seller_id IS NOT NULL OR steward_id IS NOT NULL);
+  SET seller_id = NULL, steward_id = NULL 
+  WHERE role = 'PROMOTER' AND (seller_id IS NOT NULL OR steward_id IS NOT NULL);
   
   -- Ensure ADMIN users have proper nulls set
   UPDATE users 
@@ -250,13 +262,15 @@ BEGIN
   WHERE role = 'ADMIN' AND (fraternity_member_id IS NOT NULL OR seller_id IS NOT NULL OR promoter_id IS NOT NULL OR steward_id IS NOT NULL);
 
   -- Recreate with new column name
+  -- Note: SELLER users can have fraternity_member_id (sellers can be fraternity members)
+  -- Note: PROMOTER users must have fraternity_member_id (promoters must be fraternity members)
   ALTER TABLE users ADD CONSTRAINT check_role_foreign_key CHECK (
     (role = 'GUEST' AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL AND (
       (fraternity_member_id IS NOT NULL) OR 
       (fraternity_member_id IS NULL AND onboarding_status != 'ONBOARDING_FINISHED')
     )) OR
-    (role = 'SELLER' AND seller_id IS NOT NULL AND fraternity_member_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
-    (role = 'PROMOTER' AND promoter_id IS NOT NULL AND fraternity_member_id IS NULL AND seller_id IS NULL AND steward_id IS NULL) OR
+    (role = 'SELLER' AND seller_id IS NOT NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
+    (role = 'PROMOTER' AND promoter_id IS NOT NULL AND fraternity_member_id IS NOT NULL AND seller_id IS NULL AND steward_id IS NULL) OR
     (role = 'STEWARD' AND steward_id IS NOT NULL AND fraternity_member_id IS NOT NULL AND (
       (seller_id IS NULL AND promoter_id IS NULL) OR
       (seller_id IS NOT NULL AND promoter_id IS NULL) OR

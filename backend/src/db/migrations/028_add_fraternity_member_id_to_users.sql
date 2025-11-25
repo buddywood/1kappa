@@ -28,26 +28,99 @@ BEGIN
     END IF;
 
     -- Update check_role_foreign_key constraint to allow GUEST users to have fraternity_member_id
+    -- First, fix any existing data that might violate the constraint
+    -- Ensure GUEST users have proper nulls set
+    UPDATE users 
+    SET seller_id = NULL, promoter_id = NULL, steward_id = NULL 
+    WHERE role = 'GUEST' AND (seller_id IS NOT NULL OR promoter_id IS NOT NULL OR steward_id IS NOT NULL);
+    
+    -- Ensure SELLER users have proper nulls set (sellers can have fraternity_member_id)
+    UPDATE users 
+    SET promoter_id = NULL, steward_id = NULL 
+    WHERE role = 'SELLER' AND (promoter_id IS NOT NULL OR steward_id IS NOT NULL);
+    
+    -- Ensure PROMOTER users have proper nulls set and fraternity_member_id
+    -- If PROMOTER doesn't have fraternity_member_id, try to find it from promoters table
+    UPDATE users u
+    SET fraternity_member_id = p.fraternity_member_id,
+        seller_id = NULL,
+        steward_id = NULL
+    FROM promoters p
+    WHERE u.role = 'PROMOTER' 
+      AND u.promoter_id = p.id
+      AND u.fraternity_member_id IS NULL
+      AND p.fraternity_member_id IS NOT NULL;
+    
+    -- If PROMOTER still doesn't have fraternity_member_id, we can't fix it automatically
+    -- Set onboarding_status to prevent constraint violation
+    UPDATE users
+    SET onboarding_status = 'COGNITO_CONFIRMED'
+    WHERE role = 'PROMOTER' 
+      AND fraternity_member_id IS NULL
+      AND onboarding_status = 'ONBOARDING_FINISHED';
+    
+    -- Ensure STEWARD users have fraternity_member_id
+    -- If STEWARD doesn't have fraternity_member_id, try to find it from stewards table
+    UPDATE users u
+    SET fraternity_member_id = s.fraternity_member_id
+    FROM stewards s
+    WHERE u.role = 'STEWARD' 
+      AND u.steward_id = s.id
+      AND u.fraternity_member_id IS NULL
+      AND s.fraternity_member_id IS NOT NULL;
+    
+    -- Ensure ADMIN users have proper nulls set
+    UPDATE users 
+    SET fraternity_member_id = NULL, seller_id = NULL, promoter_id = NULL, steward_id = NULL 
+    WHERE role = 'ADMIN' AND (fraternity_member_id IS NOT NULL OR seller_id IS NOT NULL OR promoter_id IS NOT NULL OR steward_id IS NOT NULL);
+
+    -- Drop existing constraint if it exists
     IF EXISTS (SELECT 1 FROM information_schema.table_constraints 
               WHERE table_name = 'users' AND constraint_name = 'check_role_foreign_key') THEN
       ALTER TABLE users DROP CONSTRAINT check_role_foreign_key;
       RAISE NOTICE 'Dropped check_role_foreign_key constraint';
     END IF;
 
-    -- Recreate constraint allowing GUEST users to have fraternity_member_id
-    ALTER TABLE users ADD CONSTRAINT check_role_foreign_key CHECK (
-      (role = 'GUEST' AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
-      (role = 'SELLER' AND seller_id IS NOT NULL AND fraternity_member_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
-      (role = 'PROMOTER' AND promoter_id IS NOT NULL AND fraternity_member_id IS NULL AND seller_id IS NULL AND steward_id IS NULL) OR
-      (role = 'STEWARD' AND steward_id IS NOT NULL AND (
-        (seller_id IS NULL AND promoter_id IS NULL) OR
-        (seller_id IS NOT NULL AND promoter_id IS NULL) OR
-        (seller_id IS NULL AND promoter_id IS NOT NULL) OR
-        (seller_id IS NOT NULL AND promoter_id IS NOT NULL)
-      )) OR
-      (role = 'ADMIN' AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL)
-    );
-    RAISE NOTICE 'Recreated check_role_foreign_key constraint allowing GUEST users to have fraternity_member_id';
+    -- Only add constraint if no data violates it
+    IF NOT EXISTS (
+      SELECT 1 FROM users WHERE NOT (
+        (role = 'GUEST' AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL AND (
+          (fraternity_member_id IS NOT NULL) OR 
+          (fraternity_member_id IS NULL AND onboarding_status != 'ONBOARDING_FINISHED')
+        )) OR
+        (role = 'SELLER' AND seller_id IS NOT NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
+        (role = 'PROMOTER' AND promoter_id IS NOT NULL AND fraternity_member_id IS NOT NULL AND seller_id IS NULL AND steward_id IS NULL) OR
+        (role = 'STEWARD' AND steward_id IS NOT NULL AND fraternity_member_id IS NOT NULL AND (
+          (seller_id IS NULL AND promoter_id IS NULL) OR
+          (seller_id IS NOT NULL AND promoter_id IS NULL) OR
+          (seller_id IS NULL AND promoter_id IS NOT NULL) OR
+          (seller_id IS NOT NULL AND promoter_id IS NOT NULL)
+        )) OR
+        (role = 'ADMIN' AND fraternity_member_id IS NULL AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL)
+      )
+    ) THEN
+      -- Recreate constraint allowing GUEST users to have fraternity_member_id
+      -- Note: SELLER users can have fraternity_member_id (sellers can be fraternity members)
+      -- Note: PROMOTER users must have fraternity_member_id (promoters must be fraternity members)
+      ALTER TABLE users ADD CONSTRAINT check_role_foreign_key CHECK (
+        (role = 'GUEST' AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL AND (
+          (fraternity_member_id IS NOT NULL) OR 
+          (fraternity_member_id IS NULL AND onboarding_status != 'ONBOARDING_FINISHED')
+        )) OR
+        (role = 'SELLER' AND seller_id IS NOT NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
+        (role = 'PROMOTER' AND promoter_id IS NOT NULL AND fraternity_member_id IS NOT NULL AND seller_id IS NULL AND steward_id IS NULL) OR
+        (role = 'STEWARD' AND steward_id IS NOT NULL AND fraternity_member_id IS NOT NULL AND (
+          (seller_id IS NULL AND promoter_id IS NULL) OR
+          (seller_id IS NOT NULL AND promoter_id IS NULL) OR
+          (seller_id IS NULL AND promoter_id IS NOT NULL) OR
+          (seller_id IS NOT NULL AND promoter_id IS NOT NULL)
+        )) OR
+        (role = 'ADMIN' AND fraternity_member_id IS NULL AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL)
+      );
+      RAISE NOTICE 'Recreated check_role_foreign_key constraint allowing GUEST users to have fraternity_member_id';
+    ELSE
+      RAISE WARNING 'Cannot add check_role_foreign_key constraint - existing data would violate it. Please review and fix data manually.';
+    END IF;
   END IF;
 END $$;
 

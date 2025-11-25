@@ -8,6 +8,7 @@ import {
   getAllProductCategories,
   createSteward,
   updateStewardStatus,
+  createUser,
 } from "./queries";
 import dotenv from "dotenv";
 import path from "path";
@@ -160,7 +161,7 @@ const sampleProducts = [
     price_cents: 2800, // $28.00
     image_url: getS3ImageUrl("products/c31ee9e9-9a55-4eb4-a9ec-35c1b68d6cbc-sample_merch3.png"),
     category: "Accessories",
-    seller_email: "sarah.mitchell@example.com", // Assign to non-member seller
+    seller_email: "buddy+seller2@ebilly.com", // Assign to non-member seller
     is_kappa_branded: false, // Not explicitly branded
   },
   {
@@ -170,7 +171,7 @@ const sampleProducts = [
     price_cents: 3200, // $32.00
     image_url: getS3ImageUrl("products/c758379d-5ade-456c-bc6f-16d2c25fe3af-sample_merch5.png"),
     category: "Accessories",
-    seller_email: "sarah.mitchell@example.com",
+    seller_email: "buddy+seller2@ebilly.com",
     is_kappa_branded: true, // Has "Kappa" in name, so branded
   },
   {
@@ -180,7 +181,7 @@ const sampleProducts = [
     price_cents: 4500, // $45.00
     image_url: getS3ImageUrl("products/d090f4dd-36d8-425c-b4ba-ff47f244450c-sample_merch2.png"),
     category: "Books & Media",
-    seller_email: "michael.chen@example.com", // Assign to non-member seller
+    seller_email: "buddy+seller2@ebilly.com", // Assign to non-member seller
     is_kappa_branded: true, // Mentions Kappa Alpha Psi
   },
   {
@@ -190,18 +191,58 @@ const sampleProducts = [
     price_cents: 8500, // $85.00
     image_url: getS3ImageUrl("products/d1a90fcc-02ae-42ac-9d0e-ede81e745677-sample_merch1.png"),
     category: "Accessories",
-    seller_email: "michael.chen@example.com",
+    seller_email: "buddy+seller2@ebilly.com",
   },
 ];
 
-// Sample sellers data
+// Test users - using buddy+ email addresses only
+const testUsers = {
+  seller: {
+    name: "Buddy Seller",
+    email: "buddy+seller@ebilly.com",
+    membership_number: "KAP-TEST-SELLER",
+    business_name: "Kappa Gear Co.",
+    kappa_vendor_id: "VL-TEST-SELLER",
+    is_member: true,
+  },
+  sellerNonMember: {
+    name: "Buddy Seller Non-Member",
+    email: "buddy+seller2@ebilly.com",
+    membership_number: null,
+    business_name: "Crimson Threads",
+    kappa_vendor_id: "VL-TEST-SELLER2",
+    is_member: false,
+  },
+  promoter: {
+    name: "Buddy Promoter",
+    email: "buddy+promoter@ebilly.com",
+    membership_number: "KAP-TEST-PROMOTER",
+  },
+  steward: {
+    name: "Buddy Steward",
+    email: "buddy+steward@ebilly.com",
+    membership_number: "KAP-TEST-STEWARD",
+  },
+  member: {
+    name: "Buddy Member",
+    email: "buddy+member@ebilly.com",
+    membership_number: "KAP-TEST-MEMBER",
+  },
+  guest: {
+    name: "Buddy Guest",
+    email: "buddy+guest@ebilly.com",
+    membership_number: null, // Not a member
+  },
+};
+
+// Sample sellers data - using buddy+ users
 const sampleSellers = [
   {
-    name: "Marcus Johnson",
-    email: "marcus.johnson@example.com",
-    membership_number: "KAP-2020-001",
-    business_name: "Kappa Gear Co.",
-    kappa_vendor_id: "VL-2024-001",
+    name: testUsers.seller.name,
+    email: testUsers.seller.email,
+    membership_number: testUsers.seller.membership_number,
+    business_name: testUsers.seller.business_name,
+    kappa_vendor_id: testUsers.seller.kappa_vendor_id,
     is_member: true,
     headshot_url:
       "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop",
@@ -209,50 +250,16 @@ const sampleSellers = [
     social_links: {
       instagram: "@kappagearco",
       twitter: "@kappagearco",
-      linkedin: "marcus-johnson-kappa",
+      linkedin: "buddy-seller-kappa",
       website: "https://kappagearco.example.com",
     },
   },
   {
-    name: "David Carter",
-    email: "david.carter@example.com",
-    membership_number: "KAP-2019-045",
-    business_name: "Brotherhood Apparel",
-    kappa_vendor_id: "VL-2024-002",
-    is_member: true,
-    headshot_url:
-      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop",
-    website: "https://brotherhoodapparel.example.com",
-    social_links: {
-      instagram: "@brotherhoodapparel",
-      twitter: "@brotherhoodapp",
-      linkedin: "david-carter-kappa",
-      website: "https://brotherhoodapparel.example.com",
-    },
-  },
-  {
-    name: "James Williams",
-    email: "james.williams@example.com",
-    membership_number: "KAP-2021-123",
-    business_name: null,
-    kappa_vendor_id: "VL-2024-003",
-    is_member: true,
-    headshot_url:
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop",
-    website: null,
-    social_links: {
-      instagram: "@jameswilliams",
-      twitter: "@jwilliams",
-      linkedin: "james-williams-kappa",
-    },
-  },
-  // Non-member sellers
-  {
-    name: "Sarah Mitchell",
-    email: "sarah.mitchell@example.com",
-    membership_number: null,
-    business_name: "Crimson Threads",
-    kappa_vendor_id: "VL-2024-004",
+    name: testUsers.sellerNonMember.name,
+    email: testUsers.sellerNonMember.email,
+    membership_number: testUsers.sellerNonMember.membership_number,
+    business_name: testUsers.sellerNonMember.business_name,
+    kappa_vendor_id: testUsers.sellerNonMember.kappa_vendor_id,
     is_member: false,
     headshot_url:
       "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop",
@@ -260,62 +267,25 @@ const sampleSellers = [
     social_links: {
       instagram: "@crimsonthreads",
       twitter: "@crimsonthreads",
-      linkedin: "sarah-mitchell",
+      linkedin: "buddy-seller-nonmember",
       website: "https://crimsonthreads.example.com",
-    },
-  },
-  {
-    name: "Michael Chen",
-    email: "michael.chen@example.com",
-    membership_number: null,
-    business_name: "Heritage Goods Co.",
-    kappa_vendor_id: "VL-2024-005",
-    is_member: false,
-    headshot_url:
-      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop",
-    website: "https://heritagegoods.example.com",
-    social_links: {
-      instagram: "@heritagegoods",
-      twitter: "@heritagegoodsco",
-      linkedin: "michael-chen",
-      website: "https://heritagegoods.example.com",
     },
   },
 ];
 
-// Test promoters for local development
+// Test promoters - using buddy+ users
 const testPromoters = [
   {
-    email: "promoter1@example.com",
-    name: "Michael Brown",
-    membership_number: "PROM-001",
+    email: testUsers.promoter.email,
+    name: testUsers.promoter.name,
+    membership_number: testUsers.promoter.membership_number,
     initiated_season: "Fall",
     initiated_year: 2018,
     social_links: {
-      instagram: "@michaelbrown",
-      twitter: "@michaelbrown",
+      instagram: "@buddypromoter",
+      twitter: "@buddypromoter",
     },
     status: "APPROVED" as const,
-  },
-  {
-    email: "promoter2@example.com",
-    name: "Robert Davis",
-    membership_number: "PROM-002",
-    initiated_season: "Spring",
-    initiated_year: 2019,
-    social_links: {
-      instagram: "@robertdavis",
-      linkedin: "robert-davis",
-    },
-    status: "APPROVED" as const,
-  },
-  {
-    email: "promoter3@example.com",
-    name: "William Taylor",
-    membership_number: "PROM-003",
-    initiated_season: "Fall",
-    initiated_year: 2020,
-    status: "PENDING" as const,
   },
 ];
 
@@ -508,28 +478,14 @@ const sampleEvents: SampleEventData[] = [
   },
 ];
 
-// Sample steward sellers data
+// Sample steward sellers data - using buddy+ users
 const stewardSellers = [
   {
-    name: "Robert Thompson",
-    email: "robert.thompson@example.com",
-    membership_number: "KAP-2018-089",
+    name: testUsers.steward.name,
+    email: testUsers.steward.email,
+    membership_number: testUsers.steward.membership_number,
     business_name: "Steward Heritage Goods",
-    kappa_vendor_id: "VL-2024-006",
-  },
-  {
-    name: "Christopher Anderson",
-    email: "christopher.anderson@example.com",
-    membership_number: "KAP-2017-156",
-    business_name: "Legacy Steward Shop",
-    kappa_vendor_id: "VL-2024-007",
-  },
-  {
-    name: "Daniel Martinez",
-    email: "daniel.martinez@example.com",
-    membership_number: "KAP-2019-234",
-    business_name: null,
-    kappa_vendor_id: "VL-2024-008",
+    kappa_vendor_id: "VL-TEST-STEWARD",
   },
 ];
 
@@ -543,7 +499,7 @@ const stewardProducts = [
     image_url:
       "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=500&h=500&fit=crop",
     category: "Heritage / Legacy Item",
-    seller_email: "robert.thompson@example.com",
+    seller_email: testUsers.steward.email,
     is_kappa_branded: true,
   },
   {
@@ -554,52 +510,8 @@ const stewardProducts = [
     image_url:
       "https://images.unsplash.com/photo-1586953208448-b95a79798f07?w=500&h=500&fit=crop",
     category: "Heritage / Legacy Item",
-    seller_email: "robert.thompson@example.com",
+    seller_email: testUsers.steward.email,
     is_kappa_branded: true,
-  },
-  {
-    name: "Vintage Wool Sweater",
-    description:
-      "Vintage wool sweater with embroidered design. From the 1990s, excellent condition. Perfect for collectors.",
-    price_cents: 9500, // $95.00
-    image_url:
-      "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=500&h=500&fit=crop",
-    category: "Outerwear",
-    seller_email: "christopher.anderson@example.com",
-    is_kappa_branded: false,
-  },
-  {
-    name: "Historic Chapter Photo Collection",
-    description:
-      "Rare collection of vintage chapter photos from the 1970s-1990s. Professionally preserved and framed. Limited availability.",
-    price_cents: 15000, // $150.00
-    image_url:
-      "https://images.unsplash.com/photo-1511578314322-379afb476865?w=500&h=500&fit=crop",
-    category: "Art & Prints",
-    seller_email: "christopher.anderson@example.com",
-    is_kappa_branded: false,
-  },
-  {
-    name: "Kappa Alpha Psi Antique Pocket Watch",
-    description:
-      "Beautiful antique pocket watch with Kappa Alpha Psi engraving. Gold-plated, fully functional. A true collector's item.",
-    price_cents: 18000, // $180.00
-    image_url:
-      "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&h=500&fit=crop",
-    category: "Heritage / Legacy Item",
-    seller_email: "daniel.martinez@example.com",
-    is_kappa_branded: true,
-  },
-  {
-    name: "Vintage Silk Ties Collection",
-    description:
-      "Set of 3 vintage silk ties from different eras. Each features unique patterns. Perfect for formal events.",
-    price_cents: 6500, // $65.00
-    image_url:
-      "https://images.unsplash.com/photo-1594938291220-94d21225f65a?w=500&h=500&fit=crop",
-    category: "Apparel",
-    seller_email: "daniel.martinez@example.com",
-    is_kappa_branded: false,
   },
 ];
 
@@ -753,11 +665,24 @@ async function seedStewardSellers(): Promise<void> {
         let sellerId: number;
         if (existingSeller.rows.length > 0) {
           sellerId = existingSeller.rows[0].id;
-          // Update seller to ensure it's linked to the member
-          await pool.query(
-            "UPDATE sellers SET fraternity_member_id = $1, status = $2 WHERE id = $3",
-            [memberId, "APPROVED", sellerId]
+          // Update seller to ensure it's linked to the member and has Stripe account
+          const existingStripeCheck = await pool.query(
+            "SELECT stripe_account_id FROM sellers WHERE id = $1",
+            [sellerId]
           );
+          const hasStripeAccount = existingStripeCheck.rows[0]?.stripe_account_id;
+          if (!hasStripeAccount) {
+            const testStripeAccountId = `acct_test_${sellerId.toString().padStart(10, '0')}`;
+            await pool.query(
+              "UPDATE sellers SET fraternity_member_id = $1, status = $2, stripe_account_id = $3 WHERE id = $4",
+              [memberId, "APPROVED", testStripeAccountId, sellerId]
+            );
+          } else {
+            await pool.query(
+              "UPDATE sellers SET fraternity_member_id = $1, status = $2 WHERE id = $3",
+              [memberId, "APPROVED", sellerId]
+            );
+          }
         } else {
           // Create new seller
           const sponsoringChapter =
@@ -776,10 +701,11 @@ async function seedStewardSellers(): Promise<void> {
             },
           });
           sellerId = seller.id;
-          // Approve the seller and set verification_status to VERIFIED
+          // Approve the seller, set verification_status to VERIFIED, and add test Stripe account ID
+          const testStripeAccountId = `acct_test_${sellerId.toString().padStart(10, '0')}`;
           await pool.query(
-            "UPDATE sellers SET status = $1, verification_status = $2 WHERE id = $3",
-            ["APPROVED", "VERIFIED", sellerId]
+            "UPDATE sellers SET status = $1, verification_status = $2, stripe_account_id = $3 WHERE id = $4",
+            ["APPROVED", "VERIFIED", testStripeAccountId, sellerId]
           );
         }
 
@@ -888,227 +814,59 @@ async function seedStewardSellers(): Promise<void> {
 }
 
 async function seedProducts(): Promise<void> {
-  console.log("📦 Seeding products and sellers...");
+  console.log("📦 Seeding products...");
 
   try {
-    // Get all chapters to use for initiated/sponsoring chapters
-    const chapters = await getAllChapters();
-    const collegiateChapters = chapters.filter(
-      (c) => c.type === "Collegiate" && c.status === "Active"
-    );
-
-    if (collegiateChapters.length === 0) {
-      console.warn(
-        "⚠️  No active collegiate chapters found. Using any available chapters..."
-      );
-    }
-
-    const availableChapters =
-      collegiateChapters.length > 0 ? collegiateChapters : chapters;
-
-    if (availableChapters.length === 0) {
-      console.error(
-        "❌ No chapters found. Please seed chapters first using: npm run seed:chapters"
-      );
-      return;
-    }
-
     // Get product categories
     const categories = await getAllProductCategories();
     const categoryMap = new Map(categories.map((cat) => [cat.name, cat.id]));
 
-    // Get or create sellers
-    const sellers = [];
-    for (const sellerData of sampleSellers) {
-      // Check if seller already exists
-      const existingSeller = await pool.query(
-        "SELECT id, fraternity_member_id FROM sellers WHERE email = $1",
-        [sellerData.email]
-      );
+    // Get existing sellers (should already exist from seedTestUsers)
+    // Query for the buddy+ seller emails
+    const sellerEmails = [
+      testUsers.seller.email,
+      testUsers.sellerNonMember.email
+    ];
+    
+    const sellersResult = await pool.query(
+      `SELECT id, email, status, verification_status FROM sellers WHERE email = ANY($1::text[])`,
+      [sellerEmails]
+    );
 
-      if (existingSeller.rows.length > 0) {
-        const seller = existingSeller.rows[0];
-        // Add email to seller object for matching
-        (seller as any).email = sellerData.email;
+    let sellers = sellersResult.rows.map(row => {
+      // Ensure email is set for matching
+      (row as any).email = row.email;
+      return row;
+    });
 
-        // Ensure existing seller is approved (products require APPROVED sellers to display)
-        if (seller.status !== "APPROVED") {
-          await pool.query("UPDATE sellers SET status = $1 WHERE id = $2", [
-            "APPROVED",
-            seller.id,
-          ]);
-          seller.status = "APPROVED";
-          console.log(`  ✓ Approved existing seller: ${sellerData.name}`);
-        }
-        // Also ensure verification_status is VERIFIED if not already set (sellers start as VERIFIED)
-        if (seller.verification_status !== "VERIFIED") {
-          await pool.query(
-            "UPDATE sellers SET verification_status = $1 WHERE id = $2",
-            ["VERIFIED", seller.id]
-          );
-        }
+    if (sellers.length === 0) {
+      console.error("  ❌ No sellers found in database!");
+      console.error("  ⚠️  Sellers should be created by seedTestUsers first.");
+      console.error(`  ⚠️  Looking for sellers: ${sellerEmails.join(', ')}`);
+      console.error("  ⚠️  Make sure seedTestUsers runs before seedProducts.");
+      return;
+    }
 
-        // If seller exists but doesn't have a fraternity_member_id and should be a member, create/update member
-        if (!seller.fraternity_member_id && sellerData.is_member) {
-          const initiatedChapter =
-            availableChapters[
-              Math.floor(Math.random() * availableChapters.length)
-            ];
-
-          // Check if member already exists
-          const existingMember = await pool.query(
-            "SELECT id FROM fraternity_members WHERE email = $1",
-            [sellerData.email]
-          );
-
-          let memberId: number | null = null;
-          if (existingMember.rows.length > 0) {
-            memberId = existingMember.rows[0].id;
-            // Update member with initiated chapter if not set
-            await pool.query(
-              "UPDATE fraternity_members SET initiated_chapter_id = COALESCE(initiated_chapter_id, $1) WHERE id = $2",
-              [initiatedChapter.id, memberId]
-            );
-          } else {
-            // Create new member
-            const memberResult = await pool.query(
-              `INSERT INTO fraternity_members (
-                email, name, membership_number, registration_status, 
-                initiated_chapter_id, verification_status
-              ) VALUES ($1, $2, $3, $4, $5, 'VERIFIED')
-              RETURNING id`,
-              [
-                sellerData.email,
-                sellerData.name,
-                sellerData.membership_number,
-                "COMPLETE",
-                initiatedChapter.id,
-              ]
-            );
-            memberId = memberResult.rows[0].id;
-          }
-
-          // Update seller with fraternity_member_id
-          await pool.query(
-            "UPDATE sellers SET fraternity_member_id = $1 WHERE id = $2",
-            [memberId, seller.id]
-          );
-          console.log(
-            `  ✓ Updated seller ${sellerData.name} with member (initiated at ${initiatedChapter.name})`
-          );
-        }
-        sellers.push(seller);
-      } else {
-        const sponsoringChapter =
-          availableChapters[
-            Math.floor(Math.random() * availableChapters.length)
-          ];
-        let memberId: number | null = null;
-
-        // Only create member if seller should be a member
-        if (sellerData.is_member) {
-          const initiatedChapter =
-            availableChapters[
-              Math.floor(Math.random() * availableChapters.length)
-            ];
-
-          // Check if member already exists
-          const existingMember = await pool.query(
-            "SELECT id FROM fraternity_members WHERE email = $1",
-            [sellerData.email]
-          );
-
-          if (existingMember.rows.length > 0) {
-            memberId = existingMember.rows[0].id;
-            // Update member with initiated chapter if not set
-            await pool.query(
-              "UPDATE fraternity_members SET initiated_chapter_id = COALESCE(initiated_chapter_id, $1) WHERE id = $2",
-              [initiatedChapter.id, memberId]
-            );
-          } else {
-            // Create new member
-            // Generate random initiation season and year
-            const seasons = ["Fall", "Spring"];
-            const season = seasons[Math.floor(Math.random() * seasons.length)];
-            const year = 2015 + Math.floor(Math.random() * 10); // Random year between 2015-2024
-
-            const memberResult = await pool.query(
-              `INSERT INTO fraternity_members (
-                email, name, membership_number, registration_status, 
-                initiated_chapter_id, initiated_season, initiated_year, verification_status
-              ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'VERIFIED')
-              RETURNING id`,
-              [
-                sellerData.email,
-                sellerData.name,
-                sellerData.membership_number,
-                "COMPLETE",
-                initiatedChapter.id,
-                season,
-                year,
-              ]
-            );
-            memberId = memberResult.rows[0].id;
-          }
-        }
-
-        // Create new seller (with or without fraternity_member_id)
-        const newSeller = await createSeller({
-          email: sellerData.email,
-          name: sellerData.name,
-          sponsoring_chapter_id: sponsoringChapter.id,
-          business_name: sellerData.business_name,
-          kappa_vendor_id: sellerData.kappa_vendor_id,
-          headshot_url: (sellerData as any).headshot_url || null,
-          website: (sellerData as any).website || null,
-          social_links: (sellerData as any).social_links || {
-            instagram: `@${sellerData.name.toLowerCase().replace(" ", "")}`,
-          },
-          fraternity_member_id: memberId,
-        });
-
-        // Approve the seller and set verification_status to VERIFIED
+    // Ensure all sellers are approved
+    for (const seller of sellers) {
+      if (seller.status !== 'APPROVED') {
+        await pool.query("UPDATE sellers SET status = $1 WHERE id = $2", [
+          "APPROVED",
+          seller.id,
+        ]);
+        seller.status = "APPROVED";
+        console.log(`  ✓ Approved seller: ${seller.email}`);
+      }
+      if (seller.verification_status !== 'VERIFIED') {
         await pool.query(
-          "UPDATE sellers SET status = $1, verification_status = $2 WHERE id = $3",
-          ["APPROVED", "VERIFIED", newSeller.id]
+          "UPDATE sellers SET verification_status = $1 WHERE id = $2",
+          ["VERIFIED", seller.id]
         );
-
-        // Update headshot_url and store_logo_url if provided (in case they weren't set during creation)
-        if ((sellerData as any).headshot_url) {
-          await pool.query(
-            "UPDATE sellers SET headshot_url = $1 WHERE id = $2",
-            [(sellerData as any).headshot_url, newSeller.id]
-          );
-        }
-
-        // Update seller object in memory to reflect approval
-        newSeller.status = "APPROVED";
-
-        // Add email to seller object for matching
-        (newSeller as any).email = sellerData.email;
-
-        if (sellerData.is_member) {
-          const memberResult = await pool.query(
-            "SELECT initiated_chapter_id FROM fraternity_members WHERE id = $1",
-            [memberId]
-          );
-          const chapterId = memberResult.rows[0]?.initiated_chapter_id;
-          const chapterResult = await pool.query(
-            "SELECT name FROM chapters WHERE id = $1",
-            [chapterId]
-          );
-          const chapterName = chapterResult.rows[0]?.name || "Unknown";
-          console.log(
-            `  ✓ Created and approved seller: ${sellerData.name} (member, initiated at ${chapterName})`
-          );
-        } else {
-          console.log(
-            `  ✓ Created and approved seller: ${sellerData.name} (non-member)`
-          );
-        }
-        sellers.push(newSeller);
       }
     }
+
+    console.log(`  ✓ Found ${sellers.length} seller(s) for products: ${sellers.map((s: any) => s.email).join(', ')}\n`);
+    console.log(`  📦 Ready to create ${sampleProducts.length} products using ${sellers.length} seller(s)\n`);
 
     // Create products
     let inserted = 0;
@@ -1148,36 +906,48 @@ async function seedProducts(): Promise<void> {
         // Assign seller - use specified seller_email if provided, otherwise random
         let seller;
         if ((productData as any).seller_email) {
-          // Try to find seller in sellers array by email
+          // Find seller by email
           seller = sellers.find(
             (s: any) => s.email === (productData as any).seller_email
           );
-          // If not found, query database
+          
+          // If not found in array, query database
           if (!seller) {
             const sellerResult = await pool.query(
-              "SELECT id FROM sellers WHERE email = $1",
+              "SELECT id, email, status FROM sellers WHERE email = $1",
               [(productData as any).seller_email]
             );
             if (sellerResult.rows.length > 0) {
-              seller = sellers.find((s) => s.id === sellerResult.rows[0].id);
-              if (!seller) {
-                // If seller not in sellers array, fetch it
-                const fullSellerResult = await pool.query(
-                  "SELECT * FROM sellers WHERE id = $1",
-                  [sellerResult.rows[0].id]
-                );
-                if (fullSellerResult.rows.length > 0) {
-                  seller = fullSellerResult.rows[0];
-                }
+              seller = sellerResult.rows[0];
+              (seller as any).email = seller.email;
+              // Ensure seller is approved
+              if (seller.status !== "APPROVED") {
+                await pool.query("UPDATE sellers SET status = $1 WHERE id = $2", [
+                  "APPROVED",
+                  seller.id,
+                ]);
+                seller.status = "APPROVED";
               }
+              sellers.push(seller);
             }
           }
-          // Fallback to random seller if not found
-          if (!seller) {
+          
+          // Fallback to random seller if still not found
+          if (!seller && sellers.length > 0) {
+            console.warn(`  ⚠️  Seller ${(productData as any).seller_email} not found, using random seller`);
             seller = sellers[Math.floor(Math.random() * sellers.length)];
           }
         } else {
-          seller = sellers[Math.floor(Math.random() * sellers.length)];
+          // Use random seller from available sellers
+          if (sellers.length > 0) {
+            seller = sellers[Math.floor(Math.random() * sellers.length)];
+          }
+        }
+
+        if (!seller || !seller.id) {
+          console.error(`  ❌ Could not assign seller to product: ${productData.name}`);
+          console.error(`  ❌ No sellers available. Make sure seedTestUsers runs before seedProducts.`);
+          continue;
         }
 
         // Get category ID from category name
@@ -1398,9 +1168,9 @@ async function seedEvents(): Promise<void> {
     eventAudienceTypesResult.rows.map((row) => [row.enum, row.id])
   );
 
-  // Get approved promoters
+  // Get approved promoters (buddy+ users)
   const promotersResult = await pool.query(
-    "SELECT id FROM promoters WHERE status = 'APPROVED' AND (email LIKE '%example.com' OR email LIKE 'test%@%')"
+    "SELECT id FROM promoters WHERE status = 'APPROVED' AND email LIKE 'buddy+%@ebilly.com'"
   );
   const promoters = promotersResult.rows;
 
@@ -1576,14 +1346,37 @@ async function seedOrders(): Promise<void> {
           continue; // Skip if already exists
         }
 
+        // Get a random test user to assign the order to
+        // Use buddy+guest@ebilly.com or buddy+member@ebilly.com (but member doesn't have user account)
+        // So use buddy+guest@ebilly.com or one of the other test users
+        const testUserEmails = [
+          testUsers.guest.email,
+          testUsers.seller.email,
+          testUsers.sellerNonMember.email,
+        ];
+        const buyerEmail = testUserEmails[i % testUserEmails.length];
+        
+        // Get user_id from email
+        const userResult = await pool.query(
+          'SELECT id FROM users WHERE email = $1',
+          [buyerEmail]
+        );
+        
+        if (userResult.rows.length === 0) {
+          console.warn(`  ⚠️  Skipping order ${i + 1}: User ${buyerEmail} not found`);
+          continue;
+        }
+        
+        const userId = userResult.rows[0].id;
+
         await pool.query(
-          `INSERT INTO orders (product_id, buyer_email, amount_cents, stripe_session_id, chapter_id, status, created_at)
+          `INSERT INTO orders (product_id, user_id, amount_cents, stripe_session_id, chapter_id, status, created_at)
            VALUES ($1, $2, $3, $4, $5, 'PAID', NOW() - INTERVAL '${Math.floor(
              Math.random() * 90
            )} days')`,
           [
             product.id,
-            `buyer${i + 1}@example.com`,
+            userId,
             amount,
             `test_session_${i}`,
             chapterId,
@@ -1602,27 +1395,357 @@ async function seedOrders(): Promise<void> {
   }
 }
 
-async function clearTestData() {
-  console.log("🧹 Clearing test data...");
+async function clearOldTestData() {
+  console.log("🧹 Clearing old test data (@example.com users)...\n");
 
   // Delete in reverse order of dependencies
   await pool.query(
-    "DELETE FROM events WHERE promoter_id IN (SELECT id FROM promoters WHERE email LIKE '%example.com' OR email LIKE 'test%@%')"
+    "DELETE FROM events WHERE promoter_id IN (SELECT id FROM promoters WHERE email LIKE '%@example.com')"
   );
   await pool.query(
-    "DELETE FROM promoters WHERE email LIKE '%example.com' OR email LIKE 'test%@%'"
+    "DELETE FROM promoters WHERE email LIKE '%@example.com'"
   );
   await pool.query(
-    "DELETE FROM orders WHERE buyer_email LIKE '%example.com' OR stripe_session_id LIKE 'test_session_%'"
+    "DELETE FROM orders WHERE stripe_session_id LIKE 'test_session_%'"
   );
   await pool.query(
-    "DELETE FROM products WHERE seller_id IN (SELECT id FROM sellers WHERE email LIKE '%example.com' OR email LIKE 'test%@%')"
+    "DELETE FROM products WHERE seller_id IN (SELECT id FROM sellers WHERE email LIKE '%@example.com')"
   );
   await pool.query(
-    "DELETE FROM sellers WHERE email LIKE '%example.com' OR email LIKE 'test%@%'"
+    "DELETE FROM sellers WHERE email LIKE '%@example.com'"
+  );
+  await pool.query(
+    "DELETE FROM users WHERE email LIKE '%@example.com'"
+  );
+  await pool.query(
+    "DELETE FROM fraternity_members WHERE email LIKE '%@example.com'"
+  );
+  await pool.query(
+    "DELETE FROM stewards WHERE fraternity_member_id IN (SELECT id FROM fraternity_members WHERE email LIKE '%@example.com')"
   );
 
-  console.log("✓ Test data cleared\n");
+  console.log("✓ Old test data cleared\n");
+}
+
+async function seedTestUsers(): Promise<void> {
+  console.log("👤 Seeding test users (buddy+ users only, no Cognito)...\n");
+
+  try {
+    // Get chapters for assigning to users
+    const chapters = await getAllChapters();
+    const collegiateChapters = chapters.filter(c => c.type === 'Collegiate' && c.status === 'Active');
+    const availableChapters = collegiateChapters.length > 0 ? collegiateChapters : chapters;
+
+    if (availableChapters.length === 0) {
+      console.warn('⚠️  No chapters found. Please seed chapters first.');
+      return;
+    }
+
+    // Helper to generate placeholder cognito_sub for test users (no Cognito creation)
+    const generateCognitoSub = (email: string): string => {
+      return `test-${email.replace(/[@+]/g, '-')}-${Date.now()}`;
+    };
+
+    // Process each test user
+    for (const [key, testUser] of Object.entries(testUsers)) {
+      try {
+        console.log(`\n📝 Processing ${key}: ${testUser.name} (${testUser.email})`);
+
+        const cognitoSub = generateCognitoSub(testUser.email);
+
+        // Get or create fraternity member (needed for member, steward, promoter, and member sellers)
+        let memberId: number | null = null;
+        if (key === 'member' || key === 'steward' || key === 'promoter' || (key === 'seller' && testUser.membership_number)) {
+          // Members must have a membership_number
+          if (!testUser.membership_number) {
+            throw new Error(`${testUser.name} (${key}) must have a membership_number to be a fraternity member`);
+          }
+
+          // Check if member already exists
+          const existingMember = await pool.query(
+            'SELECT id FROM fraternity_members WHERE email = $1',
+            [testUser.email]
+          );
+
+          if (existingMember.rows.length > 0) {
+            memberId = existingMember.rows[0].id;
+            console.log(`  ✓ Member already exists: ${testUser.name}`);
+          } else {
+            // Create new member
+            const initiatedChapter = availableChapters[Math.floor(Math.random() * availableChapters.length)];
+            const seasons = ['Fall', 'Spring'];
+            const season = seasons[Math.floor(Math.random() * seasons.length)];
+            const year = 2015 + Math.floor(Math.random() * 10);
+            
+            const memberResult = await pool.query(
+              `INSERT INTO fraternity_members (
+                email, name, membership_number, registration_status, 
+                initiated_chapter_id, initiated_season, initiated_year, verification_status
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'VERIFIED')
+              RETURNING id`,
+              [
+                testUser.email,
+                testUser.name,
+                testUser.membership_number, // Required for all members
+                'COMPLETE',
+                initiatedChapter.id,
+                season,
+                year,
+              ]
+            );
+            memberId = memberResult.rows[0].id;
+            console.log(`  ✓ Created member: ${testUser.name} (membership: ${testUser.membership_number}, initiated at ${initiatedChapter.name}, ${season} ${year})`);
+          }
+        }
+
+        // Create role-specific records
+        let sellerId: number | null = null;
+        let promoterId: number | null = null;
+        let stewardId: number | null = null;
+
+        if (key === 'seller' || key === 'sellerNonMember') {
+          // Check if seller already exists
+          const existingSeller = await pool.query(
+            'SELECT id FROM sellers WHERE email = $1',
+            [testUser.email]
+          );
+
+          if (existingSeller.rows.length > 0) {
+            sellerId = existingSeller.rows[0].id;
+            console.log(`  ✓ Seller already exists: ${testUser.name}`);
+          } else {
+            const sponsoringChapter = availableChapters[Math.floor(Math.random() * availableChapters.length)];
+            const seller = await createSeller({
+              email: testUser.email,
+              name: testUser.name,
+              sponsoring_chapter_id: sponsoringChapter.id,
+              business_name: (testUser as any).business_name || null,
+              kappa_vendor_id: (testUser as any).kappa_vendor_id || 'VL-TEST',
+              fraternity_member_id: memberId,
+            });
+            sellerId = seller.id;
+
+            // Approve the seller and add test Stripe account ID
+            // Using a test Stripe Connect account ID format (acct_xxxxx)
+            // In production, this would be set up through the seller onboarding flow
+            const testStripeAccountId = `acct_test_${sellerId.toString().padStart(10, '0')}`;
+            await pool.query(
+              'UPDATE sellers SET status = $1, verification_status = $2, stripe_account_id = $3 WHERE id = $4',
+              ['APPROVED', 'VERIFIED', testStripeAccountId, sellerId]
+            );
+            console.log(`  ✓ Created and approved seller: ${testUser.name} (Stripe: ${testStripeAccountId})`);
+          }
+        }
+
+        if (key === 'promoter') {
+          if (!memberId) {
+            throw new Error(`Promoter ${testUser.name} must be a fraternity member`);
+          }
+
+          // Check if promoter already exists
+          const existingPromoter = await pool.query(
+            'SELECT id FROM promoters WHERE email = $1',
+            [testUser.email]
+          );
+
+          if (existingPromoter.rows.length > 0) {
+            promoterId = existingPromoter.rows[0].id;
+            console.log(`  ✓ Promoter already exists: ${testUser.name}`);
+          } else {
+            const sponsoringChapter = availableChapters[Math.floor(Math.random() * availableChapters.length)];
+            const promoter = await createPromoter({
+              email: testUser.email,
+              name: testUser.name,
+              fraternity_member_id: memberId,
+              sponsoring_chapter_id: sponsoringChapter.id,
+              headshot_url: undefined,
+              social_links: {},
+            });
+            promoterId = promoter.id;
+
+            // Approve the promoter
+            await pool.query(
+              'UPDATE promoters SET status = $1 WHERE id = $2',
+              ['APPROVED', promoterId]
+            );
+            console.log(`  ✓ Created and approved promoter: ${testUser.name}`);
+          }
+        }
+
+        if (key === 'steward') {
+          if (!memberId) {
+            throw new Error('Member ID required for steward');
+          }
+
+          // Check if steward already exists
+          const existingSteward = await pool.query(
+            'SELECT id FROM stewards WHERE fraternity_member_id = $1',
+            [memberId]
+          );
+
+          if (existingSteward.rows.length > 0) {
+            stewardId = existingSteward.rows[0].id;
+            console.log(`  ✓ Steward already exists: ${testUser.name}`);
+          } else {
+            const sponsoringChapter = availableChapters[Math.floor(Math.random() * availableChapters.length)];
+            const steward = await createSteward({
+              fraternity_member_id: memberId,
+              sponsoring_chapter_id: sponsoringChapter.id,
+            });
+            stewardId = steward.id;
+
+            // Approve the steward
+            await updateStewardStatus(stewardId, 'APPROVED');
+            console.log(`  ✓ Created and approved steward: ${testUser.name}`);
+          }
+        }
+
+        // Create or update user record
+        const existingUser = await pool.query(
+          'SELECT id FROM users WHERE cognito_sub = $1 OR email = $2',
+          [cognitoSub, testUser.email]
+        );
+
+        const userRole = key === 'seller' || key === 'sellerNonMember' ? 'SELLER' : 
+                        key === 'promoter' ? 'PROMOTER' :
+                        key === 'steward' ? 'STEWARD' : 
+                        key === 'guest' ? 'GUEST' : null;
+
+        // Members who are not sellers/promoters/stewards don't get user accounts
+        // They only exist in the fraternity_members table
+        if (key === 'member') {
+          console.log(`  ✓ Member record created (no user account - members and guests are separate)`);
+          continue;
+        }
+
+        if (existingUser.rows.length > 0) {
+          const userId = existingUser.rows[0].id;
+          
+          // Determine onboarding_status based on role and fraternity_member_id
+          // GUEST users without fraternity_member_id cannot have ONBOARDING_FINISHED
+          let onboardingStatus = 'ONBOARDING_FINISHED';
+          if (userRole === 'GUEST' && !memberId) {
+            onboardingStatus = 'COGNITO_CONFIRMED';
+          }
+          
+          // Update fraternity_member_id for PROMOTER and STEWARD users (required by constraint)
+          if (userRole === 'PROMOTER' || userRole === 'STEWARD') {
+            await pool.query(
+              `UPDATE users 
+               SET email = $1, 
+                   role = $2, 
+                   onboarding_status = $3,
+                   seller_id = COALESCE(seller_id, $4),
+                   promoter_id = COALESCE(promoter_id, $5),
+                   steward_id = COALESCE(steward_id, $6),
+                   fraternity_member_id = COALESCE(fraternity_member_id, $7)
+               WHERE id = $8`,
+              [
+                testUser.email,
+                userRole,
+                onboardingStatus,
+                sellerId,
+                promoterId,
+                stewardId,
+                memberId, // Set fraternity_member_id for PROMOTER/STEWARD
+                userId,
+              ]
+            );
+          } else {
+            await pool.query(
+              `UPDATE users 
+               SET email = $1, 
+                   role = $2, 
+                   onboarding_status = $3,
+                   seller_id = COALESCE(seller_id, $4),
+                   promoter_id = COALESCE(promoter_id, $5),
+                   steward_id = COALESCE(steward_id, $6)
+               WHERE id = $7`,
+              [
+                testUser.email,
+                userRole,
+                onboardingStatus,
+                sellerId,
+                promoterId,
+                stewardId,
+                userId,
+              ]
+            );
+          }
+          console.log(`  ✓ Updated user record: ${testUser.name}`);
+        } else {
+          if (userRole === 'STEWARD') {
+            await pool.query(
+              `INSERT INTO users (cognito_sub, email, role, onboarding_status, steward_id, fraternity_member_id, features)
+               VALUES ($1, $2, $3, $4, $5, $6, $7)
+               RETURNING *`,
+              [
+                cognitoSub,
+                testUser.email,
+                'STEWARD',
+                'ONBOARDING_FINISHED',
+                stewardId,
+                memberId, // STEWARD must have fraternity_member_id
+                JSON.stringify({}),
+              ]
+            );
+          } else if (userRole === 'PROMOTER') {
+            // PROMOTER must have fraternity_member_id, so use direct SQL
+            await pool.query(
+              `INSERT INTO users (cognito_sub, email, role, onboarding_status, promoter_id, fraternity_member_id, features)
+               VALUES ($1, $2, $3, $4, $5, $6, $7)
+               RETURNING *`,
+              [
+                cognitoSub,
+                testUser.email,
+                'PROMOTER',
+                'ONBOARDING_FINISHED',
+                promoterId,
+                memberId, // PROMOTER must have fraternity_member_id
+                JSON.stringify({}),
+              ]
+            );
+          } else if (userRole === 'GUEST') {
+            // GUEST users without fraternity_member_id cannot have onboarding_status = 'ONBOARDING_FINISHED'
+            // Use 'COGNITO_CONFIRMED' instead to satisfy the constraint
+            await createUser({
+              cognito_sub: cognitoSub,
+              email: testUser.email,
+              role: 'GUEST',
+              onboarding_status: 'COGNITO_CONFIRMED', // Not 'ONBOARDING_FINISHED' for GUEST without fraternity_member_id
+              seller_id: null,
+              promoter_id: null,
+            });
+          } else {
+            await createUser({
+              cognito_sub: cognitoSub,
+              email: testUser.email,
+              role: userRole as 'ADMIN' | 'SELLER',
+              onboarding_status: 'ONBOARDING_FINISHED',
+              seller_id: sellerId,
+              promoter_id: promoterId,
+            });
+          }
+          console.log(`  ✓ Created user record: ${testUser.name}`);
+        }
+
+        console.log(`  ✅ Completed setup for ${testUser.name}`);
+      } catch (error: any) {
+        console.error(`  ❌ Error processing ${testUser.name}:`, error.message);
+        throw error;
+      }
+    }
+
+    console.log('\n✅ Test users seeded successfully!');
+    console.log('\n📋 Test User Emails:');
+    Object.values(testUsers).forEach(user => {
+      console.log(`   - ${user.name}: ${user.email}`);
+    });
+    console.log('\n');
+  } catch (error) {
+    console.error('❌ Error seeding test users:', error);
+    throw error;
+  }
 }
 
 async function main() {
@@ -1630,16 +1753,18 @@ async function main() {
   const shouldClear = args.includes("--clear");
 
   try {
-    console.log("🌱 Starting database seeding (products & promoters)...\n");
+    console.log("🌱 Starting test data seeding...\n");
 
-    if (shouldClear) {
-      await clearTestData();
-    }
+    // Always clear old @example.com test data first
+    await clearOldTestData();
 
-    // Seed products and sellers
+    // Seed test users first (buddy+ users)
+    await seedTestUsers();
+
+    // Seed products and sellers (tied to buddy+ users)
     await seedProducts();
 
-    // Seed promoters
+    // Seed promoters (tied to buddy+ users)
     await seedPromoters();
 
     // Seed events (requires promoters to be seeded first)
@@ -1648,13 +1773,13 @@ async function main() {
     // Seed orders for impact banner
     await seedOrders();
 
-    console.log("✅ Database seeding completed successfully!");
-    console.log("\nNote: For chapters, use:");
-    console.log("  - npm run seed:chapters (scrapes Wikipedia for chapters)");
-    console.log("  - npm run seed:alumni (seeds alumni chapters)");
+    // Seed steward sellers and products
+    await seedStewardSellers();
+
+    console.log("✅ Test data seeding completed successfully!");
     process.exit(0);
   } catch (error) {
-    console.error("❌ Error seeding database:", error);
+    console.error("❌ Error seeding test data:", error);
     process.exit(1);
   } finally {
     await pool.end();
@@ -1671,5 +1796,6 @@ export {
   seedPromoters,
   seedEvents,
   seedStewardSellers,
-  clearTestData,
+  seedTestUsers,
+  clearOldTestData,
 };

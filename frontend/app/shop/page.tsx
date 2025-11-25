@@ -29,6 +29,15 @@ function ShopPageContent() {
 
   // Helper to check if user can add product to cart
   const canAddToCart = (product: Product) => {
+    // Check if seller is approved but doesn't have Stripe account set up
+    const sellerApprovedButNoStripe = 
+      product.seller_status === 'APPROVED' && 
+      !product.seller_stripe_account_id;
+    
+    if (sellerApprovedButNoStripe) {
+      return false; // Can't add to cart if seller doesn't have Stripe set up
+    }
+    
     const isKappaBranded = product.is_kappa_branded === true;
     // For guests (no session or not authenticated), isMember is always false
     const isAuthenticated = sessionStatus === 'authenticated' && !!session?.user;
@@ -38,6 +47,11 @@ function ShopPageContent() {
     );
     // Explicitly block Kappa products for non-members, allow everyone for non-Kappa products
     return isKappaBranded ? isMember : true;
+  };
+  
+  // Helper to check if product is pending (seller approved but no Stripe)
+  const isProductPending = (product: Product) => {
+    return product.seller_status === 'APPROVED' && !product.seller_stripe_account_id;
   };
   const roleFilter = searchParams.get('role'); // 'steward', or null (removed 'seller')
   const stewardParam = searchParams.get('steward'); // steward ID for filtering
@@ -668,6 +682,8 @@ function ShopPageContent() {
                   key={product.id}
                   product={product}
                   onAddToCart={canAddToCart(product) ? () => addToCart(product) : undefined}
+                  badge={isProductPending(product) ? 'Pending' : undefined}
+                  badgeColor={isProductPending(product) ? '#F59E0B' : undefined} // amber-500
                 />
               ))
             )}

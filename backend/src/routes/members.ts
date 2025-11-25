@@ -1872,8 +1872,9 @@ router.get('/me/metrics', authenticate, async (req: Request, res: Response) => {
        FROM orders o
        JOIN products p ON o.product_id = p.id
        JOIN sellers s ON p.seller_id = s.id
-       WHERE s.fraternity_member_id = $1 OR o.buyer_email = $2`,
-      [fraternityMemberId, req.user.email]
+       JOIN users u ON o.user_id = u.id
+       WHERE s.fraternity_member_id = $1 OR u.id = $2`,
+      [fraternityMemberId, req.user.id]
     );
 
     const claims = claimsResult.rows[0];
@@ -1938,10 +1939,10 @@ router.get('/me/activity', authenticate, async (req: Request, res: Response) => 
        FROM orders o
        JOIN products p ON o.product_id = p.id
        JOIN sellers s ON p.seller_id = s.id
-       WHERE o.buyer_email = $1
+       WHERE o.user_id = $1
        ORDER BY o.created_at DESC
        LIMIT 10`,
-      [req.user.email]
+      [req.user.id]
     );
 
     res.json({

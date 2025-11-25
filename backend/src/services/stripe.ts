@@ -58,27 +58,50 @@ export async function createCheckoutSession(params: {
   successUrl: string;
   cancelUrl: string;
   chapterId?: number;
+  shippingCents?: number;
 }): Promise<Stripe.Checkout.Session> {
-  const applicationFeeAmount = Math.round(params.priceCents * 0.08); // 8% platform fee
+  const totalProductPrice = params.priceCents;
+  const shippingCents = params.shippingCents || 0;
+  const totalAmountCents = totalProductPrice + shippingCents;
+  
+  // Calculate application fee on total amount (product + shipping)
+  const applicationFeeAmount = Math.round(totalAmountCents * 0.08); // 8% platform fee
   // Note: When using application_fee_amount, Stripe automatically calculates transfer amount
   // Transfer amount = total - application_fee_amount
+
+  // Create line items
+  const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
+    {
+      price_data: {
+        currency: 'usd',
+        product_data: {
+          name: params.productName,
+        },
+        unit_amount: params.priceCents,
+      },
+      quantity: 1,
+    },
+  ];
+
+  // Add shipping as a separate line item if provided
+  if (shippingCents > 0) {
+    lineItems.push({
+      price_data: {
+        currency: 'usd',
+        product_data: {
+          name: 'Shipping',
+        },
+        unit_amount: shippingCents,
+      },
+      quantity: 1,
+    });
+  }
 
   // Create session on platform account (not connected account)
   // The payment_intent_data.transfer_data will handle the transfer to the connected account
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ['card'],
-    line_items: [
-      {
-        price_data: {
-          currency: 'usd',
-          product_data: {
-            name: params.productName,
-          },
-          unit_amount: params.priceCents,
-        },
-        quantity: 1,
-      },
-    ],
+    line_items: lineItems,
     mode: 'payment',
     payment_intent_data: {
       application_fee_amount: applicationFeeAmount,
@@ -94,6 +117,7 @@ export async function createCheckoutSession(params: {
     metadata: {
       product_id: params.productId.toString(),
       chapter_id: params.chapterId?.toString() || '',
+      shipping_cents: shippingCents.toString(),
     },
   });
 

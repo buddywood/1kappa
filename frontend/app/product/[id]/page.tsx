@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { fetchProduct, createCheckoutSession, fetchChapters, addFavorite, removeFavorite, checkFavorite } from '@/lib/api';
+import { fetchProduct, fetchChapters, addFavorite, removeFavorite, checkFavorite } from '@/lib/api';
 import type { Product, Chapter, ProductImage } from '@/lib/api';
 import { Heart } from 'lucide-react';
 import Image from 'next/image';
@@ -14,13 +14,7 @@ import VerificationBadge from '../../components/VerificationBadge';
 import UserRoleBadges from '../../components/UserRoleBadges';
 import ProductAttributes from '../../components/ProductAttributes';
 import { SkeletonLoader } from '../../components/SkeletonLoader';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import ProductStatusBadge from '../../components/ProductStatusBadge';
 
 export default function ProductPage() {
   const params = useParams();
@@ -29,10 +23,7 @@ export default function ProductPage() {
   const [product, setProduct] = useState<Product | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(true);
-  const [checkingOut, setCheckingOut] = useState(false);
   const [error, setError] = useState('');
-  const [showStripeModal, setShowStripeModal] = useState(false);
-  const [stripeModalMessage, setStripeModalMessage] = useState('');
   const [isFavorited, setIsFavorited] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
 
@@ -100,50 +91,8 @@ export default function ProductPage() {
     e.preventDefault();
     if (!product) return;
 
-    // Check if product is Kappa branded - if so, require authentication
-    if (product.is_kappa_branded) {
-    if (sessionStatus !== 'authenticated' || !session?.user?.email) {
-        setError('Kappa Alpha Psi branded merchandise can only be purchased by verified members. Please sign in to continue.');
-        return;
-      }
-    }
-
-    // For non-kappa branded products, guests can checkout with email
-    // For kappa branded products, we already checked authentication above
-    const buyerEmail = session?.user?.email || '';
-    if (!buyerEmail && product.is_kappa_branded) {
-      setError('Please sign in to purchase this item');
-      return;
-    }
-
-    setCheckingOut(true);
-    setError('');
-
-    try {
-      // For guests, we'll need to prompt for email - but for now, if no session, redirect to login
-      // In a full implementation, you might want a guest checkout form
-      if (!buyerEmail) {
-        // Redirect to login for guest checkout (they can enter email there)
-        router.push('/login?redirect=' + encodeURIComponent(`/product/${product.id}`));
-        return;
-      }
-
-      const { url } = await createCheckoutSession(product.id, buyerEmail);
-      window.location.href = url;
-    } catch (err: any) {
-      // Check if it's a Stripe not connected error
-      const errorData = err.errorData || {};
-      if (errorData.error === 'STRIPE_NOT_CONNECTED' || err.message?.includes('STRIPE_NOT_CONNECTED')) {
-        const message = errorData.message || 'The seller is finalizing their payout setup.\n\nThis item will be available soon.';
-        setStripeModalMessage(message);
-        setShowStripeModal(true);
-      } else if (errorData.error === 'AUTH_REQUIRED_FOR_KAPPA_BRANDED' || errorData.code === 'AUTH_REQUIRED_FOR_KAPPA_BRANDED') {
-        setError('Kappa Alpha Psi branded merchandise can only be purchased by verified members. Please sign in to continue.');
-      } else {
-        setError(err.message || 'Failed to start checkout');
-      }
-      setCheckingOut(false);
-    }
+    // Redirect to checkout page
+    router.push(`/checkout/${product.id}`);
   };
 
   if (loading) {
@@ -335,7 +284,8 @@ export default function ProductPage() {
           <div className="md:flex">
             {/* Product Images Gallery */}
             {((product.images && product.images.length > 0) || product.image_url) && (
-              <div className="md:w-1/2">
+              <div className="md:w-1/2 relative">
+                <ProductStatusBadge product={product} />
                 {product.images && product.images.length > 0 ? (
                   <ProductImageGallery images={product.images} productName={product.name} />
                 ) : product.image_url ? (
@@ -467,10 +417,9 @@ export default function ProductPage() {
                   sessionStatus === 'authenticated' && session?.user?.email ? (
                   <button
                     type="submit"
-                    disabled={checkingOut}
-                    className="w-full bg-crimson text-white py-3 rounded-lg font-semibold hover:bg-crimson/90 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
+                    className="w-full bg-crimson text-white py-3 rounded-lg font-semibold hover:bg-crimson/90 transition shadow-md hover:shadow-lg"
                   >
-                    {checkingOut ? 'Processing...' : 'Buy Now'}
+                    Buy Now
                   </button>
                 ) : (
                   <Link
@@ -482,22 +431,12 @@ export default function ProductPage() {
                   )
                 ) : (
                   // Non-kappa branded products can be purchased by guests
-                  sessionStatus === 'authenticated' && session?.user?.email ? (
-                    <button
-                      type="submit"
-                      disabled={checkingOut}
-                      className="w-full bg-crimson text-white py-3 rounded-lg font-semibold hover:bg-crimson/90 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
-                    >
-                      {checkingOut ? 'Processing...' : 'Buy Now'}
-                    </button>
-                  ) : (
-                    <Link
-                      href={`/login?redirect=${encodeURIComponent(`/product/${product.id}`)}`}
-                      className="w-full bg-crimson text-white py-3 rounded-lg font-semibold hover:bg-crimson/90 transition shadow-md hover:shadow-lg text-center block"
-                    >
-                      Continue to Checkout
-                    </Link>
-                  )
+                  <button
+                    type="submit"
+                    className="w-full bg-crimson text-white py-3 rounded-lg font-semibold hover:bg-crimson/90 transition shadow-md hover:shadow-lg"
+                  >
+                    Buy Now
+                  </button>
                 )}
               </form>
             </div>
@@ -505,65 +444,6 @@ export default function ProductPage() {
         </div>
       </main>
       <Footer />
-      
-      {/* Stripe Not Connected Modal */}
-      <Dialog open={showStripeModal} onOpenChange={setShowStripeModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-display text-midnight-navy dark:text-gray-100">
-              Item Temporarily Unavailable
-            </DialogTitle>
-            <DialogDescription className="text-midnight-navy/70 dark:text-gray-400 whitespace-pre-line pt-4">
-              {stripeModalMessage}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-frost-gray dark:border-gray-700">
-            <p className="text-sm text-midnight-navy dark:text-gray-300 mb-3">
-              <strong>Don&apos;t miss out!</strong> Favorite this item to be notified when it becomes available.
-            </p>
-            {sessionStatus === 'authenticated' && session?.user?.email && product && (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    handleToggleFavorite();
-                    setShowStripeModal(false);
-                  }}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition ${
-                    isFavorited
-                      ? 'bg-crimson text-white hover:bg-crimson/90'
-                      : 'bg-gray-200 dark:bg-gray-700 text-midnight-navy dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  <Heart className={`w-4 h-4 ${isFavorited ? 'fill-current' : ''}`} />
-                  {isFavorited ? 'Favorited' : 'Favorite Item'}
-                </button>
-                <Link
-                  href="/saved"
-                  onClick={() => setShowStripeModal(false)}
-                  className="text-sm text-crimson hover:underline"
-                >
-                  View your saved items →
-                </Link>
-              </div>
-            )}
-            {sessionStatus !== 'authenticated' && (
-              <p className="text-xs text-midnight-navy/60 dark:text-gray-400">
-                <Link href="/login" className="text-crimson hover:underline">
-                  Sign in
-                </Link> to favorite items and view them in your saved items list.
-              </p>
-            )}
-          </div>
-          <div className="flex justify-end mt-6">
-            <button
-              onClick={() => setShowStripeModal(false)}
-              className="bg-crimson text-white px-6 py-2 rounded-lg font-semibold hover:bg-crimson/90 transition"
-            >
-              Got it
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

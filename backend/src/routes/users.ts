@@ -10,6 +10,41 @@ import pool from "../db/connection";
 
 const router: ExpressRouter = Router();
 
+// Get current user's orders
+router.get("/me/orders", authenticate, async (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const result = await pool.query(
+      `SELECT 
+        o.id,
+        o.product_id,
+        o.amount_cents,
+        o.status,
+        o.stripe_session_id,
+        o.created_at,
+        o.updated_at,
+        p.name as product_name,
+        p.image_url as product_image_url,
+        s.name as seller_name,
+        c.name as chapter_name
+       FROM orders o
+       JOIN products p ON o.product_id = p.id
+       JOIN sellers s ON p.seller_id = s.id
+       LEFT JOIN chapters c ON o.chapter_id = c.id
+       WHERE o.user_id = $1
+       ORDER BY o.created_at DESC`,
+      [req.user.id]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error("Error fetching user orders:", error);
+    res.status(500).json({ error: "Failed to fetch orders" });
+  }
+});
+
 // Get current user info
 router.get("/me", authenticate, async (req: Request, res: Response) => {
   try {
@@ -413,8 +448,8 @@ router.delete(
       ]);
 
       // Delete orders where user is buyer
-      await pool.query("DELETE FROM orders WHERE buyer_email = $1", [
-        user.email,
+      await pool.query("DELETE FROM orders WHERE user_id = $1", [
+        user.id,
       ]);
 
       // Delete member record if exists

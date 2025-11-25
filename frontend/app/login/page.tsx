@@ -186,9 +186,14 @@ function LoginPageContent() {
           
           if (session?.user) {
             const onboardingStatus = (session.user as any)?.onboarding_status;
+            const userRole = (session.user as any)?.role;
             
-            // If onboarding is incomplete, redirect to registration step 2
-            if (onboardingStatus && onboardingStatus !== 'ONBOARDING_FINISHED') {
+            // GUEST users with 'COGNITO_CONFIRMED' status don't need member onboarding
+            // They can access the site directly
+            if (userRole === 'GUEST' && onboardingStatus === 'COGNITO_CONFIRMED') {
+              router.push('/');
+            } else if (onboardingStatus && onboardingStatus !== 'ONBOARDING_FINISHED') {
+              // For other roles or statuses, redirect to registration if onboarding incomplete
               router.push('/register');
             } else {
               router.push('/');
@@ -288,9 +293,14 @@ function LoginPageContent() {
         
         if (session?.user) {
           const onboardingStatus = (session.user as any)?.onboarding_status;
+          const userRole = (session.user as any)?.role;
           
-          // If onboarding is incomplete, redirect to registration step 2
-          if (onboardingStatus && onboardingStatus !== 'ONBOARDING_FINISHED') {
+          // GUEST users with 'COGNITO_CONFIRMED' status don't need member onboarding
+          // They can access the site directly
+          if (userRole === 'GUEST' && onboardingStatus === 'COGNITO_CONFIRMED') {
+            router.push('/');
+          } else if (onboardingStatus && onboardingStatus !== 'ONBOARDING_FINISHED') {
+            // For other roles or statuses, redirect to registration if onboarding incomplete
             router.push('/register');
           } else {
             router.push('/');
@@ -397,9 +407,14 @@ function LoginPageContent() {
         
         if (session?.user) {
           const onboardingStatus = (session.user as any)?.onboarding_status;
+          const userRole = (session.user as any)?.role;
           
-          // If onboarding is incomplete, redirect to registration step 2
-          if (onboardingStatus && onboardingStatus !== 'ONBOARDING_FINISHED') {
+          // GUEST users with 'COGNITO_CONFIRMED' status don't need member onboarding
+          // They can access the site directly
+          if (userRole === 'GUEST' && onboardingStatus === 'COGNITO_CONFIRMED') {
+            router.push('/');
+          } else if (onboardingStatus && onboardingStatus !== 'ONBOARDING_FINISHED') {
+            // For other roles or statuses, redirect to registration if onboarding incomplete
             router.push('/register');
           } else {
             router.push('/');

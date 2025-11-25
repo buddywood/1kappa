@@ -179,6 +179,14 @@ export default function RegisterPage() {
         userRole,
       });
       
+      // GUEST users with 'COGNITO_CONFIRMED' status don't need member onboarding
+      // They can access the site directly without being redirected
+      if (userRole === 'GUEST' && onboardingStatus === 'COGNITO_CONFIRMED') {
+        console.log('[Register] User is GUEST with COGNITO_CONFIRMED status, redirecting to home');
+        router.push('/');
+        return;
+      }
+      
       // Only redirect if user has completed onboarding AND has a member profile
       // Sellers can have completed seller onboarding but still need to register as members
       if (onboardingStatus === 'ONBOARDING_FINISHED' && userMemberId) {

@@ -39,7 +39,7 @@ BEGIN
           (fraternity_member_id IS NOT NULL) OR 
           (fraternity_member_id IS NULL AND onboarding_status != 'ONBOARDING_FINISHED')
         )) OR
-        (role = 'SELLER' AND seller_id IS NOT NULL AND fraternity_member_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
+        (role = 'SELLER' AND seller_id IS NOT NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
         (role = 'PROMOTER' AND promoter_id IS NOT NULL AND fraternity_member_id IS NOT NULL AND seller_id IS NULL AND steward_id IS NULL) OR
         (role = 'STEWARD' AND steward_id IS NOT NULL AND fraternity_member_id IS NOT NULL AND (
           (seller_id IS NULL AND promoter_id IS NULL) OR
@@ -55,7 +55,7 @@ BEGIN
           (fraternity_member_id IS NOT NULL) OR 
           (fraternity_member_id IS NULL AND onboarding_status != 'ONBOARDING_FINISHED')
         )) OR
-        (role = 'SELLER' AND seller_id IS NOT NULL AND fraternity_member_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
+        (role = 'SELLER' AND seller_id IS NOT NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
         (role = 'PROMOTER' AND promoter_id IS NOT NULL AND fraternity_member_id IS NOT NULL AND seller_id IS NULL AND steward_id IS NULL) OR
         (role = 'STEWARD' AND steward_id IS NOT NULL AND fraternity_member_id IS NOT NULL AND (
           (seller_id IS NULL AND promoter_id IS NULL) OR
@@ -78,7 +78,7 @@ BEGIN
           (member_id IS NOT NULL) OR 
           (member_id IS NULL AND onboarding_status != 'ONBOARDING_FINISHED')
         )) OR
-        (role = 'SELLER' AND seller_id IS NOT NULL AND member_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
+        (role = 'SELLER' AND seller_id IS NOT NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
         (role = 'PROMOTER' AND promoter_id IS NOT NULL AND member_id IS NOT NULL AND seller_id IS NULL AND steward_id IS NULL) OR
         (role = 'STEWARD' AND steward_id IS NOT NULL AND member_id IS NOT NULL AND (
           (seller_id IS NULL AND promoter_id IS NULL) OR
@@ -94,7 +94,7 @@ BEGIN
           (member_id IS NOT NULL) OR 
           (member_id IS NULL AND onboarding_status != 'ONBOARDING_FINISHED')
         )) OR
-        (role = 'SELLER' AND seller_id IS NOT NULL AND member_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
+        (role = 'SELLER' AND seller_id IS NOT NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
         (role = 'PROMOTER' AND promoter_id IS NOT NULL AND member_id IS NOT NULL AND seller_id IS NULL AND steward_id IS NULL) OR
         (role = 'STEWARD' AND steward_id IS NOT NULL AND member_id IS NOT NULL AND (
           (seller_id IS NULL AND promoter_id IS NULL) OR

@@ -475,21 +475,31 @@ export async function updateProductImageOrder(imageId: number, displayOrder: num
 // Order queries
 export async function createOrder(order: {
   product_id: number;
-  buyer_email: string;
+  user_id: number;
   amount_cents: number;
   stripe_session_id: string;
   chapter_id?: number;
+  shipping_street?: string;
+  shipping_city?: string;
+  shipping_state?: string;
+  shipping_zip?: string;
+  shipping_country?: string;
 }): Promise<Order> {
   const result = await pool.query(
-    `INSERT INTO orders (product_id, buyer_email, amount_cents, stripe_session_id, chapter_id, status)
-     VALUES ($1, $2, $3, $4, $5, 'PENDING')
+    `INSERT INTO orders (product_id, user_id, amount_cents, stripe_session_id, chapter_id, status, shipping_street, shipping_city, shipping_state, shipping_zip, shipping_country)
+     VALUES ($1, $2, $3, $4, $5, 'PENDING', $6, $7, $8, $9, $10)
      RETURNING *`,
     [
       order.product_id,
-      order.buyer_email,
+      order.user_id,
       order.amount_cents,
       order.stripe_session_id,
       order.chapter_id || null,
+      order.shipping_street || null,
+      order.shipping_city || null,
+      order.shipping_state || null,
+      order.shipping_zip || null,
+      order.shipping_country || 'US',
     ]
   );
   return result.rows[0];
@@ -994,7 +1004,7 @@ export async function updateUserLastLogin(cognitoSub: string): Promise<User | nu
 }
 
 export async function upsertUserOnLogin(cognitoSub: string, email: string): Promise<User> {
-  // First try to update existing user
+  // First try to update existing user by cognito_sub
   const updateResult = await pool.query(
     `UPDATE users 
      SET last_login = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP, email = $2
@@ -1011,19 +1021,99 @@ export async function upsertUserOnLogin(cognitoSub: string, email: string): Prom
     return row;
   }
   
-  // If no user exists, create one
-  const insertResult = await pool.query(
-    `INSERT INTO users (cognito_sub, email, role, onboarding_status, last_login)
-     VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
-     RETURNING *`,
-    [cognitoSub, email, 'GUEST', 'COGNITO_CONFIRMED']
+  // If no user exists with this cognito_sub, check if user exists by email
+  // This handles the case where user was created with different cognito_sub
+  const existingUserResult = await pool.query(
+    `SELECT * FROM users WHERE email = $1`,
+    [email]
   );
   
-  const row = insertResult.rows[0];
-  if (row.features && typeof row.features === 'string') {
-    row.features = JSON.parse(row.features);
+  if (existingUserResult.rows.length > 0) {
+    const existingUser = existingUserResult.rows[0];
+    // User exists with this email - update cognito_sub if different, and update last_login
+    const updateByEmailResult = await pool.query(
+      `UPDATE users 
+       SET cognito_sub = $1, last_login = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+       WHERE email = $2 AND (cognito_sub IS NULL OR cognito_sub != $1)
+       RETURNING *`,
+      [cognitoSub, email]
+    );
+    
+    if (updateByEmailResult.rows.length > 0) {
+      const row = updateByEmailResult.rows[0];
+      if (row.features && typeof row.features === 'string') {
+        row.features = JSON.parse(row.features);
+      }
+      return row;
+    } else {
+      // User exists and cognito_sub already matches - just update last_login
+      const updateLoginResult = await pool.query(
+        `UPDATE users 
+         SET last_login = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+         WHERE email = $1
+         RETURNING *`,
+        [email]
+      );
+      
+      if (updateLoginResult.rows.length > 0) {
+        const row = updateLoginResult.rows[0];
+        if (row.features && typeof row.features === 'string') {
+          row.features = JSON.parse(row.features);
+        }
+        return row;
+      }
+    }
   }
-  return row;
+  
+  // If no user exists, create one using ON CONFLICT to handle race conditions
+  // Handle conflicts on both email and cognito_sub
+  try {
+    const insertResult = await pool.query(
+      `INSERT INTO users (cognito_sub, email, role, onboarding_status, last_login)
+       VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+       ON CONFLICT (email) DO UPDATE SET
+         cognito_sub = EXCLUDED.cognito_sub,
+         last_login = CURRENT_TIMESTAMP,
+         updated_at = CURRENT_TIMESTAMP
+       RETURNING *`,
+      [cognitoSub, email, 'GUEST', 'COGNITO_CONFIRMED']
+    );
+    
+    const row = insertResult.rows[0];
+    if (row.features && typeof row.features === 'string') {
+      row.features = JSON.parse(row.features);
+    }
+    return row;
+  } catch (error: any) {
+    // If there's still a conflict (e.g., on cognito_sub), try to get the existing user
+    if (error.code === '23505') {
+      // Try to get user by cognito_sub or email
+      const conflictResult = await pool.query(
+        `SELECT * FROM users WHERE cognito_sub = $1 OR email = $2 LIMIT 1`,
+        [cognitoSub, email]
+      );
+      
+      if (conflictResult.rows.length > 0) {
+        // Update the existing user
+        const updateResult = await pool.query(
+          `UPDATE users 
+           SET cognito_sub = $1, email = $2, last_login = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+           WHERE id = $3
+           RETURNING *`,
+          [cognitoSub, email, conflictResult.rows[0].id]
+        );
+        
+        if (updateResult.rows.length > 0) {
+          const row = updateResult.rows[0];
+          if (row.features && typeof row.features === 'string') {
+            row.features = JSON.parse(row.features);
+          }
+          return row;
+        }
+      }
+    }
+    throw error;
+  }
 }
 
 export async function updateUserFeatures(

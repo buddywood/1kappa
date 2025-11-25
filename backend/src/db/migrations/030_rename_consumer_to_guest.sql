@@ -29,17 +29,22 @@ BEGIN
     CHECK (role IN ('ADMIN', 'SELLER', 'PROMOTER', 'GUEST', 'STEWARD'));
 
   -- Re-add check_role_foreign_key constraint with GUEST
+  -- Note: SELLER users can have fraternity_member_id (sellers can be fraternity members)
+  -- Note: PROMOTER users must have fraternity_member_id (promoters must be fraternity members)
   ALTER TABLE users ADD CONSTRAINT check_role_foreign_key CHECK (
-    (role = 'GUEST' AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
-    (role = 'SELLER' AND seller_id IS NOT NULL AND fraternity_member_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
-    (role = 'PROMOTER' AND promoter_id IS NOT NULL AND fraternity_member_id IS NULL AND seller_id IS NULL AND steward_id IS NULL) OR
-    (role = 'STEWARD' AND steward_id IS NOT NULL AND (
+    (role = 'GUEST' AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL AND (
+      (fraternity_member_id IS NOT NULL) OR 
+      (fraternity_member_id IS NULL AND onboarding_status != 'ONBOARDING_FINISHED')
+    )) OR
+    (role = 'SELLER' AND seller_id IS NOT NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
+    (role = 'PROMOTER' AND promoter_id IS NOT NULL AND fraternity_member_id IS NOT NULL AND seller_id IS NULL AND steward_id IS NULL) OR
+    (role = 'STEWARD' AND steward_id IS NOT NULL AND fraternity_member_id IS NOT NULL AND (
       (seller_id IS NULL AND promoter_id IS NULL) OR
       (seller_id IS NOT NULL AND promoter_id IS NULL) OR
       (seller_id IS NULL AND promoter_id IS NOT NULL) OR
       (seller_id IS NOT NULL AND promoter_id IS NOT NULL)
     )) OR
-    (role = 'ADMIN' AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL)
+    (role = 'ADMIN' AND fraternity_member_id IS NULL AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL)
   );
 
   RAISE NOTICE 'Successfully renamed CONSUMER role to GUEST';

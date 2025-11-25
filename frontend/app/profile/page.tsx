@@ -91,6 +91,14 @@ function ProfilePageContent() {
       return;
     }
 
+    // GUEST users should see a simple profile view (no member information)
+    if (userRole === 'GUEST') {
+      console.log('Profile page: User is GUEST, showing simple profile view');
+      setHasVerifiedSession(true);
+      setLoading(false);
+      return;
+    }
+
     // Check if user has memberId in session
     let memberId = (session.user as any)?.memberId;
     
@@ -385,6 +393,9 @@ function ProfilePageContent() {
     setError('');
   };
 
+  // Get user role for conditional rendering
+  const userRole = (session?.user as any)?.role;
+
   if (loading) {
     return (
       <div className="min-h-screen bg-cream">
@@ -395,6 +406,69 @@ function ProfilePageContent() {
           <Skeleton className="h-6 w-full mb-4" />
           <Skeleton className="h-6 w-3/4" />
         </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Show simple profile view for GUEST users
+  if (userRole === 'GUEST') {
+    return (
+      <div className="min-h-screen bg-cream text-midnight-navy">
+        <Header />
+        
+        <main className="max-w-4xl mx-auto px-4 py-12">
+          <div className="mb-8">
+            <h1 className="text-3xl font-display font-bold text-midnight-navy mb-2">My Profile</h1>
+            <p className="text-midnight-navy/70">Manage your account information</p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg p-8 space-y-6">
+            <div>
+              <label className="block text-sm font-medium mb-2 text-midnight-navy">Email</label>
+              <p className="px-4 py-2 text-midnight-navy/70">{session?.user?.email || 'Not available'}</p>
+            </div>
+
+            <div className="pt-6 border-t border-frost-gray">
+              <h2 className="text-xl font-display font-semibold text-midnight-navy mb-4">Account Actions</h2>
+              <div className="space-y-3">
+                <Link
+                  href="/orders"
+                  className="flex items-center gap-3 px-4 py-3 text-midnight-navy hover:bg-gray-50 dark:hover:bg-gray-900 rounded-lg transition-colors"
+                >
+                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                  </svg>
+                  <span>View Order History</span>
+                </Link>
+                <Link
+                  href="/settings"
+                  className="flex items-center gap-3 px-4 py-3 text-midnight-navy hover:bg-gray-50 dark:hover:bg-gray-900 rounded-lg transition-colors"
+                >
+                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <span>Account Settings</span>
+                </Link>
+              </div>
+            </div>
+
+            <div className="pt-6 border-t border-frost-gray">
+              <h2 className="text-xl font-display font-semibold text-midnight-navy mb-4">Become a Member</h2>
+              <p className="text-midnight-navy/70 mb-4">
+                Join the fraternity network to access member-only features, connect with brothers, and more.
+              </p>
+              <Link
+                href="/register"
+                className="inline-block bg-crimson text-white px-6 py-2 rounded-full font-semibold hover:bg-crimson/90 transition"
+              >
+                Register as Member
+              </Link>
+            </div>
+          </div>
+        </main>
+
         <Footer />
       </div>
     );

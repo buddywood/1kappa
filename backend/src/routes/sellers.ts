@@ -374,7 +374,7 @@ router.get("/", async (req: Request, res: Response) => {
         s.description,
         s.website,
         s.status,
-        COUNT(p.id) FILTER (WHERE p.status = 'ACTIVE') as product_count
+        COUNT(p.id) as product_count
       FROM sellers s
       LEFT JOIN products p ON s.id = p.seller_id
       WHERE s.status = 'APPROVED'

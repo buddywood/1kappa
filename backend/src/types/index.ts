@@ -117,11 +117,16 @@ export interface Product {
 export interface Order {
   id: number;
   product_id: number;
-  buyer_email: string;
+  user_id: number;
   amount_cents: number;
   stripe_session_id: string;
   status: 'PENDING' | 'PAID' | 'FAILED';
   chapter_id: number | null;
+  shipping_street?: string | null;
+  shipping_city?: string | null;
+  shipping_state?: string | null;
+  shipping_zip?: string | null;
+  shipping_country?: string | null;
   created_at: Date;
   updated_at: Date;
 }

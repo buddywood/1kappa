@@ -349,11 +349,205 @@ export async function createProduct(formData: FormData): Promise<Product> {
   return res.json();
 }
 
-export async function createCheckoutSession(productId: number, buyerEmail: string): Promise<{ sessionId: string; url: string }> {
-  const res = await fetch(`${API_URL}/api/checkout/${productId}`, {
+export interface ShippingRate {
+  service: string;
+  carrier: string;
+  rate: number; // in cents
+  estimatedDays?: number;
+}
+
+export interface UserAddress {
+  id: number;
+  user_id: number;
+  label: string | null;
+  street: string;
+  city: string;
+  state: string;
+  zip: string;
+  country: string;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function fetchUserAddresses(): Promise<UserAddress[]> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/addresses`, {
+    headers,
+  });
+  if (!res.ok) throw new Error('Failed to fetch addresses');
+  const data = await res.json();
+  return data.addresses || [];
+}
+
+export async function fetchDefaultAddress(): Promise<UserAddress | null> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/addresses/default`, {
+    headers,
+  });
+  if (!res.ok) {
+    if (res.status === 404) return null;
+    throw new Error('Failed to fetch default address');
+  }
+  const data = await res.json();
+  return data.address || null;
+}
+
+export async function createUserAddress(address: {
+  label?: string | null;
+  street: string;
+  city: string;
+  state: string;
+  zip: string;
+  country?: string;
+  is_default?: boolean;
+}): Promise<UserAddress> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/addresses`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(address),
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to create address');
+  }
+  const data = await res.json();
+  return data.address;
+}
+
+export async function updateUserAddress(
+  addressId: number,
+  updates: {
+    label?: string | null;
+    street?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
+    country?: string;
+    is_default?: boolean;
+  }
+): Promise<UserAddress> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/addresses/${addressId}`, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify(updates),
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to update address');
+  }
+  const data = await res.json();
+  return data.address;
+}
+
+export async function deleteUserAddress(addressId: number): Promise<void> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/addresses/${addressId}`, {
+    method: 'DELETE',
+    headers,
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to delete address');
+  }
+}
+
+export async function setDefaultAddress(addressId: number): Promise<UserAddress> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/addresses/${addressId}/set-default`, {
+    method: 'POST',
+    headers,
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to set default address');
+  }
+  const data = await res.json();
+  return data.address;
+}
+
+export async function calculateShippingRates(
+  productId: number,
+  toAddress: {
+    street: string;
+    city: string;
+    state: string;
+    zip: string;
+    country: string;
+  }
+): Promise<ShippingRate[]> {
+  const res = await fetch(`${API_URL}/api/shipping/rates`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ buyer_email: buyerEmail }),
+    body: JSON.stringify({
+      productId,
+      toAddress,
+    }),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Failed to calculate shipping rates');
+  }
+
+  const data = await res.json();
+  return data.rates || [];
+}
+
+export async function createCheckoutSession(
+  productId: number, 
+  buyerEmail: string, 
+  guestData?: { email?: string; password?: string },
+  shippingCents?: number,
+  shippingAddress?: {
+    street: string;
+    city: string;
+    state: string;
+    zip: string;
+    country: string;
+  }
+): Promise<{ sessionId: string; url: string }> {
+  const body: any = {};
+  
+  // For authenticated users, just send email
+  if (buyerEmail && !guestData) {
+    body.buyer_email = buyerEmail;
+  }
+  
+  // For guest checkout, send email and password
+  if (guestData?.email && guestData?.password) {
+    body.email = guestData.email;
+    body.password = guestData.password;
+  }
+  
+  // Add shipping cost if provided
+  if (shippingCents !== undefined && shippingCents > 0) {
+    body.shippingCents = shippingCents;
+  }
+  
+  // Add shipping address if provided
+  if (shippingAddress) {
+    body.shippingAddress = shippingAddress;
+  }
+  
+  // Get auth headers if user is authenticated (optional - won't fail if not authenticated)
+  const headers: HeadersInit = { 'Content-Type': 'application/json' };
+  try {
+    const session = await fetch('/api/auth/session').then(res => res.json());
+    const idToken = (session as any)?.idToken;
+    if (idToken) {
+      headers['Authorization'] = `Bearer ${idToken}`;
+    }
+  } catch (error) {
+    // Not authenticated, continue without auth header (for guest checkout)
+  }
+  
+  const res = await fetch(`${API_URL}/api/checkout/${productId}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
   });
   
   if (!res.ok) {
@@ -372,13 +566,15 @@ export interface OrderDetails {
     id: number;
     status: 'PENDING' | 'PAID' | 'FAILED';
     amount_cents: number;
-    buyer_email: string;
+    buyer_email: string | null;
+    user_id: number | null;
     created_at: string;
   };
   product: {
     id: number;
     name: string;
     price_cents: number;
+    image_url?: string | null;
   } | null;
 }
 
@@ -611,13 +807,18 @@ export async function getAuthHeaders(): Promise<HeadersInit> {
   const session = await fetch('/api/auth/session').then(res => res.json());
   const idToken = (session as any)?.idToken;
   const onboardingStatus = (session as any)?.user?.onboarding_status;
+  const userRole = (session as any)?.user?.role;
   
   if (!idToken) {
     throw new Error('Not authenticated');
   }
   
-  // Check if user has completed onboarding
-  if (onboardingStatus !== 'ONBOARDING_FINISHED') {
+  // GUEST users with 'COGNITO_CONFIRMED' status are allowed to access basic features like orders
+  // Other users need 'ONBOARDING_FINISHED' status
+  const isAllowed = onboardingStatus === 'ONBOARDING_FINISHED' ||
+                     (userRole === 'GUEST' && onboardingStatus === 'COGNITO_CONFIRMED');
+  
+  if (!isAllowed) {
     throw new Error('Registration incomplete. Please complete your registration to access this feature.');
   }
   
@@ -653,6 +854,15 @@ export async function updateSellerStatus(
 export async function fetchOrders(): Promise<Order[]> {
   const headers = await getAuthHeaders();
   const res = await fetch(`${API_URL}/api/admin/orders`, {
+    headers,
+  });
+  if (!res.ok) throw new Error('Failed to fetch orders');
+  return res.json();
+}
+
+export async function fetchUserOrders(): Promise<Order[]> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/users/me/orders`, {
     headers,
   });
   if (!res.ok) throw new Error('Failed to fetch orders');

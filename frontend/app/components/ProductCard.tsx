@@ -7,6 +7,12 @@ import { useSession } from 'next-auth/react';
 import { Product } from '@/lib/api';
 import UserRoleBadges from './UserRoleBadges';
 import { useCart } from '../contexts/CartContext';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface ProductCardProps {
   product: Product;
@@ -62,6 +68,11 @@ export default function ProductCard({
     onAddToCart?.();
   };
 
+  // Check if seller is approved but doesn't have Stripe account set up
+  const sellerApprovedButNoStripe = 
+    product.seller_status === 'APPROVED' && 
+    !product.seller_stripe_account_id;
+  
   // Check if user can add to cart
   // Kappa branded products require member status
   const isKappaBranded = product.is_kappa_branded === true;
@@ -69,7 +80,10 @@ export default function ProductCard({
   // Determine if user can add this product to cart
   let canAddToCart = true; // Default: everyone can add non-Kappa products
   
-  if (isKappaBranded) {
+  // Block if seller doesn't have Stripe set up
+  if (sellerApprovedButNoStripe) {
+    canAddToCart = false;
+  } else if (isKappaBranded) {
     // For Kappa products, must be authenticated AND be a member
     const isAuthenticated = sessionStatus === 'authenticated' && !!session?.user;
     if (!isAuthenticated) {
@@ -87,11 +101,14 @@ export default function ProductCard({
   // Only show button if onAddToCart is provided AND user can add to cart
   const shouldShowAddButton = onAddToCart && canAddToCart;
 
+  // Check if product is pending (seller approved but no Stripe)
+  const isPending = sellerApprovedButNoStripe;
+
   return (
     <div
       className={`relative bg-white rounded-2xl overflow-hidden mb-4 shadow-sm border border-frost-gray/33 transition-all duration-200 ${
         fadeIn ? 'opacity-100' : 'opacity-0'
-      } ${isPressed ? 'opacity-85 scale-[0.98]' : ''} ${isStewardItem ? 'opacity-70' : ''} ${className}`}
+      } ${isPressed ? 'opacity-85 scale-[0.98]' : ''} ${isStewardItem ? 'opacity-70' : ''} ${isPending ? 'opacity-75' : ''} ${className}`}
       style={{
         boxShadow: '0 3px 6px rgba(0, 0, 0, 0.06)',
       }}
@@ -146,12 +163,23 @@ export default function ProductCard({
 
         {/* Badge (top-left) */}
         {badge && (
-          <div
-            className="absolute top-2 left-2 px-2 py-1 rounded-xl z-10"
-            style={{ backgroundColor: badgeColor }}
-          >
-            <span className="text-white text-[10px] font-semibold leading-none">{badge}</span>
-          </div>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div
+                  className="absolute top-2 left-2 px-2 py-1 rounded-xl z-10 cursor-help"
+                  style={{ backgroundColor: badgeColor }}
+                >
+                  <span className="text-white text-[10px] font-semibold leading-none">{badge}</span>
+                </div>
+              </TooltipTrigger>
+              {badge === 'Pending' && (
+                <TooltipContent className="max-w-xs bg-midnight-navy text-white border-midnight-navy">
+                  <p>This item will be available soon. Check back later.</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
         )}
 
         {/* Members Only badge (top-right) */}

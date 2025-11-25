@@ -22,6 +22,8 @@ import stewardsRouter from './routes/stewards';
 import stewardCheckoutRouter from './routes/steward-checkout';
 import favoritesRouter from './routes/favorites';
 import notificationsRouter from './routes/notifications';
+import shippingRouter from './routes/shipping';
+import addressesRouter from './routes/addresses';
 import { initializeDatabase } from './db/migrations';
 import { runVerification, runSellerVerification } from './scripts/verify-members';
 
@@ -128,6 +130,8 @@ app.use('/api/stewards', stewardsRouter);
 app.use('/api/steward-checkout', stewardCheckoutRouter);
 app.use('/api/favorites', favoritesRouter);
 app.use('/api/notifications', notificationsRouter);
+app.use('/api/shipping', shippingRouter);
+app.use('/api/addresses', addressesRouter);
 
 // Initialize database on startup
 initializeDatabase().catch(console.error);
