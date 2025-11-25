@@ -206,6 +206,21 @@ export default function CartCheckoutPage() {
       if (items.length > 0) {
         setProcessingIndex(0);
         const firstItem = items[0];
+
+        // Get idToken from session API if authenticated
+        let idToken: string | undefined;
+        if (sessionStatus === "authenticated") {
+          try {
+            const sessionResponse = await fetch("/api/auth/session");
+            if (sessionResponse.ok) {
+              const sessionData = await sessionResponse.json();
+              idToken = (sessionData as any)?.idToken;
+            }
+          } catch (error) {
+            console.warn("Could not get idToken from session:", error);
+          }
+        }
+
         const { url } = await createCheckoutSession(
           firstItem.product.id,
           buyerEmail,
@@ -217,7 +232,8 @@ export default function CartCheckoutPage() {
             state: shippingAddress.state,
             zip: shippingAddress.zip,
             country: shippingAddress.country || "US",
-          }
+          },
+          idToken
         );
 
         // Save address if user requested to save it

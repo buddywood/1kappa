@@ -215,12 +215,22 @@ export async function fetchEventAudienceTypes(): Promise<EventAudienceType[]> {
 export interface Order {
   id: number;
   product_id: number;
-  buyer_email: string;
+  buyer_email?: string; // Deprecated, use user_id
+  user_id?: number;
   amount_cents: number;
   status: 'PENDING' | 'PAID' | 'FAILED';
+  stripe_session_id?: string | null;
+  created_at?: string;
+  updated_at?: string;
   product_name?: string;
+  product_image_url?: string | null;
   seller_name?: string;
-  chapter_name?: string;
+  chapter_name?: string | null;
+  shipping_street?: string | null;
+  shipping_city?: string | null;
+  shipping_state?: string | null;
+  shipping_zip?: string | null;
+  shipping_country?: string | null;
 }
 
 export interface Industry {
@@ -507,7 +517,8 @@ export async function createCheckoutSession(
     state: string;
     zip: string;
     country: string;
-  }
+  },
+  idToken?: string
 ): Promise<{ sessionId: string; url: string }> {
   const body: any = {};
   
@@ -534,14 +545,21 @@ export async function createCheckoutSession(
   
   // Get auth headers if user is authenticated (optional - won't fail if not authenticated)
   const headers: HeadersInit = { 'Content-Type': 'application/json' };
-  try {
-    const session = await fetch('/api/auth/session').then(res => res.json());
-    const idToken = (session as any)?.idToken;
-    if (idToken) {
-      headers['Authorization'] = `Bearer ${idToken}`;
+  
+  // Use provided token if available, otherwise try to get from session
+  if (idToken) {
+    headers['Authorization'] = `Bearer ${idToken}`;
+  } else {
+    try {
+      const session = await fetch('/api/auth/session').then(res => res.json());
+      const sessionToken = (session as any)?.idToken;
+      if (sessionToken) {
+        headers['Authorization'] = `Bearer ${sessionToken}`;
+      }
+    } catch (error) {
+      // Not authenticated, continue without auth header (for guest checkout)
+      console.warn('Could not get auth token for checkout:', error);
     }
-  } catch (error) {
-    // Not authenticated, continue without auth header (for guest checkout)
   }
   
   const res = await fetch(`${API_URL}/api/checkout/${productId}`, {

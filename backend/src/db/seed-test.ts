@@ -1108,8 +1108,8 @@ async function seedPromoters(): Promise<void> {
         ) as Record<string, string>,
       });
 
-      // Update status if not PENDING
-      if (promoterData.status && promoterData.status !== "PENDING") {
+      // Update status if provided and not PENDING
+      if (promoterData.status && (promoterData.status as string) !== "PENDING") {
         await pool.query("UPDATE promoters SET status = $1 WHERE id = $2", [
           promoterData.status,
           promoter.id,

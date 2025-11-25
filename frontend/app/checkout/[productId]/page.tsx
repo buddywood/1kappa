@@ -57,8 +57,8 @@ export default function CheckoutPage() {
     return chapter?.name || null;
   };
 
-  const sponsoringChapterName = product?.sponsoring_chapter_id 
-    ? getChapterName(product.sponsoring_chapter_id) 
+  const sponsoringChapterName = product?.seller_sponsoring_chapter_id
+    ? getChapterName(product.seller_sponsoring_chapter_id)
     : null;
 
   const formatPrice = (cents: number) => {

@@ -338,9 +338,6 @@ export default function SuccessPage() {
     <Suspense fallback={
       <main className="min-h-screen bg-cream dark:bg-black flex items-center justify-center">
         <div className="bg-white dark:bg-gray-900 p-8 rounded-lg shadow-lg text-center max-w-md border border-frost-gray">
-          <div className="mb-4">
-            <Logo />
-          </div>
           <div className="text-midnight-navy dark:text-gray-100">Loading...</div>
         </div>
       </main>

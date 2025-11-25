@@ -3,25 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { fetchUserOrders } from '@/lib/api';
+import { fetchUserOrders, type Order } from '@/lib/api';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
-
-interface Order {
-  id: number;
-  product_id: number;
-  amount_cents: number;
-  status: 'PENDING' | 'PAID' | 'FAILED';
-  stripe_session_id: string | null;
-  created_at: string;
-  updated_at: string;
-  product_name: string;
-  product_image_url: string | null;
-  seller_name: string;
-  chapter_name: string | null;
-}
 
 export default function OrdersPage() {
   const router = useRouter();
@@ -158,8 +144,8 @@ export default function OrdersPage() {
                   <div className="relative w-full md:w-32 h-32 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                     {order.product_image_url ? (
                       <Image
-                        src={order.product_image_url}
-                        alt={order.product_name}
+                        src={order.product_image_url || '/placeholder.png'}
+                        alt={order.product_name || 'Product'}
                         fill
                         className="object-cover"
                       />
@@ -184,7 +170,7 @@ export default function OrdersPage() {
                           {order.chapter_name && (
                             <p>Chapter: {order.chapter_name}</p>
                           )}
-                          <p>Order Date: {formatDate(order.created_at)}</p>
+                          <p>Order Date: {order.created_at ? formatDate(order.created_at) : 'N/A'}</p>
                         </div>
                       </div>
 
