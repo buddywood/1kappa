@@ -15,6 +15,7 @@ jest.mock('../db/queries', () => ({
   getStewardListingById: jest.fn(),
   claimStewardListing: jest.fn(),
   getStewardById: jest.fn(),
+  getStewardByFraternityMemberId: jest.fn(),
   getChapterById: jest.fn(),
   getPlatformSetting: jest.fn(),
   createStewardClaim: jest.fn(),
@@ -26,6 +27,8 @@ jest.mock('../db/queries', () => ({
   linkUserToPromoter: jest.fn(),
   linkUserToSteward: jest.fn(),
   getUserByCognitoSub: jest.fn(),
+  getUserByEmail: jest.fn(),
+  updateSellerInvitationToken: jest.fn(),
 }));
 
 // Mock the auth middleware
@@ -44,11 +47,15 @@ const mockAuthenticate = jest.fn((req: any, res: any, next: any) => {
   next();
 });
 
-const mockRequireVerifiedMember = jest.fn((req: any, res: any, next: any) => {
+const mockRequireVerifiedMember = jest.fn(async (req: any, res: any, next: any) => {
   // Note: requireVerifiedMember now gets fraternity_member_id from role tables
   if (!req.user) {
-    return res.status(403).json({ error: 'Member profile required' });
+    return res.status(401).json({ error: 'Authentication required' });
   }
+  
+  // The real middleware calls getUserByCognitoSub, getFraternityMemberId, and getMemberById
+  // These are mocked in the tests, so we can just call next()
+  // The mocks will handle the async operations
   next();
 });
 
@@ -79,6 +86,11 @@ jest.mock('../services/s3', () => ({
   uploadToS3: jest.fn().mockResolvedValue('https://example.com/headshot.jpg'),
 }));
 
+// Mock token generation
+jest.mock('../utils/tokens', () => ({
+  generateInvitationToken: jest.fn().mockReturnValue('test-invitation-token'),
+}));
+
 // Mock Stripe service
 jest.mock('../services/stripe', () => ({
   createStewardCheckoutSession: jest.fn().mockResolvedValue({
@@ -86,6 +98,11 @@ jest.mock('../services/stripe', () => ({
     url: 'https://checkout.stripe.com/cs_test_123',
   }),
   calculateStewardPlatformFee: jest.fn().mockResolvedValue(500),
+}));
+
+// Mock email service
+jest.mock('../services/email', () => ({
+  sendSellerApplicationSubmittedEmail: jest.fn().mockResolvedValue(undefined),
 }));
 
 const app = express();
@@ -284,14 +301,17 @@ describe('Member Role Integration Tests', () => {
 
       getMemberById.mockResolvedValue(mockMember);
       createSeller.mockResolvedValue(mockSeller);
+      
       // Mock: Seller route checks for member by email
       (jest.spyOn(pool, 'query') as jest.Mock)
-        .mockResolvedValueOnce({ rows: [{ id: 1, verification_status: 'VERIFIED' }] }) // Member lookup by email
-        .mockResolvedValueOnce({ rows: [{ id: 1 }] }); // Other query
+        .mockResolvedValueOnce({ rows: [{ id: 1, verification_status: 'VERIFIED' }] }) // Member lookup by email (line 157-160)
+        .mockResolvedValueOnce({ rows: [{ id: 1, verification_status: 'VERIFIED' }] }); // Member verification check (line 212-215)
 
-      // Mock linkUserToSeller if user is authenticated
-      const { linkUserToSeller } = require('../db/queries');
+      // Mock linkUserToSeller and getUserByEmail for auto-approval
+      const { linkUserToSeller, getUserByEmail, updateSellerInvitationToken } = require('../db/queries');
       linkUserToSeller.mockResolvedValue(undefined);
+      getUserByEmail.mockResolvedValue(null); // No existing user
+      updateSellerInvitationToken.mockResolvedValue(undefined);
 
       // Seller apply requires a store_logo file
       const response = await request(app)
@@ -362,8 +382,13 @@ describe('Member Role Integration Tests', () => {
       getMemberById.mockResolvedValue(verifiedMember);
       createSteward.mockResolvedValue(mockSteward);
       
+      // Mock getStewardByFraternityMemberId (checks if steward already exists)
+      const { getStewardByFraternityMemberId } = require('../db/queries');
+      getStewardByFraternityMemberId.mockResolvedValue(null); // No existing steward
+      
       // Mock getUserByCognitoSub and pool.query for getFraternityMemberIdFromRequest
-      require('../db/queries').getUserByCognitoSub.mockResolvedValue({
+      const queries = require('../db/queries');
+      queries.getUserByCognitoSub.mockResolvedValue({
         id: 1,
         cognito_sub: 'test-cognito-sub',
         email: 'test@example.com',
@@ -373,6 +398,14 @@ describe('Member Role Integration Tests', () => {
         steward_id: null,
         features: {},
       });
+
+      // Mock getStewardById (called after update)
+      const { getStewardById } = require('../db/queries');
+      getStewardById.mockResolvedValue({ ...mockSteward, status: 'APPROVED' });
+
+      // Mock linkUserToSteward
+      const { linkUserToSteward } = require('../db/queries');
+      linkUserToSteward.mockResolvedValue(undefined);
 
       // Mock pool.query for getFraternityMemberId (GUEST role looks up by email)
       // Also mock the steward update query

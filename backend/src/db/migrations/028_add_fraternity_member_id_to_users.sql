@@ -41,15 +41,32 @@ BEGIN
     
     -- Ensure PROMOTER users have proper nulls set and fraternity_member_id
     -- If PROMOTER doesn't have fraternity_member_id, try to find it from promoters table
-    UPDATE users u
-    SET fraternity_member_id = p.fraternity_member_id,
-        seller_id = NULL,
-        steward_id = NULL
-    FROM promoters p
-    WHERE u.role = 'PROMOTER' 
-      AND u.promoter_id = p.id
-      AND u.fraternity_member_id IS NULL
-      AND p.fraternity_member_id IS NOT NULL;
+    -- Check which column exists in promoters table (member_id or fraternity_member_id)
+    IF EXISTS (SELECT 1 FROM information_schema.columns 
+               WHERE table_name = 'promoters' AND column_name = 'fraternity_member_id') THEN
+      -- Use fraternity_member_id column
+      UPDATE users u
+      SET fraternity_member_id = p.fraternity_member_id,
+          seller_id = NULL,
+          steward_id = NULL
+      FROM promoters p
+      WHERE u.role = 'PROMOTER' 
+        AND u.promoter_id = p.id
+        AND u.fraternity_member_id IS NULL
+        AND p.fraternity_member_id IS NOT NULL;
+    ELSIF EXISTS (SELECT 1 FROM information_schema.columns 
+                  WHERE table_name = 'promoters' AND column_name = 'member_id') THEN
+      -- Use member_id column (before migration 016)
+      UPDATE users u
+      SET fraternity_member_id = p.member_id,
+          seller_id = NULL,
+          steward_id = NULL
+      FROM promoters p
+      WHERE u.role = 'PROMOTER' 
+        AND u.promoter_id = p.id
+        AND u.fraternity_member_id IS NULL
+        AND p.member_id IS NOT NULL;
+    END IF;
     
     -- If PROMOTER still doesn't have fraternity_member_id, we can't fix it automatically
     -- Set onboarding_status to prevent constraint violation
@@ -61,13 +78,28 @@ BEGIN
     
     -- Ensure STEWARD users have fraternity_member_id
     -- If STEWARD doesn't have fraternity_member_id, try to find it from stewards table
-    UPDATE users u
-    SET fraternity_member_id = s.fraternity_member_id
-    FROM stewards s
-    WHERE u.role = 'STEWARD' 
-      AND u.steward_id = s.id
-      AND u.fraternity_member_id IS NULL
-      AND s.fraternity_member_id IS NOT NULL;
+    -- Check which column exists in stewards table (member_id or fraternity_member_id)
+    IF EXISTS (SELECT 1 FROM information_schema.columns 
+               WHERE table_name = 'stewards' AND column_name = 'fraternity_member_id') THEN
+      -- Use fraternity_member_id column
+      UPDATE users u
+      SET fraternity_member_id = s.fraternity_member_id
+      FROM stewards s
+      WHERE u.role = 'STEWARD' 
+        AND u.steward_id = s.id
+        AND u.fraternity_member_id IS NULL
+        AND s.fraternity_member_id IS NOT NULL;
+    ELSIF EXISTS (SELECT 1 FROM information_schema.columns 
+                  WHERE table_name = 'stewards' AND column_name = 'member_id') THEN
+      -- Use member_id column (before migration 016)
+      UPDATE users u
+      SET fraternity_member_id = s.member_id
+      FROM stewards s
+      WHERE u.role = 'STEWARD' 
+        AND u.steward_id = s.id
+        AND u.fraternity_member_id IS NULL
+        AND s.member_id IS NOT NULL;
+    END IF;
     
     -- Ensure ADMIN users have proper nulls set
     UPDATE users 
