@@ -83,6 +83,7 @@ jobs:
       name: preview
 
     env:
+      NODE_ENV: production
       DATABASE_HOST: ${{ secrets.STAGING_DATABASE_HOST }}
       DATABASE_USERNAME: ${{ secrets.STAGING_DATABASE_USERNAME }}
       DATABASE_PASSWORD: ${{ secrets.STAGING_DATABASE_PASSWORD }}
@@ -124,6 +125,7 @@ jobs:
       name: production
 
     env:
+      NODE_ENV: production
       DATABASE_HOST: ${{ secrets.DATABASE_HOST }}
       DATABASE_USERNAME: ${{ secrets.DATABASE_USERNAME }}
       DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}

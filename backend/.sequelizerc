@@ -1,10 +1,13 @@
 const path = require('path');
 
+// Resolve paths relative to this .sequelizerc file location
+const sequelizercDir = __dirname;
+
 module.exports = {
-  'config': path.resolve('src', 'db', 'sequelize.config.js'),
-  'models-path': path.resolve('src', 'db', 'models'),
-  'seeders-path': path.resolve('src', 'db', 'seeders'),
-  'migrations-path': path.resolve('src', 'db', 'sequelize-migrations')
+  'config': path.resolve(sequelizercDir, 'src', 'db', 'sequelize.config.js'),
+  'models-path': path.resolve(sequelizercDir, 'src', 'db', 'models'),
+  'seeders-path': path.resolve(sequelizercDir, 'src', 'db', 'seeders'),
+  'migrations-path': path.resolve(sequelizercDir, 'src', 'db', 'sequelize-migrations')
 };
 
 
