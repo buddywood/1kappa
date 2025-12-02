@@ -125,13 +125,15 @@ module.exports = {
       console.log('Renamed stewards.member_id to fraternity_member_id');
     } else {
       // Neither column exists, add fraternity_member_id
-      const [fraternityMembersTableResult2] = await queryInterface.sequelize.query(`
+      console.log('➕ Adding fraternity_member_id column...');
+      
+      const fraternityMembersTableResult2 = await queryInterface.sequelize.query(`
         SELECT table_name 
         FROM information_schema.tables 
         WHERE table_name = 'fraternity_members'
       `);
 
-      if (fraternityMembersTableResult2.length > 0) {
+      if (fraternityMembersTableResult2[0].length > 0) {
         await queryInterface.addColumn('stewards', 'fraternity_member_id', {
           type: Sequelize.INTEGER,
           allowNull: false,
