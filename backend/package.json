@@ -34,6 +34,7 @@
     "delete:seller": "tsx src/scripts/delete-seller.ts",
     "delete:promoter": "tsx src/scripts/delete-promoter.ts",
     "delete:steward": "tsx src/scripts/delete-steward.ts",
+    "test:migration:028": "tsx src/scripts/test-migration-028.ts",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
