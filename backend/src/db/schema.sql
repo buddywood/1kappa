@@ -330,6 +330,44 @@ CREATE TABLE IF NOT EXISTS platform_settings (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Notifications table
+CREATE TABLE IF NOT EXISTS notifications (
+  id SERIAL PRIMARY KEY,
+  user_email VARCHAR(255) NOT NULL,
+  type VARCHAR(50) NOT NULL CHECK (type IN ('PURCHASE_BLOCKED', 'ITEM_AVAILABLE', 'ORDER_CONFIRMED', 'ORDER_SHIPPED')),
+  title VARCHAR(255) NOT NULL,
+  message TEXT NOT NULL,
+  related_product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
+  related_order_id INTEGER REFERENCES orders(id) ON DELETE CASCADE,
+  is_read BOOLEAN DEFAULT false,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  read_at TIMESTAMP
+);
+
+-- Favorites/wishlist table
+CREATE TABLE IF NOT EXISTS favorites (
+  id SERIAL PRIMARY KEY,
+  user_email VARCHAR(255) NOT NULL,
+  product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_email, product_id)
+);
+
+-- User addresses table (for multiple shipping addresses per user)
+CREATE TABLE IF NOT EXISTS user_addresses (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  label VARCHAR(100),
+  street VARCHAR(255) NOT NULL,
+  city VARCHAR(100) NOT NULL,
+  state VARCHAR(2) NOT NULL,
+  zip VARCHAR(20) NOT NULL,
+  country VARCHAR(2) NOT NULL DEFAULT 'US',
+  is_default BOOLEAN DEFAULT false,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_sellers_status ON sellers(status);
 -- Note: Indexes for fraternity_member_id columns are created by migration 016 after columns are renamed
@@ -377,6 +415,15 @@ CREATE INDEX IF NOT EXISTS idx_steward_claims_listing ON steward_claims(listing_
 -- CREATE INDEX IF NOT EXISTS idx_steward_claims_claimant_fraternity_member ON steward_claims(claimant_fraternity_member_id);
 CREATE INDEX IF NOT EXISTS idx_steward_claims_status ON steward_claims(status);
 CREATE INDEX IF NOT EXISTS idx_steward_claims_stripe_session ON steward_claims(stripe_session_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_email ON notifications(user_email);
+CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);
+CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_type ON notifications(type);
+CREATE INDEX IF NOT EXISTS idx_favorites_user_email ON favorites(user_email);
+CREATE INDEX IF NOT EXISTS idx_favorites_product_id ON favorites(product_id);
+CREATE INDEX IF NOT EXISTS idx_user_addresses_user_id ON user_addresses(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_addresses_user_default ON user_addresses(user_id, is_default) WHERE is_default = true;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_user_addresses_one_default ON user_addresses(user_id, is_default) WHERE is_default = true;
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -438,4 +485,8 @@ CREATE TRIGGER update_steward_claims_updated_at BEFORE UPDATE ON steward_claims
 
 DROP TRIGGER IF EXISTS update_platform_settings_updated_at ON platform_settings;
 CREATE TRIGGER update_platform_settings_updated_at BEFORE UPDATE ON platform_settings
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_user_addresses_updated_at ON user_addresses;
+CREATE TRIGGER update_user_addresses_updated_at BEFORE UPDATE ON user_addresses
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
