@@ -49,7 +49,9 @@ module.exports = {
       '039_drop_dress_code_type_column.sql',
       '040_change_orders_buyer_email_to_user_id.sql',
       '041_add_shipping_address_to_orders.sql',
-      '042_create_user_addresses_table.sql'
+      '042_create_user_addresses_table.sql',
+      '043_ensure_promoters_fraternity_member_id.sql',
+      '044_ensure_stewards_fraternity_member_id.sql'
     ];
 
     // Ensure SequelizeMeta table exists
@@ -116,7 +118,9 @@ module.exports = {
       '039_drop_dress_code_type_column.sql',
       '040_change_orders_buyer_email_to_user_id.sql',
       '041_add_shipping_address_to_orders.sql',
-      '042_create_user_addresses_table.sql'
+      '042_create_user_addresses_table.sql',
+      '043_ensure_promoters_fraternity_member_id.sql',
+      '044_ensure_stewards_fraternity_member_id.sql'
     ];
 
     await queryInterface.bulkDelete('SequelizeMeta', {

@@ -1,104 +1,93 @@
 import pool from './connection';
 import fs from 'fs';
 import path from 'path';
+import { execSync } from 'child_process';
 
-async function runSchema() {
-  // Try current directory first (works when running with tsx from src/db)
-  let schemaPath = path.join(__dirname, 'schema.sql');
+/**
+ * Run initial schema.sql if database is empty
+ * This is only needed for fresh databases
+ */
+async function runSchemaIfNeeded() {
+  // Check if any tables exist
+  const [result] = await pool.query(`
+    SELECT COUNT(*) as count 
+    FROM information_schema.tables 
+    WHERE table_schema = 'public' 
+    AND table_type = 'BASE TABLE'
+    AND table_name != 'SequelizeMeta'
+  `);
   
-  // If not found, try going up from dist/db to backend root, then to src/db
-  if (!fs.existsSync(schemaPath)) {
-    schemaPath = path.resolve(__dirname, '..', '..', 'src', 'db', 'schema.sql');
+  const tableCount = parseInt((result as any[])[0]?.count || '0', 10);
+  
+  // If no tables exist, run schema.sql
+  if (tableCount === 0) {
+    let schemaPath = path.join(__dirname, 'schema.sql');
+    
+    if (!fs.existsSync(schemaPath)) {
+      schemaPath = path.resolve(__dirname, '..', '..', 'src', 'db', 'schema.sql');
+    }
+    
+    if (!fs.existsSync(schemaPath)) {
+      schemaPath = path.resolve(process.cwd(), 'src', 'db', 'schema.sql');
+    }
+    
+    if (fs.existsSync(schemaPath)) {
+      const schema = fs.readFileSync(schemaPath, 'utf8');
+      await pool.query(schema);
+      console.log('✓ Initial schema created successfully');
+    }
+  } else {
+    console.log('✓ Database already has tables, skipping schema.sql');
   }
-  
-  // If still not found, try relative to project root (for different execution contexts)
-  if (!fs.existsSync(schemaPath)) {
-    schemaPath = path.resolve(process.cwd(), 'src', 'db', 'schema.sql');
-  }
-  
-  if (!fs.existsSync(schemaPath)) {
-    throw new Error(`Schema file not found. Tried: ${schemaPath}`);
-  }
-  
-  const schema = fs.readFileSync(schemaPath, 'utf8');
-  await pool.query(schema);
-  console.log('Initial schema created successfully');
 }
 
-async function runMigrationFiles() {
-  // Get migrations directory
-  let migrationsDir = path.join(__dirname, 'migrations');
-  
-  // If not found, try going up from dist/db to backend root, then to src/db
-  if (!fs.existsSync(migrationsDir)) {
-    migrationsDir = path.resolve(__dirname, '..', '..', 'src', 'db', 'migrations');
-  }
-  
-  // If still not found, try relative to project root
-  if (!fs.existsSync(migrationsDir)) {
-    migrationsDir = path.resolve(process.cwd(), 'src', 'db', 'migrations');
-  }
-  
-  if (!fs.existsSync(migrationsDir)) {
-    console.log('No migrations directory found, skipping migrations');
-    return;
-  }
-  
-  // Get all migration files and sort them
-  const files = fs.readdirSync(migrationsDir)
-    .filter(file => file.endsWith('.sql'))
-    .sort(); // Sort alphabetically (001, 002, 003, etc.)
-  
-  if (files.length === 0) {
-    console.log('No migration files found');
-    return;
-  }
-  
-  console.log(`Found ${files.length} migration file(s)`);
-  
-  for (const file of files) {
-    const migrationPath = path.join(migrationsDir, file);
-    const migration = fs.readFileSync(migrationPath, 'utf8');
+/**
+ * Run Sequelize migrations using Sequelize CLI
+ * This will only run migrations that haven't been applied yet
+ */
+function runSequelizeMigrations() {
+  try {
+    // Get the backend directory
+    const backendDir = path.resolve(__dirname, '..', '..');
+    const originalCwd = process.cwd();
     
     try {
-      await pool.query(migration);
-      console.log(`✓ Applied migration: ${file}`);
-    } catch (error: any) {
-      // Check if it's an expected error (things already exist, deadlocks, etc.)
-      const errorCode = error?.code;
-      const errorMessage = error?.message || '';
+      // Change to backend directory to run Sequelize CLI
+      process.chdir(backendDir);
       
-      if (
-        errorCode === '42710' || // duplicate object (trigger, index, etc.)
-        errorCode === '42P07' || // duplicate table
-        errorCode === '23505' || // duplicate key (sequence)
-        errorCode === '40P01' || // deadlock detected
-        errorMessage.includes('already exists') ||
-        errorMessage.includes('duplicate') ||
-        errorMessage.includes('deadlock')
-      ) {
-        // Expected error - some objects already exist or deadlock (concurrent migrations), which is fine
-        console.log(`✓ Migration ${file} completed (some objects already exist, which is expected)`);
-      } else {
-        // Unexpected error - log it and throw to stop migration process
-        console.error(`✗ Error applying migration ${file}:`, errorMessage.substring(0, 200));
-        throw error; // Stop migration process on unexpected errors
-      }
+      // Run Sequelize migrations
+      console.log('🔄 Running Sequelize migrations...');
+      execSync('npm run sequelize:migrate', {
+        stdio: 'inherit',
+        env: process.env
+      });
+      console.log('✓ Sequelize migrations completed');
+    } finally {
+      // Restore original working directory
+      process.chdir(originalCwd);
     }
+  } catch (error: any) {
+    console.error('✗ Error running Sequelize migrations:', error.message);
+    throw error;
   }
 }
 
+/**
+ * Main migration function
+ * 1. Run schema.sql if database is empty
+ * 2. Run Sequelize migrations (which will only run pending ones)
+ */
 export async function runMigrations() {
   try {
-    // First, run the initial schema (CREATE TABLE statements)
-    await runSchema();
+    // First, run schema if database is empty
+    await runSchemaIfNeeded();
     
-    // Then, run all migration files in order
-    await runMigrationFiles();
+    // Then, run Sequelize migrations
+    runSequelizeMigrations();
     
-    console.log('Database migrations completed successfully');
+    console.log('✅ Database migrations completed successfully');
   } catch (error) {
-    console.error('Error running migrations:', error);
+    console.error('❌ Error running migrations:', error);
     throw error;
   }
 }
