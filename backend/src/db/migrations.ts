@@ -9,7 +9,7 @@ import { execSync } from 'child_process';
  */
 async function runSchemaIfNeeded() {
   // Check if any tables exist
-  const [result] = await pool.query(`
+  const result = await pool.query(`
     SELECT COUNT(*) as count 
     FROM information_schema.tables 
     WHERE table_schema = 'public' 
@@ -17,7 +17,7 @@ async function runSchemaIfNeeded() {
     AND table_name != 'SequelizeMeta'
   `);
   
-  const tableCount = parseInt((result as any[])[0]?.count || '0', 10);
+  const tableCount = parseInt(result.rows[0]?.count || '0', 10);
   
   // If no tables exist, run schema.sql
   if (tableCount === 0) {
@@ -55,9 +55,9 @@ function runSequelizeMigrations() {
       // Change to backend directory to run Sequelize CLI
       process.chdir(backendDir);
       
-      // Run Sequelize migrations
+      // Run Sequelize migrations using npx (in case sequelize-cli is not globally installed)
       console.log('🔄 Running Sequelize migrations...');
-      execSync('npm run sequelize:migrate', {
+      execSync('npx sequelize-cli db:migrate', {
         stdio: 'inherit',
         env: process.env
       });
