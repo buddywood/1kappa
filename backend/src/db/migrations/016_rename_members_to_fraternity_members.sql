@@ -39,6 +39,15 @@ BEGIN
              WHERE table_name = 'promoters' AND column_name = 'member_id') THEN
     ALTER TABLE promoters RENAME COLUMN member_id TO fraternity_member_id;
     RAISE NOTICE 'Renamed promoters.member_id to fraternity_member_id';
+  ELSIF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                    WHERE table_name = 'promoters' AND column_name = 'fraternity_member_id') THEN
+    -- If neither member_id nor fraternity_member_id exists, add it
+    -- This handles cases where the column wasn't created in migration 003
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'fraternity_members') THEN
+      ALTER TABLE promoters ADD COLUMN fraternity_member_id INTEGER REFERENCES fraternity_members(id);
+      CREATE INDEX IF NOT EXISTS idx_promoters_fraternity_member_id ON promoters(fraternity_member_id);
+      RAISE NOTICE 'Added promoters.fraternity_member_id column';
+    END IF;
   END IF;
 
   -- Stewards table
