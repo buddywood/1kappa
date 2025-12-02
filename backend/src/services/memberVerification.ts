@@ -526,13 +526,13 @@ export async function loginToKappaPortal(page: Page, debugMode: boolean = false)
       
       // Try to get all inputs on the page for debugging
       try {
-        const allInputs = await targetPage.$$eval('input', (elements: any[]) => 
-          elements.map((el: any) => ({
-            type: el.type,
-            id: el.id,
-            name: el.name,
-            placeholder: el.placeholder,
-            className: el.className,
+        const allInputs = await targetPage.$$eval('input', (elements: Element[]) => 
+          elements.map((el: Element) => ({
+            type: (el as HTMLInputElement).type,
+            id: (el as HTMLInputElement).id,
+            name: (el as HTMLInputElement).name,
+            placeholder: (el as HTMLInputElement).placeholder,
+            className: (el as HTMLElement).className,
           }))
         );
         console.error('📝 All inputs found on page:', JSON.stringify(allInputs, null, 2));

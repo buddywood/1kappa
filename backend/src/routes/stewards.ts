@@ -1,6 +1,12 @@
 import { Router, Request, Response } from 'express';
 import type { Router as ExpressRouter } from 'express';
 import multer from 'multer';
+
+// Extend Express Request to include multer file types
+interface MulterRequest extends Request {
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | { [fieldname: string]: Express.Multer.File[] } | Express.Multer.File[];
+}
 import { 
   createSteward, 
   getStewardById, 
@@ -212,7 +218,7 @@ router.get('/profile', authenticate, requireSteward, async (req: Request, res: R
 });
 
 // Create a new listing
-router.post('/listings', authenticate, requireSteward, upload.array('images', 10), async (req: Request, res: Response) => {
+router.post('/listings', authenticate, requireSteward, upload.array('images', 10), async (req: MulterRequest, res: Response) => {
   try {
     if (!req.user || !req.user.stewardId) {
       return res.status(403).json({ error: 'Steward access required' });
@@ -449,7 +455,7 @@ router.get('/listings/:id', authenticate, requireVerifiedMember, async (req: Req
 });
 
 // Update listing
-router.put('/listings/:id', authenticate, requireSteward, upload.single('image'), async (req: Request, res: Response) => {
+router.put('/listings/:id', authenticate, requireSteward, upload.single('image'), async (req: MulterRequest, res: Response) => {
   try {
     if (!req.user || !req.user.stewardId) {
       return res.status(403).json({ error: 'Steward access required' });

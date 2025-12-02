@@ -90,7 +90,7 @@ async function scrapeChapters(): Promise<void> {
   // Build a map of tables to their section by iterating through document in order
   // This is more reliable than trying to find headings backwards
   let currentSection: 'Collegiate' | 'Alumni' = 'Collegiate';
-  const tableSectionMap = new Map<cheerio.Element, 'Collegiate' | 'Alumni'>();
+  const tableSectionMap = new Map<any, 'Collegiate' | 'Alumni'>();
   
   // Get the main content area (usually #content or #bodyContent)
   const $content = $('#content, #bodyContent, .mw-parser-output').first();
