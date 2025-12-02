@@ -127,11 +127,7 @@ BEGIN
     WHERE role = 'PROMOTER' AND (seller_id IS NOT NULL OR steward_id IS NOT NULL);
     
     -- Check for problematic rows and log them
-    DECLARE
-      problematic_count INTEGER;
-      rec RECORD;
-    BEGIN
-      SELECT COUNT(*) INTO problematic_count
+    SELECT COUNT(*) INTO problematic_count
       FROM users WHERE NOT (
         (role = 'GUEST' AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL AND (
           (fraternity_member_id IS NOT NULL) OR 
