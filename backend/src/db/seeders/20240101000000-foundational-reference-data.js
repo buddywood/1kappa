@@ -26,13 +26,6 @@ module.exports = {
 
     // 1. Seed Roles
     try {
-      const [rolesTable] = await queryInterface.sequelize.query(`
-        SELECT table_name 
-        FROM information_schema.tables 
-        WHERE table_name = 'roles' AND table_schema = 'public'
-      `);
-      
-      if (rolesTable && rolesTable.length > 0) {
       console.log('📋 Seeding roles...');
       const roles = [
         { name: 'ADMIN', description: 'System administrator with full access', display_order: 1 },
@@ -52,22 +45,12 @@ module.exports = {
         });
       }
       console.log('  ✅ Roles seeded\n');
-      } else {
-        console.log('  ⏭️  Skipping roles (table does not exist yet)\n');
-      }
     } catch (error) {
-      console.log('  ⏭️  Skipping roles (table does not exist yet)\n');
+      console.log('  ⏭️  Skipping roles (table does not exist yet or error occurred)\n');
     }
 
     // 2. Seed Event Types
     try {
-      const [eventTypesTable] = await queryInterface.sequelize.query(`
-        SELECT table_name 
-        FROM information_schema.tables 
-        WHERE table_name = 'event_types' AND table_schema = 'public'
-      `);
-      
-      if (eventTypesTable && eventTypesTable.length > 0) {
       console.log('📅 Seeding event types...');
       const eventTypes = [
         { enum: 'social', description: 'Social gatherings and mixers', display_order: 1, is_active: true },
@@ -91,22 +74,12 @@ module.exports = {
         });
       }
       console.log('  ✅ Event types seeded\n');
-      } else {
-        console.log('  ⏭️  Skipping event types (table does not exist yet)\n');
-      }
     } catch (error) {
-      console.log('  ⏭️  Skipping event types (table does not exist yet)\n');
+      console.log('  ⏭️  Skipping event types (table does not exist yet or error occurred)\n');
     }
 
     // 3. Seed Event Audience Types
     try {
-      const [eventAudienceTypesTable] = await queryInterface.sequelize.query(`
-        SELECT table_name 
-        FROM information_schema.tables 
-        WHERE table_name = 'event_audience_types' AND table_schema = 'public'
-      `);
-      
-      if (eventAudienceTypesTable && eventAudienceTypesTable.length > 0) {
       console.log('👥 Seeding event audience types...');
       const eventAudienceTypes = [
         { enum: 'all_members', description: 'All fraternity members', display_order: 1, is_active: true },
@@ -124,22 +97,12 @@ module.exports = {
         });
       }
       console.log('  ✅ Event audience types seeded\n');
-      } else {
-        console.log('  ⏭️  Skipping event audience types (table does not exist yet)\n');
-      }
     } catch (error) {
-      console.log('  ⏭️  Skipping event audience types (table does not exist yet)\n');
+      console.log('  ⏭️  Skipping event audience types (table does not exist yet or error occurred)\n');
     }
 
     // 4. Seed Industries (50 industries)
     try {
-      const [industriesTable] = await queryInterface.sequelize.query(`
-        SELECT table_name 
-        FROM information_schema.tables 
-        WHERE table_name = 'industries' AND table_schema = 'public'
-      `);
-      
-      if (industriesTable && industriesTable.length > 0) {
       console.log('🏭 Seeding industries...');
       const industries = [
         'Technology', 'Finance', 'Healthcare', 'Education', 'Legal', 'Consulting', 'Real Estate',
@@ -165,22 +128,12 @@ module.exports = {
         });
       }
       console.log(`  ✅ ${industries.length} industries seeded\n`);
-      } else {
-        console.log('  ⏭️  Skipping industries (table does not exist yet)\n');
-      }
     } catch (error) {
-      console.log('  ⏭️  Skipping industries (table does not exist yet)\n');
+      console.log('  ⏭️  Skipping industries (table does not exist yet or error occurred)\n');
     }
 
     // 5. Seed Professions (32 professions)
     try {
-      const [professionsTable] = await queryInterface.sequelize.query(`
-        SELECT table_name 
-        FROM information_schema.tables 
-        WHERE table_name = 'professions' AND table_schema = 'public'
-      `);
-      
-      if (professionsTable && professionsTable.length > 0) {
       console.log('💼 Seeding professions...');
       const professions = [
         'Software Engineer', 'Data Scientist', 'Product Manager', 'Business Analyst',
@@ -204,23 +157,13 @@ module.exports = {
         });
       }
       console.log(`  ✅ ${professions.length} professions seeded\n`);
-      } else {
-        console.log('  ⏭️  Skipping professions (table does not exist yet)\n');
-      }
     } catch (error) {
-      console.log('  ⏭️  Skipping professions (table does not exist yet)\n');
+      console.log('  ⏭️  Skipping professions (table does not exist yet or error occurred)\n');
     }
 
     // 6. Seed Product Categories (10 categories)
     try {
-      const [productCategoriesTable] = await queryInterface.sequelize.query(`
-        SELECT table_name 
-        FROM information_schema.tables 
-        WHERE table_name = 'product_categories' AND table_schema = 'public'
-      `);
-      
-      if (productCategoriesTable && productCategoriesTable.length > 0) {
-        console.log('📦 Seeding product categories...');
+      console.log('📦 Seeding product categories...');
         const productCategories = [
           { name: 'Apparel', display_order: 1 },
           { name: 'Outerwear', display_order: 2 },
@@ -243,12 +186,9 @@ module.exports = {
             replacements: category
           });
         }
-        console.log(`  ✅ ${productCategories.length} product categories seeded\n`);
-      } else {
-        console.log('  ⏭️  Skipping product categories (table does not exist yet)\n');
-      }
+      console.log(`  ✅ ${productCategories.length} product categories seeded\n`);
     } catch (error) {
-      console.log('  ⏭️  Skipping product categories (table does not exist yet)\n');
+      console.log('  ⏭️  Skipping product categories (table does not exist yet or error occurred)\n');
     }
 
     console.log('✅ Foundational reference data seeding completed!');
