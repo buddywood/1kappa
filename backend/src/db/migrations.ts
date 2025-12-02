@@ -4,8 +4,8 @@ import path from 'path';
 import { execSync } from 'child_process';
 
 /**
- * Run initial schema.sql if database is empty
- * This is only needed for fresh databases
+ * Schema.sql is no longer used - Sequelize migrations handle everything
+ * This function is kept for backwards compatibility but does nothing
  */
 async function runSchemaIfNeeded() {
   // Check if any tables exist
@@ -19,25 +19,10 @@ async function runSchemaIfNeeded() {
   
   const tableCount = parseInt(result.rows[0]?.count || '0', 10);
   
-  // If no tables exist, run schema.sql
   if (tableCount === 0) {
-    let schemaPath = path.join(__dirname, 'schema.sql');
-    
-    if (!fs.existsSync(schemaPath)) {
-      schemaPath = path.resolve(__dirname, '..', '..', 'src', 'db', 'schema.sql');
-    }
-    
-    if (!fs.existsSync(schemaPath)) {
-      schemaPath = path.resolve(process.cwd(), 'src', 'db', 'schema.sql');
-    }
-    
-    if (fs.existsSync(schemaPath)) {
-      const schema = fs.readFileSync(schemaPath, 'utf8');
-      await pool.query(schema);
-      console.log('✓ Initial schema created successfully');
-    }
+    console.log('📦 Database is empty - Sequelize migrations will create all tables');
   } else {
-    console.log('✓ Database already has tables, skipping schema.sql');
+    console.log(`✓ Database already has ${tableCount} table(s) - Sequelize migrations will handle updates`);
   }
 }
 
