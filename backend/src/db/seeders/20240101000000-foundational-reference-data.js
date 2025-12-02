@@ -203,55 +203,55 @@ module.exports = {
           }
         });
       }
-        console.log(`  ✅ ${professions.length} professions seeded\n`);
-        } else {
-          console.log('  ⏭️  Skipping professions (table does not exist yet)\n');
-        }
-      } catch (error) {
+      console.log(`  ✅ ${professions.length} professions seeded\n`);
+      } else {
         console.log('  ⏭️  Skipping professions (table does not exist yet)\n');
       }
+    } catch (error) {
+      console.log('  ⏭️  Skipping professions (table does not exist yet)\n');
+    }
 
-      // 6. Seed Product Categories (10 categories)
-      try {
-        const [productCategoriesTable] = await queryInterface.sequelize.query(`
-          SELECT table_name 
-          FROM information_schema.tables 
-          WHERE table_name = 'product_categories' AND table_schema = 'public'
-        `);
-        
-        if (productCategoriesTable && productCategoriesTable.length > 0) {
-          console.log('📦 Seeding product categories...');
-          const productCategories = [
-            { name: 'Apparel', display_order: 1 },
-            { name: 'Outerwear', display_order: 2 },
-            { name: 'Footwear', display_order: 3 },
-            { name: 'Accessories', display_order: 4 },
-            { name: 'Electronics', display_order: 5 },
-            { name: 'Home Goods', display_order: 6 },
-            { name: 'Art & Prints', display_order: 7 },
-            { name: 'Books & Media', display_order: 8 },
-            { name: 'Heritage / Legacy Item', display_order: 9 },
-            { name: 'Cigar Lounge Essentials', display_order: 10 }
-          ];
+    // 6. Seed Product Categories (10 categories)
+    try {
+      const [productCategoriesTable] = await queryInterface.sequelize.query(`
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_name = 'product_categories' AND table_schema = 'public'
+      `);
+      
+      if (productCategoriesTable && productCategoriesTable.length > 0) {
+        console.log('📦 Seeding product categories...');
+        const productCategories = [
+          { name: 'Apparel', display_order: 1 },
+          { name: 'Outerwear', display_order: 2 },
+          { name: 'Footwear', display_order: 3 },
+          { name: 'Accessories', display_order: 4 },
+          { name: 'Electronics', display_order: 5 },
+          { name: 'Home Goods', display_order: 6 },
+          { name: 'Art & Prints', display_order: 7 },
+          { name: 'Books & Media', display_order: 8 },
+          { name: 'Heritage / Legacy Item', display_order: 9 },
+          { name: 'Cigar Lounge Essentials', display_order: 10 }
+        ];
 
-          for (const category of productCategories) {
-            await queryInterface.sequelize.query(`
-              INSERT INTO product_categories (name, display_order, created_at, updated_at)
-              VALUES (:name, :display_order, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-              ON CONFLICT (name) DO NOTHING
-            `, {
-              replacements: category
-            });
-          }
-          console.log(`  ✅ ${productCategories.length} product categories seeded\n`);
-        } else {
-          console.log('  ⏭️  Skipping product categories (table does not exist yet)\n');
+        for (const category of productCategories) {
+          await queryInterface.sequelize.query(`
+            INSERT INTO product_categories (name, display_order, created_at, updated_at)
+            VALUES (:name, :display_order, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ON CONFLICT (name) DO NOTHING
+          `, {
+            replacements: category
+          });
         }
-      } catch (error) {
+        console.log(`  ✅ ${productCategories.length} product categories seeded\n`);
+      } else {
         console.log('  ⏭️  Skipping product categories (table does not exist yet)\n');
       }
+    } catch (error) {
+      console.log('  ⏭️  Skipping product categories (table does not exist yet)\n');
+    }
 
-      console.log('✅ Foundational reference data seeding completed!');
+    console.log('✅ Foundational reference data seeding completed!');
   },
 
   async down(queryInterface, Sequelize) {
