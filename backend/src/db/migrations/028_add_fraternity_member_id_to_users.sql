@@ -10,6 +10,8 @@
 DO $$
 DECLARE
   constraint_name_var TEXT;
+  problematic_count INTEGER;
+  rec RECORD;
 BEGIN
   -- Add fraternity_member_id column to users table if it doesn't exist
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'users') THEN
@@ -124,15 +126,10 @@ BEGIN
     SET seller_id = NULL, steward_id = NULL 
     WHERE role = 'PROMOTER' AND (seller_id IS NOT NULL OR steward_id IS NOT NULL);
     
-    -- Fix any STEWARD users missing fraternity_member_id
-    -- If we can't find fraternity_member_id for a STEWARD, we need to handle it
-    -- For now, we'll skip adding the constraint if there are STEWARD users without fraternity_member_id
-    
-    -- Only add constraint if no data violates it
-    -- First, let's check for problematic rows and log them
-    DO $$
+    -- Check for problematic rows and log them
     DECLARE
       problematic_count INTEGER;
+      rec RECORD;
     BEGIN
       SELECT COUNT(*) INTO problematic_count
       FROM users WHERE NOT (
@@ -177,8 +174,8 @@ BEGIN
             rec.id, rec.email, rec.role, rec.fraternity_member_id, rec.seller_id, rec.promoter_id, rec.steward_id, rec.onboarding_status;
         END LOOP;
       END IF;
-    END $$;
     
+    -- Only add constraint if no data violates it
     IF NOT EXISTS (
       SELECT 1 FROM users WHERE NOT (
         (role = 'GUEST' AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL AND (
