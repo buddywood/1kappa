@@ -24,16 +24,28 @@
  * Helper function to check if a table exists
  */
 async function tableExists(queryInterface, tableName) {
-  const results = await queryInterface.sequelize.query(`
-    SELECT EXISTS (
-      SELECT FROM information_schema.tables 
-      WHERE table_schema = 'public' 
-      AND table_name = '${tableName}'
-    ) as exists
-  `, {
-    type: queryInterface.sequelize.QueryTypes.SELECT
-  });
-  return results && results.length > 0 && results[0].exists === true;
+  try {
+    const [results] = await queryInterface.sequelize.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = :tableName
+      ) as exists
+    `, {
+      replacements: { tableName },
+      type: queryInterface.sequelize.QueryTypes.SELECT
+    });
+    // PostgreSQL returns boolean as 't'/'f' strings or true/false depending on driver
+    if (!results || results.length === 0) {
+      return false;
+    }
+    const existsValue = results[0].exists;
+    return existsValue === true || existsValue === 't' || existsValue === 1;
+  } catch (error) {
+    // If query fails, assume table doesn't exist
+    console.warn(`Warning: Error checking if table ${tableName} exists:`, error.message);
+    return false;
+  }
 }
 
 module.exports = {
