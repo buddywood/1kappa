@@ -1,4 +1,4 @@
-import { Sequelize } from 'sequelize';
+import { Sequelize, QueryTypes } from 'sequelize';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
@@ -98,7 +98,7 @@ async function getDatabaseColumns(tableName: string): Promise<string[]> {
     ORDER BY ordinal_position
   `, {
     replacements: { tableName },
-    type: Sequelize.QueryTypes.SELECT
+    type: QueryTypes.SELECT
   }) as any[];
 
   return results.map((r: any) => r.column_name);
