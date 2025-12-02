@@ -235,14 +235,16 @@ INSERT INTO roles (name, description, display_order) VALUES
 ON CONFLICT (name) DO NOTHING;
 
 -- Stewards table - must be created before users table (users references stewards)
+-- Note: Uses fraternity_member_id from the start (not member_id)
 CREATE TABLE IF NOT EXISTS stewards (
   id SERIAL PRIMARY KEY,
-  fraternity_member_id INTEGER NOT NULL UNIQUE REFERENCES fraternity_members(id),
+  fraternity_member_id INTEGER NOT NULL REFERENCES fraternity_members(id),
   sponsoring_chapter_id INTEGER NOT NULL REFERENCES chapters(id),
   status VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
   verification_status VARCHAR(20) DEFAULT 'PENDING' CHECK (verification_status IN ('PENDING', 'VERIFIED', 'FAILED', 'MANUAL_REVIEW')),
   verification_date TIMESTAMP,
   verification_notes TEXT,
+  stripe_account_id VARCHAR(255),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
