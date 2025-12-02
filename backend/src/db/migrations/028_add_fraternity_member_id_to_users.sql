@@ -113,7 +113,72 @@ BEGIN
       RAISE NOTICE 'Dropped check_role_foreign_key constraint';
     END IF;
 
+    -- Additional data fixes to ensure all rows comply
+    -- Fix any SELLER users that might have invalid foreign keys
+    UPDATE users 
+    SET promoter_id = NULL, steward_id = NULL 
+    WHERE role = 'SELLER' AND (promoter_id IS NOT NULL OR steward_id IS NOT NULL);
+    
+    -- Fix any PROMOTER users missing fraternity_member_id or having invalid foreign keys
+    UPDATE users 
+    SET seller_id = NULL, steward_id = NULL 
+    WHERE role = 'PROMOTER' AND (seller_id IS NOT NULL OR steward_id IS NOT NULL);
+    
+    -- Fix any STEWARD users missing fraternity_member_id
+    -- If we can't find fraternity_member_id for a STEWARD, we need to handle it
+    -- For now, we'll skip adding the constraint if there are STEWARD users without fraternity_member_id
+    
     -- Only add constraint if no data violates it
+    -- First, let's check for problematic rows and log them
+    DO $$
+    DECLARE
+      problematic_count INTEGER;
+    BEGIN
+      SELECT COUNT(*) INTO problematic_count
+      FROM users WHERE NOT (
+        (role = 'GUEST' AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL AND (
+          (fraternity_member_id IS NOT NULL) OR 
+          (fraternity_member_id IS NULL AND onboarding_status != 'ONBOARDING_FINISHED')
+        )) OR
+        (role = 'SELLER' AND seller_id IS NOT NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
+        (role = 'PROMOTER' AND promoter_id IS NOT NULL AND fraternity_member_id IS NOT NULL AND seller_id IS NULL AND steward_id IS NULL) OR
+        (role = 'STEWARD' AND steward_id IS NOT NULL AND fraternity_member_id IS NOT NULL AND (
+          (seller_id IS NULL AND promoter_id IS NULL) OR
+          (seller_id IS NOT NULL AND promoter_id IS NULL) OR
+          (seller_id IS NULL AND promoter_id IS NOT NULL) OR
+          (seller_id IS NOT NULL AND promoter_id IS NOT NULL)
+        )) OR
+        (role = 'ADMIN' AND fraternity_member_id IS NULL AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL)
+      );
+      
+      IF problematic_count > 0 THEN
+        RAISE WARNING 'Found % rows that would violate check_role_foreign_key constraint', problematic_count;
+        -- Log the problematic rows for debugging
+        RAISE NOTICE 'Problematic rows:';
+        FOR rec IN 
+          SELECT id, email, role, fraternity_member_id, seller_id, promoter_id, steward_id, onboarding_status
+          FROM users WHERE NOT (
+            (role = 'GUEST' AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL AND (
+              (fraternity_member_id IS NOT NULL) OR 
+              (fraternity_member_id IS NULL AND onboarding_status != 'ONBOARDING_FINISHED')
+            )) OR
+            (role = 'SELLER' AND seller_id IS NOT NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
+            (role = 'PROMOTER' AND promoter_id IS NOT NULL AND fraternity_member_id IS NOT NULL AND seller_id IS NULL AND steward_id IS NULL) OR
+            (role = 'STEWARD' AND steward_id IS NOT NULL AND fraternity_member_id IS NOT NULL AND (
+              (seller_id IS NULL AND promoter_id IS NULL) OR
+              (seller_id IS NOT NULL AND promoter_id IS NULL) OR
+              (seller_id IS NULL AND promoter_id IS NOT NULL) OR
+              (seller_id IS NOT NULL AND promoter_id IS NOT NULL)
+            )) OR
+            (role = 'ADMIN' AND fraternity_member_id IS NULL AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL)
+          )
+        LOOP
+          RAISE NOTICE '  User ID: %, Email: %, Role: %, fraternity_member_id: %, seller_id: %, promoter_id: %, steward_id: %, onboarding_status: %', 
+            rec.id, rec.email, rec.role, rec.fraternity_member_id, rec.seller_id, rec.promoter_id, rec.steward_id, rec.onboarding_status;
+        END LOOP;
+      END IF;
+    END $$;
+    
     IF NOT EXISTS (
       SELECT 1 FROM users WHERE NOT (
         (role = 'GUEST' AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL AND (
@@ -152,6 +217,8 @@ BEGIN
       RAISE NOTICE 'Recreated check_role_foreign_key constraint allowing GUEST users to have fraternity_member_id';
     ELSE
       RAISE WARNING 'Cannot add check_role_foreign_key constraint - existing data would violate it. Please review and fix data manually.';
+      -- Don't fail the migration, just skip adding the constraint
+      -- The constraint can be added later after data is fixed
     END IF;
   END IF;
 END $$;
