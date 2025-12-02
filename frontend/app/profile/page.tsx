@@ -399,7 +399,7 @@ function ProfilePageContent() {
       // Validate image dimensions
       const reader = new FileReader();
       reader.onloadend = () => {
-        const img = new Image();
+        const img = new window.Image();
         img.onload = () => {
           const MIN_DIMENSION = 200;
           const MAX_DIMENSION = 2000;
