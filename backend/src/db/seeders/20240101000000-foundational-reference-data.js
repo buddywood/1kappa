@@ -20,34 +20,19 @@
  * and are seeded separately via seed-chapters.ts script.
  */
 
-/**
- * Helper function to check if a table exists
- * Uses the same pattern as the chapters seeder - direct query without QueryTypes
- */
-async function tableExists(queryInterface, tableName) {
-  try {
-    const tablesResult = await queryInterface.sequelize.query(`
-      SELECT table_name 
-      FROM information_schema.tables 
-      WHERE table_name = :tableName AND table_schema = 'public'
-    `, {
-      replacements: { tableName }
-    });
-    // Handle both array of arrays and array of objects
-    const results = Array.isArray(tablesResult[0]) ? tablesResult[0] : tablesResult;
-    return results && results.length > 0;
-  } catch (error) {
-    // If query fails, assume table doesn't exist
-    return false;
-  }
-}
-
 module.exports = {
   async up(queryInterface, Sequelize) {
     console.log('🌱 Seeding foundational reference data...\n');
 
     // 1. Seed Roles
-    if (await tableExists(queryInterface, 'roles')) {
+    try {
+      const [rolesTable] = await queryInterface.sequelize.query(`
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_name = 'roles' AND table_schema = 'public'
+      `);
+      
+      if (rolesTable && rolesTable.length > 0) {
       console.log('📋 Seeding roles...');
       const roles = [
         { name: 'ADMIN', description: 'System administrator with full access', display_order: 1 },
@@ -67,12 +52,22 @@ module.exports = {
         });
       }
       console.log('  ✅ Roles seeded\n');
-    } else {
+      } else {
+        console.log('  ⏭️  Skipping roles (table does not exist yet)\n');
+      }
+    } catch (error) {
       console.log('  ⏭️  Skipping roles (table does not exist yet)\n');
     }
 
     // 2. Seed Event Types
-    if (await tableExists(queryInterface, 'event_types')) {
+    try {
+      const [eventTypesTable] = await queryInterface.sequelize.query(`
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_name = 'event_types' AND table_schema = 'public'
+      `);
+      
+      if (eventTypesTable && eventTypesTable.length > 0) {
       console.log('📅 Seeding event types...');
       const eventTypes = [
         { enum: 'social', description: 'Social gatherings and mixers', display_order: 1, is_active: true },
@@ -96,12 +91,22 @@ module.exports = {
         });
       }
       console.log('  ✅ Event types seeded\n');
-    } else {
+      } else {
+        console.log('  ⏭️  Skipping event types (table does not exist yet)\n');
+      }
+    } catch (error) {
       console.log('  ⏭️  Skipping event types (table does not exist yet)\n');
     }
 
     // 3. Seed Event Audience Types
-    if (await tableExists(queryInterface, 'event_audience_types')) {
+    try {
+      const [eventAudienceTypesTable] = await queryInterface.sequelize.query(`
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_name = 'event_audience_types' AND table_schema = 'public'
+      `);
+      
+      if (eventAudienceTypesTable && eventAudienceTypesTable.length > 0) {
       console.log('👥 Seeding event audience types...');
       const eventAudienceTypes = [
         { enum: 'all_members', description: 'All fraternity members', display_order: 1, is_active: true },
@@ -119,12 +124,22 @@ module.exports = {
         });
       }
       console.log('  ✅ Event audience types seeded\n');
-    } else {
+      } else {
+        console.log('  ⏭️  Skipping event audience types (table does not exist yet)\n');
+      }
+    } catch (error) {
       console.log('  ⏭️  Skipping event audience types (table does not exist yet)\n');
     }
 
     // 4. Seed Industries (50 industries)
-    if (await tableExists(queryInterface, 'industries')) {
+    try {
+      const [industriesTable] = await queryInterface.sequelize.query(`
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_name = 'industries' AND table_schema = 'public'
+      `);
+      
+      if (industriesTable && industriesTable.length > 0) {
       console.log('🏭 Seeding industries...');
       const industries = [
         'Technology', 'Finance', 'Healthcare', 'Education', 'Legal', 'Consulting', 'Real Estate',
@@ -150,12 +165,22 @@ module.exports = {
         });
       }
       console.log(`  ✅ ${industries.length} industries seeded\n`);
-    } else {
+      } else {
+        console.log('  ⏭️  Skipping industries (table does not exist yet)\n');
+      }
+    } catch (error) {
       console.log('  ⏭️  Skipping industries (table does not exist yet)\n');
     }
 
     // 5. Seed Professions (32 professions)
-    if (await tableExists(queryInterface, 'professions')) {
+    try {
+      const [professionsTable] = await queryInterface.sequelize.query(`
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_name = 'professions' AND table_schema = 'public'
+      `);
+      
+      if (professionsTable && professionsTable.length > 0) {
       console.log('💼 Seeding professions...');
       const professions = [
         'Software Engineer', 'Data Scientist', 'Product Manager', 'Business Analyst',
@@ -182,9 +207,19 @@ module.exports = {
         } else {
           console.log('  ⏭️  Skipping professions (table does not exist yet)\n');
         }
+      } catch (error) {
+        console.log('  ⏭️  Skipping professions (table does not exist yet)\n');
+      }
 
-        // 6. Seed Product Categories (10 categories)
-        if (await tableExists(queryInterface, 'product_categories')) {
+      // 6. Seed Product Categories (10 categories)
+      try {
+        const [productCategoriesTable] = await queryInterface.sequelize.query(`
+          SELECT table_name 
+          FROM information_schema.tables 
+          WHERE table_name = 'product_categories' AND table_schema = 'public'
+        `);
+        
+        if (productCategoriesTable && productCategoriesTable.length > 0) {
           console.log('📦 Seeding product categories...');
           const productCategories = [
             { name: 'Apparel', display_order: 1 },
@@ -212,8 +247,11 @@ module.exports = {
         } else {
           console.log('  ⏭️  Skipping product categories (table does not exist yet)\n');
         }
+      } catch (error) {
+        console.log('  ⏭️  Skipping product categories (table does not exist yet)\n');
+      }
 
-        console.log('✅ Foundational reference data seeding completed!');
+      console.log('✅ Foundational reference data seeding completed!');
   },
 
   async down(queryInterface, Sequelize) {
@@ -222,21 +260,11 @@ module.exports = {
     
     // Only delete if tables exist (use try-catch to handle missing tables gracefully)
     try {
-      if (await tableExists(queryInterface, 'product_categories')) {
-        await queryInterface.sequelize.query('DELETE FROM product_categories');
-      }
-      if (await tableExists(queryInterface, 'professions')) {
-        await queryInterface.sequelize.query('DELETE FROM professions');
-      }
-      if (await tableExists(queryInterface, 'industries')) {
-        await queryInterface.sequelize.query('DELETE FROM industries');
-      }
-      if (await tableExists(queryInterface, 'event_audience_types')) {
-        await queryInterface.sequelize.query('DELETE FROM event_audience_types');
-      }
-      if (await tableExists(queryInterface, 'event_types')) {
-        await queryInterface.sequelize.query('DELETE FROM event_types');
-      }
+      await queryInterface.sequelize.query('DELETE FROM product_categories').catch(() => {});
+      await queryInterface.sequelize.query('DELETE FROM professions').catch(() => {});
+      await queryInterface.sequelize.query('DELETE FROM industries').catch(() => {});
+      await queryInterface.sequelize.query('DELETE FROM event_audience_types').catch(() => {});
+      await queryInterface.sequelize.query('DELETE FROM event_types').catch(() => {});
       // Note: Don't delete roles as they might be referenced by users
     } catch (error) {
       console.warn('Warning: Error during down migration:', error.message);
