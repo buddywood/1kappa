@@ -6,40 +6,50 @@
  */
 module.exports = {
   async up(queryInterface, Sequelize) {
+    console.log('🔍 Checking stewards table structure...');
+    
     // Check if stewards table exists
-    const [tablesResult] = await queryInterface.sequelize.query(`
+    const tablesResult = await queryInterface.sequelize.query(`
       SELECT table_name 
       FROM information_schema.tables 
       WHERE table_name = 'stewards'
     `);
 
-    if (tablesResult.length === 0) {
-      console.log('stewards table does not exist, skipping');
+    if (tablesResult[0].length === 0) {
+      console.log('⚠️  stewards table does not exist, skipping');
       return;
     }
 
+    console.log('✓ stewards table exists');
+
     // Check if fraternity_member_id column exists
-    const [columnsResult] = await queryInterface.sequelize.query(`
+    const columnsResult = await queryInterface.sequelize.query(`
       SELECT column_name 
       FROM information_schema.columns 
       WHERE table_name = 'stewards' AND column_name = 'fraternity_member_id'
     `);
 
-    if (columnsResult.length > 0) {
-      console.log('stewards.fraternity_member_id column already exists');
+    console.log(`  - fraternity_member_id column: ${columnsResult[0].length > 0 ? 'EXISTS' : 'MISSING'}`);
+
+    if (columnsResult[0].length > 0) {
+      console.log('✓ stewards.fraternity_member_id column already exists, skipping migration');
       return;
     }
 
     // Check if member_id exists (old column name)
-    const [oldColumnsResult] = await queryInterface.sequelize.query(`
+    const oldColumnsResult = await queryInterface.sequelize.query(`
       SELECT column_name 
       FROM information_schema.columns 
       WHERE table_name = 'stewards' AND column_name = 'member_id'
     `);
 
-    if (oldColumnsResult.length > 0) {
+    console.log(`  - member_id column: ${oldColumnsResult[0].length > 0 ? 'EXISTS' : 'MISSING'}`);
+
+    if (oldColumnsResult[0].length > 0) {
+      console.log('🔄 Renaming member_id to fraternity_member_id...');
+      
       // Drop constraints before renaming
-      const [constraintsResult] = await queryInterface.sequelize.query(`
+      const constraintsResult = await queryInterface.sequelize.query(`
         SELECT conname
         FROM pg_constraint
         WHERE conrelid = 'stewards'::regclass
@@ -47,7 +57,9 @@ module.exports = {
         AND conname LIKE '%member_id%'
       `);
 
-      for (const constraint of constraintsResult) {
+      console.log(`  - Found ${constraintsResult[0].length} constraints to drop`);
+
+      for (const constraint of constraintsResult[0]) {
         await queryInterface.sequelize.query(`
           ALTER TABLE stewards DROP CONSTRAINT IF EXISTS ${queryInterface.quoteIdentifier(constraint.conname)}
         `);
@@ -63,13 +75,13 @@ module.exports = {
       `);
 
       // Recreate foreign key constraint
-      const [fraternityMembersTableResult] = await queryInterface.sequelize.query(`
+      const fraternityMembersTableResult = await queryInterface.sequelize.query(`
         SELECT table_name 
         FROM information_schema.tables 
         WHERE table_name = 'fraternity_members'
       `);
 
-      if (fraternityMembersTableResult.length > 0) {
+      if (fraternityMembersTableResult[0].length > 0) {
         await queryInterface.addConstraint('stewards', {
           fields: ['fraternity_member_id'],
           type: 'foreign key',
@@ -80,14 +92,15 @@ module.exports = {
           },
           onDelete: 'RESTRICT'
         });
+        console.log('  ✓ Recreated foreign key constraint');
       } else {
-        const [membersTableResult] = await queryInterface.sequelize.query(`
+        const membersTableResult = await queryInterface.sequelize.query(`
           SELECT table_name 
           FROM information_schema.tables 
           WHERE table_name = 'members'
         `);
 
-        if (membersTableResult.length > 0) {
+        if (membersTableResult[0].length > 0) {
           await queryInterface.addConstraint('stewards', {
             fields: ['fraternity_member_id'],
             type: 'foreign key',
@@ -131,15 +144,15 @@ module.exports = {
         await queryInterface.addIndex('stewards', ['fraternity_member_id'], {
           name: 'idx_stewards_fraternity_member_id'
         });
-        console.log('Added stewards.fraternity_member_id column');
+        console.log('✓ Added stewards.fraternity_member_id column');
       } else {
-        const [membersTableResult2] = await queryInterface.sequelize.query(`
+        const membersTableResult2 = await queryInterface.sequelize.query(`
           SELECT table_name 
           FROM information_schema.tables 
           WHERE table_name = 'members'
         `);
 
-        if (membersTableResult2.length > 0) {
+        if (membersTableResult2[0].length > 0) {
           await queryInterface.addColumn('stewards', 'fraternity_member_id', {
             type: Sequelize.INTEGER,
             allowNull: false,
