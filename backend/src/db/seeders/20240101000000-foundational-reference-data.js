@@ -23,7 +23,7 @@
 /**
  * Helper function to check if a table exists
  */
-async function tableExists(queryInterface, tableName) {
+async function tableExists(queryInterface, Sequelize, tableName) {
   try {
     const [results] = await queryInterface.sequelize.query(`
       SELECT EXISTS (
@@ -33,7 +33,7 @@ async function tableExists(queryInterface, tableName) {
       ) as exists
     `, {
       replacements: { tableName },
-      type: queryInterface.sequelize.QueryTypes.SELECT
+      type: Sequelize.QueryTypes.SELECT
     });
     // PostgreSQL returns boolean as 't'/'f' strings or true/false depending on driver
     if (!results || results.length === 0) {
@@ -53,7 +53,7 @@ module.exports = {
     console.log('🌱 Seeding foundational reference data...\n');
 
     // 1. Seed Roles
-    if (await tableExists(queryInterface, 'roles')) {
+    if (await tableExists(queryInterface, Sequelize, 'roles')) {
       console.log('📋 Seeding roles...');
       const roles = [
         { name: 'ADMIN', description: 'System administrator with full access', display_order: 1 },
@@ -78,7 +78,7 @@ module.exports = {
     }
 
     // 2. Seed Event Types
-    if (await tableExists(queryInterface, 'event_types')) {
+    if (await tableExists(queryInterface, Sequelize, 'event_types')) {
       console.log('📅 Seeding event types...');
       const eventTypes = [
         { enum: 'social', description: 'Social gatherings and mixers', display_order: 1, is_active: true },
@@ -107,7 +107,7 @@ module.exports = {
     }
 
     // 3. Seed Event Audience Types
-    if (await tableExists(queryInterface, 'event_audience_types')) {
+    if (await tableExists(queryInterface, Sequelize, 'event_audience_types')) {
       console.log('👥 Seeding event audience types...');
       const eventAudienceTypes = [
         { enum: 'all_members', description: 'All fraternity members', display_order: 1, is_active: true },
@@ -130,7 +130,7 @@ module.exports = {
     }
 
     // 4. Seed Industries (50 industries)
-    if (await tableExists(queryInterface, 'industries')) {
+    if (await tableExists(queryInterface, Sequelize, 'industries')) {
       console.log('🏭 Seeding industries...');
       const industries = [
         'Technology', 'Finance', 'Healthcare', 'Education', 'Legal', 'Consulting', 'Real Estate',
@@ -161,7 +161,7 @@ module.exports = {
     }
 
     // 5. Seed Professions (32 professions)
-    if (await tableExists(queryInterface, 'professions')) {
+    if (await tableExists(queryInterface, Sequelize, 'professions')) {
       console.log('💼 Seeding professions...');
       const professions = [
         'Software Engineer', 'Data Scientist', 'Product Manager', 'Business Analyst',
@@ -190,7 +190,7 @@ module.exports = {
         }
 
         // 6. Seed Product Categories (10 categories)
-        if (await tableExists(queryInterface, 'product_categories')) {
+        if (await tableExists(queryInterface, Sequelize, 'product_categories')) {
           console.log('📦 Seeding product categories...');
           const productCategories = [
             { name: 'Apparel', display_order: 1 },
