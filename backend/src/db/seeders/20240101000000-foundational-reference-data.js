@@ -22,14 +22,22 @@
 
 /**
  * Helper function to check if a table exists
- * Uses queryInterface.describeTable which is more reliable than raw queries
+ * Uses the same pattern as the chapters seeder - direct query without QueryTypes
  */
 async function tableExists(queryInterface, tableName) {
   try {
-    await queryInterface.describeTable(tableName);
-    return true;
+    const tablesResult = await queryInterface.sequelize.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_name = :tableName AND table_schema = 'public'
+    `, {
+      replacements: { tableName }
+    });
+    // Handle both array of arrays and array of objects
+    const results = Array.isArray(tablesResult[0]) ? tablesResult[0] : tablesResult;
+    return results && results.length > 0;
   } catch (error) {
-    // If describeTable fails, table doesn't exist
+    // If query fails, assume table doesn't exist
     return false;
   }
 }
@@ -212,11 +220,27 @@ module.exports = {
     // Remove seeded data (optional - usually you'd keep reference data)
     console.log('⚠️  Removing foundational reference data...');
     
-    await queryInterface.sequelize.query('DELETE FROM professions');
-    await queryInterface.sequelize.query('DELETE FROM industries');
-    await queryInterface.sequelize.query('DELETE FROM event_audience_types');
-    await queryInterface.sequelize.query('DELETE FROM event_types');
-    // Note: Don't delete roles as they might be referenced by users
+    // Only delete if tables exist (use try-catch to handle missing tables gracefully)
+    try {
+      if (await tableExists(queryInterface, 'product_categories')) {
+        await queryInterface.sequelize.query('DELETE FROM product_categories');
+      }
+      if (await tableExists(queryInterface, 'professions')) {
+        await queryInterface.sequelize.query('DELETE FROM professions');
+      }
+      if (await tableExists(queryInterface, 'industries')) {
+        await queryInterface.sequelize.query('DELETE FROM industries');
+      }
+      if (await tableExists(queryInterface, 'event_audience_types')) {
+        await queryInterface.sequelize.query('DELETE FROM event_audience_types');
+      }
+      if (await tableExists(queryInterface, 'event_types')) {
+        await queryInterface.sequelize.query('DELETE FROM event_types');
+      }
+      // Note: Don't delete roles as they might be referenced by users
+    } catch (error) {
+      console.warn('Warning: Error during down migration:', error.message);
+    }
     
     console.log('✅ Foundational reference data removed');
   }
