@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import type { Router as ExpressRouter } from 'express';
 import { CognitoIdentityProviderClient, AdminCreateUserCommand, AdminSetUserPasswordCommand, AdminGetUserCommand } from '@aws-sdk/client-cognito-identity-provider';
 import { z } from 'zod';
-import { getSellerByInvitationToken, createUser, linkUserToSeller, updateSellerInvitationToken, getUserByEmail } from '../db/queries';
+import { getSellerByInvitationToken, createUser, linkUserToSeller, updateSellerInvitationToken, getUserByEmail } from '../db/queries-sequelize';
 
 const router: ExpressRouter = Router();
 

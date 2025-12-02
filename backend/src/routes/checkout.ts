@@ -1,8 +1,7 @@
 import { Router, Request, Response } from 'express';
 import type { Router as ExpressRouter } from 'express';
-import { getProductById, getOrderByStripeSessionId, getUserByEmail, createUser, getUserByCognitoSub } from '../db/queries';
+import { getProductById, getOrderByStripeSessionId, getUserByEmail, createUser, getUserByCognitoSub, createOrder } from '../db/queries-sequelize';
 import { createCheckoutSession } from '../services/stripe';
-import { createOrder } from '../db/queries';
 import { authenticateOptional } from '../middleware/auth';
 import { CognitoIdentityProviderClient, AdminCreateUserCommand, AdminSetUserPasswordCommand, AdminGetUserCommand, InitiateAuthCommand, AuthFlowType } from '@aws-sdk/client-cognito-identity-provider';
 import { z } from 'zod';
@@ -296,7 +295,7 @@ router.post('/:productId', authenticateOptional, async (req: Request, res: Respo
     }
 
     // Get seller to check status and get Stripe account
-    const { getSellerById } = await import('../db/queries');
+    const { getSellerById } = await import('../db/queries-sequelize');
     const seller = await getSellerById(product.seller_id);
     
     if (!seller) {
@@ -323,7 +322,7 @@ router.post('/:productId', authenticateOptional, async (req: Request, res: Respo
       });
 
       // Create notification for seller about blocked purchase
-      const { createNotification } = await import('../db/queries-notifications');
+      const { createNotification } = await import('../db/queries-notifications-sequelize');
       createNotification({
         user_email: seller.email,
         type: 'PURCHASE_BLOCKED',
@@ -439,7 +438,7 @@ router.get('/session/:sessionId', async (req: Request, res: Response) => {
     const product = await getProductById(order.product_id);
 
     // Get user email from user_id
-    const { getUserById } = await import('../db/queries');
+    const { getUserById } = await import('../db/queries-sequelize');
     const buyer = order.user_id ? await getUserById(order.user_id) : null;
 
     res.json({

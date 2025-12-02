@@ -1,7 +1,6 @@
 import { Router, Request, Response } from 'express';
 import type { Router as ExpressRouter } from 'express';
-import { getProductById } from '../db/queries';
-import { getSellerById } from '../db/queries';
+import { getProductById, getSellerById } from '../db/queries-sequelize';
 import { calculateProductShipping } from '../services/shipping';
 import { z } from 'zod';
 

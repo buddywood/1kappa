@@ -7,7 +7,7 @@ import { sendWelcomeEmail } from '../services/email';
 import { authenticate } from '../middleware/auth';
 import { z } from 'zod';
 import { CognitoIdentityProviderClient, SignUpCommand, ConfirmSignUpCommand, ForgotPasswordCommand, ConfirmForgotPasswordCommand, AdminGetUserCommand, AdminConfirmSignUpCommand, ResendConfirmationCodeCommand, ListUsersCommand } from '@aws-sdk/client-cognito-identity-provider';
-import { getUserByCognitoSub, createUser, linkUserToMember, updateUserOnboardingStatusByCognitoSub, upsertUserOnLogin } from '../db/queries';
+import { getUserByCognitoSub, createUser, linkUserToMember, updateUserOnboardingStatusByCognitoSub, upsertUserOnLogin } from '../db/queries-sequelize';
 import { authenticateUser, refreshUserTokens, verifyCognitoToken, extractUserInfoFromToken } from '../services/cognito';
 
 const router: ExpressRouter = Router();
@@ -1628,7 +1628,28 @@ const memberUpdateSchema = z.object({
   social_links: z.record(z.string()).optional(),
 });
 
-router.put('/profile', authenticate, upload.single('headshot'), async (req: Request, res: Response) => {
+router.put('/profile', authenticate, upload.single('headshot'), (err: any, req: Request, res: Response, next: any) => {
+  // Handle multer errors (file type, size, etc.)
+  if (err) {
+    if (err.message && err.message.includes('Invalid file type')) {
+      return res.status(400).json({ 
+        error: 'Invalid file type. Only JPEG, PNG, and WebP images are allowed.',
+        code: 'INVALID_FILE_TYPE'
+      });
+    }
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ 
+        error: 'File is too large. Maximum file size is 2MB.',
+        code: 'FILE_TOO_LARGE'
+      });
+    }
+    return res.status(400).json({ 
+      error: err.message || 'File upload error',
+      code: 'UPLOAD_ERROR'
+    });
+  }
+  next();
+}, async (req: Request, res: Response) => {
   try {
     if (!req.user) {
       return res.status(401).json({ error: 'Unauthorized' });

@@ -6,7 +6,7 @@ import {
   markNotificationAsRead,
   markAllNotificationsAsRead,
   deleteNotification,
-} from '../db/queries-notifications';
+} from '../db/queries-notifications-sequelize';
 import { z } from 'zod';
 
 const router: ExpressRouter = Router();

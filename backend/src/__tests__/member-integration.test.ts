@@ -8,7 +8,7 @@ import promotersRouter from '../routes/promoters';
 import pool from '../db/connection';
 
 // Mock the database queries
-jest.mock('../db/queries', () => ({
+jest.mock('../db/queries-sequelize', () => ({
   getMemberById: jest.fn(),
   updateMemberVerification: jest.fn(),
   createStewardListing: jest.fn(),
@@ -124,7 +124,7 @@ describe('Member Role Integration Tests', () => {
 
   describe('End-to-End: Member Registration → Verification → Dashboard Access', () => {
     it('should allow user to register, get verified, and access dashboard features', async () => {
-      const { getMemberById, updateMemberVerification } = require('../db/queries');
+      const { getMemberById, updateMemberVerification } = require('../db/queries-sequelize');
       
       // Step 1: Member profile exists (after registration)
       const mockMember = {
@@ -151,7 +151,7 @@ describe('Member Role Integration Tests', () => {
       getMemberById.mockResolvedValue(verifiedMember);
 
       // Mock getUserByCognitoSub to return user with member link
-      require('../db/queries').getUserByCognitoSub.mockResolvedValue({
+      require('../db/queries-sequelize').getUserByCognitoSub.mockResolvedValue({
         id: 1,
         cognito_sub: 'test-cognito-sub',
         email: verifiedMember.email,
@@ -201,7 +201,7 @@ describe('Member Role Integration Tests', () => {
       expect(connectResponse.body[0]).toHaveProperty('verification_status', 'VERIFIED');
 
       // Step 5: Member can claim steward listings
-      const { getStewardListingById, claimStewardListing } = require('../db/queries');
+      const { getStewardListingById, claimStewardListing } = require('../db/queries-sequelize');
       const mockListing = {
         id: 1,
         steward_id: 1,
@@ -213,7 +213,7 @@ describe('Member Role Integration Tests', () => {
       claimStewardListing.mockResolvedValue({ ...mockListing, status: 'CLAIMED' });
 
       // Mock getUserByCognitoSub and pool.query for getFraternityMemberIdFromRequest
-      require('../db/queries').getUserByCognitoSub.mockResolvedValue({
+      require('../db/queries-sequelize').getUserByCognitoSub.mockResolvedValue({
         id: 1,
         cognito_sub: 'test-cognito-sub',
         email: 'test@example.com',
@@ -241,7 +241,7 @@ describe('Member Role Integration Tests', () => {
     it('should allow guest to view steward marketplace but require member for claiming', async () => {
       // Guest can view public marketplace (tested in guest-access.test.ts)
       // Member can claim
-      const { getStewardListingById, claimStewardListing, getMemberById } = require('../db/queries');
+      const { getStewardListingById, claimStewardListing, getMemberById } = require('../db/queries-sequelize');
       
       const mockListing = {
         id: 1,
@@ -260,7 +260,7 @@ describe('Member Role Integration Tests', () => {
       claimStewardListing.mockResolvedValue({ ...mockListing, status: 'CLAIMED' });
 
       // Mock getUserByCognitoSub and pool.query for getFraternityMemberIdFromRequest
-      require('../db/queries').getUserByCognitoSub.mockResolvedValue({
+      require('../db/queries-sequelize').getUserByCognitoSub.mockResolvedValue({
         id: 1,
         cognito_sub: 'test-cognito-sub',
         email: 'test@example.com',
@@ -286,7 +286,7 @@ describe('Member Role Integration Tests', () => {
 
   describe('End-to-End: Member → Seller/Promoter/Steward Transitions', () => {
     it('should allow member to apply for seller role', async () => {
-      const { createSeller, getMemberById } = require('../db/queries');
+      const { createSeller, getMemberById } = require('../db/queries-sequelize');
       
       const mockMember = {
         id: 1,
@@ -308,7 +308,7 @@ describe('Member Role Integration Tests', () => {
         .mockResolvedValueOnce({ rows: [{ id: 1, verification_status: 'VERIFIED' }] }); // Member verification check (line 212-215)
 
       // Mock linkUserToSeller and getUserByEmail for auto-approval
-      const { linkUserToSeller, getUserByEmail, updateSellerInvitationToken } = require('../db/queries');
+      const { linkUserToSeller, getUserByEmail, updateSellerInvitationToken } = require('../db/queries-sequelize');
       linkUserToSeller.mockResolvedValue(undefined);
       getUserByEmail.mockResolvedValue(null); // No existing user
       updateSellerInvitationToken.mockResolvedValue(undefined);
@@ -329,7 +329,7 @@ describe('Member Role Integration Tests', () => {
     });
 
     it('should allow member to apply for promoter role', async () => {
-      const { createPromoter, getMemberById } = require('../db/queries');
+      const { createPromoter, getMemberById } = require('../db/queries-sequelize');
       
       const mockMember = {
         id: 1,
@@ -361,7 +361,7 @@ describe('Member Role Integration Tests', () => {
     });
 
     it('should allow member to apply for steward role', async () => {
-      const { createSteward, getMemberById } = require('../db/queries');
+      const { createSteward, getMemberById } = require('../db/queries-sequelize');
       
       const mockMember = {
         id: 1,
@@ -383,11 +383,11 @@ describe('Member Role Integration Tests', () => {
       createSteward.mockResolvedValue(mockSteward);
       
       // Mock getStewardByFraternityMemberId (checks if steward already exists)
-      const { getStewardByFraternityMemberId } = require('../db/queries');
+      const { getStewardByFraternityMemberId } = require('../db/queries-sequelize');
       getStewardByFraternityMemberId.mockResolvedValue(null); // No existing steward
       
       // Mock getUserByCognitoSub and pool.query for getFraternityMemberIdFromRequest
-      const queries = require('../db/queries');
+      const queries = require('../db/queries-sequelize');
       queries.getUserByCognitoSub.mockResolvedValue({
         id: 1,
         cognito_sub: 'test-cognito-sub',
@@ -400,11 +400,11 @@ describe('Member Role Integration Tests', () => {
       });
 
       // Mock getStewardById (called after update)
-      const { getStewardById } = require('../db/queries');
+      const { getStewardById } = require('../db/queries-sequelize');
       getStewardById.mockResolvedValue({ ...mockSteward, status: 'APPROVED' });
 
       // Mock linkUserToSteward
-      const { linkUserToSteward } = require('../db/queries');
+      const { linkUserToSteward } = require('../db/queries-sequelize');
       linkUserToSteward.mockResolvedValue(undefined);
 
       // Mock pool.query for getFraternityMemberId (GUEST role looks up by email)
@@ -440,7 +440,7 @@ describe('Member Role Integration Tests', () => {
 
   describe('End-to-End: Member Steward Claim Flow', () => {
     it('should allow member to claim steward listing and complete checkout', async () => {
-      const { getStewardListingById, getStewardById, getChapterById, getPlatformSetting, createStewardClaim } = require('../db/queries');
+      const { getStewardListingById, getStewardById, getChapterById, getPlatformSetting, createStewardClaim } = require('../db/queries-sequelize');
       
       const mockListing = {
         id: 1,
@@ -475,7 +475,7 @@ describe('Member Role Integration Tests', () => {
       });
 
       // Mock getUserByCognitoSub and pool.query for getFraternityMemberIdFromRequest
-      require('../db/queries').getUserByCognitoSub.mockResolvedValue({
+      require('../db/queries-sequelize').getUserByCognitoSub.mockResolvedValue({
         id: 1,
         cognito_sub: 'test-cognito-sub',
         email: 'test@example.com',

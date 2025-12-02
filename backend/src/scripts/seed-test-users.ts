@@ -1,6 +1,6 @@
 import { CognitoIdentityProviderClient, AdminCreateUserCommand, AdminSetUserPasswordCommand, AdminGetUserCommand, AdminConfirmSignUpCommand } from '@aws-sdk/client-cognito-identity-provider';
 import pool from '../db/connection';
-import { createUser, createSeller, createPromoter, createSteward, getAllChapters, updateStewardStatus } from '../db/queries';
+import { createUser, createSeller, createPromoter, createSteward, getAllChapters, updateStewardStatus } from '../db/queries-sequelize';
 import dotenv from 'dotenv';
 import path from 'path';
 

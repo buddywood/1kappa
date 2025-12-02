@@ -9,7 +9,7 @@ import {
   updateMemberVerification,
   updateSellerVerification,
   updatePromoterVerification,
-} from '../db/queries';
+} from '../db/queries-sequelize';
 import { initializeDatabase } from '../db/migrations';
 import type { Browser, Page } from 'puppeteer';
 

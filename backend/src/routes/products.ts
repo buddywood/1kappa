@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import type { Router as ExpressRouter } from 'express';
 import multer from 'multer';
-import { createProduct, getActiveProducts, getProductById, getSellerById, getAllProductCategories, getCategoryAttributeDefinitions, setProductAttributeValue, addProductImage } from '../db/queries';
+import { createProduct, getActiveProducts, getProductById, getSellerById, getAllProductCategories, getCategoryAttributeDefinitions, setProductAttributeValue, addProductImage } from '../db/queries-sequelize';
 import { uploadToS3 } from '../services/s3';
 import { z } from 'zod';
 import { authenticate } from '../middleware/auth';
@@ -181,7 +181,7 @@ router.post('/', authenticate, upload.array('images', 10), async (req: Request, 
     // Business rule: If seller has verification_status = 'VERIFIED' and adds a kappa branded product,
     // change verification_status to 'PENDING' for review
     if (isKappaBranded && seller.verification_status === 'VERIFIED') {
-      const { updateSellerVerification } = await import('../db/queries');
+      const { updateSellerVerification } = await import('../db/queries-sequelize');
       await updateSellerVerification(
         seller.id,
         'PENDING',
@@ -224,7 +224,7 @@ router.post('/', authenticate, upload.array('images', 10), async (req: Request, 
     }
 
     // Load attributes and images and return complete product
-    const { getProductAttributeValues, getProductImages } = await import('../db/queries');
+    const { getProductAttributeValues, getProductImages } = await import('../db/queries-sequelize');
     const attributes = await getProductAttributeValues(product.id);
     const images = await getProductImages(product.id);
     const productWithAttributes = { ...product, attributes, images };

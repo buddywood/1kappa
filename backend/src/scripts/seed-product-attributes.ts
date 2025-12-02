@@ -1,5 +1,5 @@
 import pool from '../db/connection';
-import { getAllProductCategories, getCategoryAttributeDefinitions, getProductAttributeValues, setProductAttributeValue } from '../db/queries';
+import { getAllProductCategories, getCategoryAttributeDefinitions, getProductAttributeValues, setProductAttributeValue } from '../db/queries-sequelize';
 
 // Product attribute mappings - maps product name to attribute values
 // Note: Only include attributes that are defined for the product's category

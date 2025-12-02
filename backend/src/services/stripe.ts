@@ -148,7 +148,7 @@ export async function calculateStewardPlatformFee(
   donationCents: number
 ): Promise<number> {
   // Import here to avoid circular dependency
-  const { getPlatformSetting } = await import('../db/queries');
+  const { getPlatformSetting } = await import('../db/queries-sequelize');
   
   // Try percentage first
   const percentageSetting = await getPlatformSetting('steward_platform_fee_percentage');

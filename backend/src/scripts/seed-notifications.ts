@@ -1,5 +1,6 @@
 import pool from '../db/connection';
-import { createNotification } from '../db/queries-notifications';
+import { createNotification } from '../db/queries-notifications-sequelize';
+import sequelize from '../db/sequelize';
 import dotenv from 'dotenv';
 import path from 'path';
 
@@ -307,6 +308,7 @@ async function main() {
     console.error('❌ Error:', error);
     process.exit(1);
   } finally {
+    await sequelize.close();
     await pool.end();
   }
 }

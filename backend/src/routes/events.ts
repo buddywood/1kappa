@@ -12,7 +12,7 @@ import {
   getAllEventAudienceTypes,
   updateEventStatus,
   updateEvent,
-} from "../db/queries";
+} from "../db/queries-sequelize";
 import { uploadToS3 } from "../services/s3";
 import { authenticate } from "../middleware/auth";
 import pool from "../db/connection";

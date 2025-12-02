@@ -1,5 +1,5 @@
 import pool from "../db/connection";
-import { createStewardListing, getAllProductCategories } from "../db/queries";
+import { createStewardListing, getAllProductCategories } from "../db/queries-sequelize";
 import dotenv from "dotenv";
 import path from "path";
 

@@ -271,3 +271,17 @@ export interface PlatformSetting {
   updated_at: Date;
 }
 
+export interface UserAddress {
+  id: number;
+  user_id: number;
+  label: string | null;
+  street: string;
+  city: string;
+  state: string;
+  zip: string;
+  country: string;
+  is_default: boolean;
+  created_at: Date;
+  updated_at: Date;
+}
+

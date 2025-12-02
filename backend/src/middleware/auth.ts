@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyCognitoToken, extractUserInfoFromToken } from '../services/cognito';
-import { getUserByCognitoSub, createUser, getMemberById } from '../db/queries';
+import { getUserByCognitoSub, createUser, getMemberById } from '../db/queries-sequelize';
 import { getFraternityMemberId } from '../utils/getFraternityMemberId';
 import pool from '../db/connection';
 

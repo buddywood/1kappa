@@ -1,7 +1,5 @@
 import pool from "../db/connection";
-import { createProduct, getAllProductCategories } from "../db/queries";
-import { createSeller } from "../db/queries";
-import { getAllChapters } from "../db/queries";
+import { createProduct, getAllProductCategories, createSeller, getAllChapters } from "../db/queries-sequelize";
 
 // Sample product data with category mappings
 const sampleProducts = [

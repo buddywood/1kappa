@@ -9,7 +9,7 @@ import {
   createSteward,
   updateStewardStatus,
   createUser,
-} from "./queries";
+} from "./queries-sequelize";
 import dotenv from "dotenv";
 import path from "path";
 
@@ -522,7 +522,7 @@ async function seedStewardSellers(): Promise<void> {
     // Get all chapters to use for initiated/sponsoring chapters
     const chapters = await getAllChapters();
     const collegiateChapters = chapters.filter(
-      (c) => c.type === "Collegiate" && c.status === "Active"
+      (c: any) => c.type === "Collegiate" && c.status === "Active"
     );
 
     if (collegiateChapters.length === 0) {
@@ -543,7 +543,7 @@ async function seedStewardSellers(): Promise<void> {
 
     // Get product categories
     const categories = await getAllProductCategories();
-    const categoryMap = new Map(categories.map((cat) => [cat.name, cat.id]));
+    const categoryMap = new Map(categories.map((cat: any) => [cat.name, cat.id]));
 
     // Get or create steward sellers
     const stewardSellersList = [];
@@ -819,7 +819,7 @@ async function seedProducts(): Promise<void> {
   try {
     // Get product categories
     const categories = await getAllProductCategories();
-    const categoryMap = new Map(categories.map((cat) => [cat.name, cat.id]));
+    const categoryMap = new Map(categories.map((cat: any) => [cat.name, cat.id]));
 
     // Get existing sellers (should already exist from seedTestUsers)
     // Query for the buddy+ seller emails
@@ -1029,7 +1029,7 @@ async function seedPromoters(): Promise<void> {
   }
 
   const collegiateChapters = chapters.filter(
-    (c) => c.type === "Collegiate" && c.status === "Active"
+    (c: any) => c.type === "Collegiate" && c.status === "Active"
   );
   if (collegiateChapters.length === 0) {
     console.warn(
@@ -1433,7 +1433,7 @@ async function seedTestUsers(): Promise<void> {
   try {
     // Get chapters for assigning to users
     const chapters = await getAllChapters();
-    const collegiateChapters = chapters.filter(c => c.type === 'Collegiate' && c.status === 'Active');
+    const collegiateChapters = chapters.filter((c: any) => c.type === 'Collegiate' && c.status === 'Active');
     const availableChapters = collegiateChapters.length > 0 ? collegiateChapters : chapters;
 
     if (availableChapters.length === 0) {
@@ -1528,6 +1528,7 @@ async function seedTestUsers(): Promise<void> {
             // Approve the seller and add test Stripe account ID
             // Using a test Stripe Connect account ID format (acct_xxxxx)
             // In production, this would be set up through the seller onboarding flow
+            if (!sellerId) throw new Error('Seller ID is required');
             const testStripeAccountId = `acct_test_${sellerId.toString().padStart(10, '0')}`;
             await pool.query(
               'UPDATE sellers SET status = $1, verification_status = $2, stripe_account_id = $3 WHERE id = $4',

@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import type { Router as ExpressRouter } from 'express';
-import { getAllProfessions, getProfessionById, createProfession, updateProfession, deleteProfession } from '../db/queries';
+import { getAllProfessions, getProfessionById, createProfession, updateProfession, deleteProfession } from '../db/queries-sequelize';
 import { authenticate, requireAdmin } from '../middleware/auth';
 
 const router: Router = Router();

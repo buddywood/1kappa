@@ -1,5 +1,5 @@
 import pool from '../db/connection';
-import { updateProduct } from '../db/queries';
+import { updateProduct } from '../db/queries-sequelize';
 import dotenv from 'dotenv';
 import path from 'path';
 

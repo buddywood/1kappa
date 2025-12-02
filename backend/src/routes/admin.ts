@@ -24,7 +24,7 @@ import {
   getChapterById,
   getPendingMembersForVerification,
   updateMemberVerification
-} from '../db/queries';
+} from '../db/queries-sequelize';
 import { createConnectAccount, createChapterConnectAccount } from '../services/stripe';
 import { sendSellerApprovedEmail } from '../services/email';
 import { generateInvitationToken } from '../utils/tokens';

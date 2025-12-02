@@ -9,7 +9,7 @@ import {
   updateUserAddress,
   deleteUserAddress,
   setDefaultAddress,
-} from '../db/queries-addresses';
+} from '../db/queries-addresses-sequelize';
 import { z } from 'zod';
 
 const router: ExpressRouter = Router();

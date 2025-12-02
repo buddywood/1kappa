@@ -9,7 +9,7 @@ import promotersRouter from "../routes/promoters";
 import pool from "../db/connection";
 
 // Mock the database queries
-jest.mock("../db/queries", () => ({
+jest.mock("../db/queries-sequelize", () => ({
   getMemberById: jest.fn(),
   updateMemberVerification: jest.fn(),
   getPendingMembersForVerification: jest.fn(),
@@ -127,7 +127,7 @@ describe("Member Role Functionality", () => {
 
   describe("Member Profile Retrieval", () => {
     it("should retrieve member profile for authenticated member", async () => {
-      const { getMemberById, getUserByCognitoSub } = require("../db/queries");
+      const { getMemberById, getUserByCognitoSub } = require("../db/queries-sequelize");
 
       const mockMember = {
         id: 1,
@@ -214,7 +214,7 @@ describe("Member Role Functionality", () => {
 
   describe("Member Profile Updates", () => {
     it("should update member profile", async () => {
-      const { getMemberById } = require("../db/queries");
+      const { getMemberById } = require("../db/queries-sequelize");
 
       // Mock getFraternityMemberIdFromRequest to return member ID
       const utilsModule = await import("../utils/getFraternityMemberId");
@@ -402,7 +402,7 @@ describe("Member Role Functionality", () => {
 
   describe("Member Verification Workflow", () => {
     it("should allow admin to update member verification status", async () => {
-      const { updateMemberVerification } = require("../db/queries");
+      const { updateMemberVerification } = require("../db/queries-sequelize");
       const authModule = require("../middleware/auth");
 
       (authModule.authenticate as jest.Mock).mockImplementation(
@@ -464,7 +464,7 @@ describe("Member Role Functionality", () => {
         getActiveStewardListings,
         getStewardById,
         getMemberById,
-      } = require("../db/queries");
+      } = require("../db/queries-sequelize");
 
       const mockListings = [
         {
@@ -527,7 +527,7 @@ describe("Member Role Functionality", () => {
         getStewardListingById,
         claimStewardListing,
         getMemberById,
-      } = require("../db/queries");
+      } = require("../db/queries-sequelize");
 
       const mockListing = {
         id: 1,
@@ -586,7 +586,7 @@ describe("Member Role Functionality", () => {
         getStewardById,
         getChapterById,
         getPlatformSetting,
-      } = require("../db/queries");
+      } = require("../db/queries-sequelize");
 
       const mockListing = {
         id: 1,
@@ -614,7 +614,7 @@ describe("Member Role Functionality", () => {
       getStewardById.mockResolvedValue(mockSteward);
       getChapterById.mockResolvedValue(mockChapter);
       getPlatformSetting.mockResolvedValue(null);
-      const { createStewardClaim } = require("../db/queries");
+      const { createStewardClaim } = require("../db/queries-sequelize");
       createStewardClaim.mockResolvedValue({
         id: 1,
         listing_id: 1,
@@ -654,7 +654,7 @@ describe("Member Role Functionality", () => {
 
   describe("Role Transitions", () => {
     it.skip("should allow members to apply to become sellers", async () => {
-      const { createSeller, getMemberById } = require("../db/queries");
+      const { createSeller, getMemberById } = require("../db/queries-sequelize");
 
       const mockMember = {
         id: 1,
@@ -692,7 +692,7 @@ describe("Member Role Functionality", () => {
     });
 
     it.skip("should allow members to apply to become promoters", async () => {
-      const { createPromoter, getMemberById } = require("../db/queries");
+      const { createPromoter, getMemberById } = require("../db/queries-sequelize");
 
       const mockMember = {
         id: 1,
@@ -724,7 +724,7 @@ describe("Member Role Functionality", () => {
     });
 
     it.skip("should allow members to apply to become stewards", async () => {
-      const { createSteward, getMemberById } = require("../db/queries");
+      const { createSteward, getMemberById } = require("../db/queries-sequelize");
 
       const mockMember = {
         id: 1,

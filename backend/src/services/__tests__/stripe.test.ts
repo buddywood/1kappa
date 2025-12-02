@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { getPlatformSetting } from '../../db/queries';
+import { getPlatformSetting } from '../../db/queries-sequelize';
 
 // Mock Stripe before importing
 const mockStripe = {
@@ -23,7 +23,7 @@ jest.mock('stripe', () => {
   return jest.fn().mockImplementation(() => mockStripe);
 });
 
-jest.mock('../../db/queries', () => ({
+jest.mock('../../db/queries-sequelize', () => ({
   getPlatformSetting: jest.fn(),
 }));
 

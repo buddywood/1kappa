@@ -1,6 +1,6 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-import { createChapter } from '../db/queries';
+import { createChapter } from '../db/queries-sequelize';
 import pool from '../db/connection';
 
 const WIKIPEDIA_URL = 'https://en.wikipedia.org/wiki/List_of_Kappa_Alpha_Psi_chapters';

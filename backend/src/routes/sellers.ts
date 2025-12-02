@@ -6,7 +6,7 @@ import {
   getActiveProducts,
   getSellerById,
   getProductsBySeller,
-} from "../db/queries";
+} from "../db/queries-sequelize";
 import pool from "../db/connection";
 import { uploadToS3 } from "../services/s3";
 import { z } from "zod";
@@ -80,7 +80,7 @@ const optionalAuthenticate = async (req: Request, res: Response, next: any) => {
     const { verifyCognitoToken, extractUserInfoFromToken } = await import(
       "../services/cognito"
     );
-    const { getUserByCognitoSub } = await import("../db/queries");
+    const { getUserByCognitoSub } = await import("../db/queries-sequelize");
 
     // Verify token
     const payload = await verifyCognitoToken(token);
@@ -221,7 +221,7 @@ router.post(
             updateSellerInvitationToken,
             linkUserToSeller,
             getUserByEmail,
-          } = await import("../db/queries");
+          } = await import("../db/queries-sequelize");
 
           // Check if Stripe is configured
           const stripeKey = process.env.STRIPE_SECRET_KEY;

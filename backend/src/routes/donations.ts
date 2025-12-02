@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import type { Router as ExpressRouter } from 'express';
-import { getTotalDonations } from '../db/queries';
+import { getTotalDonations } from '../db/queries-sequelize';
 
 const router: ExpressRouter = Router();
 

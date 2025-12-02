@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-import { getProductById } from '../db/queries';
+import { getProductById } from '../db/queries-sequelize';
 import type { Seller } from '../types';
 
 dotenv.config();

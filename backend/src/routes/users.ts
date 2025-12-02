@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import type { Router as ExpressRouter } from "express";
 import { authenticate } from "../middleware/auth";
-import { getUserById, upsertUserOnLogin } from "../db/queries";
+import { getUserById, upsertUserOnLogin } from "../db/queries-sequelize";
 import {
   verifyCognitoToken,
   extractUserInfoFromToken,

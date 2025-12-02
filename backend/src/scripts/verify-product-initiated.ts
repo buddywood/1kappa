@@ -1,5 +1,5 @@
 import pool from '../db/connection';
-import { getProductById } from '../db/queries';
+import { getProductById } from '../db/queries-sequelize';
 
 async function verify() {
   try {

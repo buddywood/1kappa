@@ -1,6 +1,6 @@
 import pool from '../db/connection';
 import { User } from '../types';
-import { getUserByCognitoSub } from '../db/queries';
+import { getUserByCognitoSub } from '../db/queries-sequelize';
 
 /**
  * Get fraternity_member_id from role-specific tables based on user's role

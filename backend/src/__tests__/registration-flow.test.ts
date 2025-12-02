@@ -13,14 +13,14 @@ import request from 'supertest';
 import express, { Express } from 'express';
 import { CognitoIdentityProviderClient, SignUpCommand, ConfirmSignUpCommand, ListUsersCommand, ResendConfirmationCodeCommand } from '@aws-sdk/client-cognito-identity-provider';
 import pool from '../db/connection';
-import * as queries from '../db/queries';
+import * as queries from '../db/queries-sequelize';
 import * as s3Service from '../services/s3';
 import * as emailService from '../services/email';
 import * as stripeService from '../services/stripe';
 
 // Mock all dependencies
 jest.mock('../db/connection');
-jest.mock('../db/queries');
+jest.mock('../db/queries-sequelize');
 jest.mock('../services/s3');
 jest.mock('../services/email');
 jest.mock('../services/stripe');

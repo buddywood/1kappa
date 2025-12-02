@@ -1,5 +1,5 @@
 import pool from '../db/connection';
-import { getAllChapters, createSeller, createPromoter } from '../db/queries';
+import { getAllChapters, createSeller, createPromoter } from '../db/queries-sequelize';
 import dotenv from 'dotenv';
 import path from 'path';
 

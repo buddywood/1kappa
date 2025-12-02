@@ -5,7 +5,7 @@ import checkoutRouter from "../routes/checkout";
 import pool from "../db/connection";
 
 // Mock the database queries
-jest.mock("../db/queries", () => ({
+jest.mock("../db/queries-sequelize", () => ({
   getActiveStewardListings: jest.fn(),
   getStewardListingById: jest.fn(),
   getStewardById: jest.fn(),
@@ -98,7 +98,7 @@ describe("Guest Access to Steward Endpoints", () => {
         getActiveStewardListings,
         getStewardById,
         getMemberById,
-      } = require("../db/queries");
+      } = require("../db/queries-sequelize");
 
       const mockListings = [
         {
@@ -153,7 +153,7 @@ describe("Guest Access to Steward Endpoints", () => {
         getActiveStewardListings,
         getStewardById,
         getMemberById,
-      } = require("../db/queries");
+      } = require("../db/queries-sequelize");
 
       getActiveStewardListings.mockResolvedValue([]);
       (jest.spyOn(pool, "query") as jest.Mock).mockResolvedValue({ rows: [] });
@@ -175,7 +175,7 @@ describe("Guest Access to Steward Endpoints", () => {
         getStewardById,
         getMemberById,
         getStewardListingImages,
-      } = require("../db/queries");
+      } = require("../db/queries-sequelize");
 
       const mockListing = {
         id: 1,
@@ -223,7 +223,7 @@ describe("Guest Access to Steward Endpoints", () => {
     });
 
     it("should return 404 for non-existent listing", async () => {
-      const { getStewardListingById } = require("../db/queries");
+      const { getStewardListingById } = require("../db/queries-sequelize");
       getStewardListingById.mockResolvedValue(null);
 
       await request(app).get("/api/stewards/listings/999/public").expect(404);
@@ -251,7 +251,7 @@ describe("Guest Access to Steward Endpoints", () => {
   describe("Guest Access to Product Checkout", () => {
     describe("Kappa Branded Products", () => {
       it("should reject guest checkout for Kappa branded products", async () => {
-        const { getProductById, getSellerById } = require("../db/queries");
+        const { getProductById, getSellerById } = require("../db/queries-sequelize");
 
         const mockKappaProduct = {
           id: 1,
@@ -296,7 +296,7 @@ describe("Guest Access to Steward Endpoints", () => {
           getProductById,
           getSellerById,
           createOrder,
-        } = require("../db/queries");
+        } = require("../db/queries-sequelize");
         const { createCheckoutSession } = require("../services/stripe");
 
         const mockKappaProduct = {

@@ -4,7 +4,7 @@ import usersRouter from "../routes/users";
 import pool from "../db/connection";
 
 // Mock the database queries
-jest.mock("../db/queries", () => ({
+jest.mock("../db/queries-sequelize", () => ({
   getUserById: jest.fn(),
   getUserByCognitoSub: jest.fn(),
 }));
@@ -40,7 +40,7 @@ describe("is_fraternity_member verification", () => {
   });
 
   it("should return false if user has no fraternity_member_id", async () => {
-    const { getUserById } = require("../db/queries");
+    const { getUserById } = require("../db/queries-sequelize");
 
     // Mock user with no member_id
     getUserById.mockResolvedValue({
@@ -65,7 +65,7 @@ describe("is_fraternity_member verification", () => {
   });
 
   it("should return false if user has fraternity_member_id but member is not verified", async () => {
-    const { getUserById } = require("../db/queries");
+    const { getUserById } = require("../db/queries-sequelize");
 
     // Mock user with member_id
     getUserById.mockResolvedValue({
@@ -105,7 +105,7 @@ describe("is_fraternity_member verification", () => {
   });
 
   it("should return false if user has fraternity_member_id but member doesn't exist", async () => {
-    const { getUserById } = require("../db/queries");
+    const { getUserById } = require("../db/queries-sequelize");
 
     // Mock user with member_id
     getUserById.mockResolvedValue({
@@ -141,7 +141,7 @@ describe("is_fraternity_member verification", () => {
   });
 
   it("should return true if user has fraternity_member_id and member is verified", async () => {
-    const { getUserById } = require("../db/queries");
+    const { getUserById } = require("../db/queries-sequelize");
 
     // Mock user with member_id
     getUserById.mockResolvedValue({
@@ -177,7 +177,7 @@ describe("is_fraternity_member verification", () => {
   });
 
   it("should return false for SELLER role if seller has no fraternity_member_id", async () => {
-    const { getUserById } = require("../db/queries");
+    const { getUserById } = require("../db/queries-sequelize");
 
     // Mock user with SELLER role but no member_id
     getUserById.mockResolvedValue({
@@ -204,7 +204,7 @@ describe("is_fraternity_member verification", () => {
   });
 
   it("should return false for SELLER role if seller has fraternity_member_id but member is not verified", async () => {
-    const { getUserById } = require("../db/queries");
+    const { getUserById } = require("../db/queries-sequelize");
 
     // Mock user with SELLER role and member_id
     getUserById.mockResolvedValue({
@@ -253,7 +253,7 @@ describe("is_fraternity_member verification", () => {
   });
 
   it("should return true for SELLER role if seller has fraternity_member_id and member is verified", async () => {
-    const { getUserById } = require("../db/queries");
+    const { getUserById } = require("../db/queries-sequelize");
 
     // Mock user with SELLER role and member_id
     getUserById.mockResolvedValue({

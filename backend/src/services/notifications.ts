@@ -1,5 +1,5 @@
-import { createNotification, getInterestedUsersForProduct } from '../db/queries-notifications';
-import { getProductsBySeller } from '../db/queries';
+import { createNotification, getInterestedUsersForProduct } from '../db/queries-notifications-sequelize';
+import { getProductsBySeller } from '../db/queries-sequelize';
 
 /**
  * Notify all interested users when a seller's product becomes available

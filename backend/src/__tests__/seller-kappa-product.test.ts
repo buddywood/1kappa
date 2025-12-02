@@ -2,10 +2,10 @@ import request from 'supertest';
 import express from 'express';
 import productsRouter from '../routes/products';
 import pool from '../db/connection';
-import * as queries from '../db/queries';
+import * as queries from '../db/queries-sequelize';
 
 // Mock the database queries
-jest.mock('../db/queries');
+jest.mock('../db/queries-sequelize');
 jest.mock('../db/connection');
 jest.mock('../services/s3', () => ({
   uploadToS3: jest.fn().mockResolvedValue({ url: 'https://example.com/image.jpg' }),

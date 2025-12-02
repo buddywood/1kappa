@@ -1,4 +1,4 @@
-import { createChapter } from '../db/queries';
+import { createChapter } from '../db/queries-sequelize';
 import pool from '../db/connection';
 
 interface AlumniChapterData {

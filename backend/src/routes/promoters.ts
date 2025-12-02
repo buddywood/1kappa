@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import type { Router as ExpressRouter } from 'express';
 import multer from 'multer';
-import { createPromoter, getPromoterById } from '../db/queries';
+import { createPromoter, getPromoterById } from '../db/queries-sequelize';
 import { authenticate } from '../middleware/auth';
 import { uploadToS3 } from '../services/s3';
 import { z } from 'zod';

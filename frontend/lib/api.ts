@@ -1273,8 +1273,18 @@ export async function updateMemberProfile(
   });
   
   if (!res.ok) {
-    const error = await res.json().catch(() => ({ error: 'Failed to update profile' }));
-    throw new Error(error.error || 'Failed to update member profile');
+    // Try to parse JSON error, fallback to text if not JSON
+    let errorData;
+    const contentType = res.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      errorData = await res.json().catch(() => ({ error: 'Failed to update profile' }));
+    } else {
+      // If HTML error page, try to extract error message
+      const text = await res.text().catch(() => '');
+      const errorMatch = text.match(/Error: ([^<]+)/);
+      errorData = { error: errorMatch ? errorMatch[1] : 'Failed to update profile' };
+    }
+    throw new Error(errorData.error || 'Failed to update member profile');
   }
   
   return res.json();

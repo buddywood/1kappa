@@ -8,7 +8,7 @@ import {
   getPlatformSetting,
   getChapterById,
   getStewardById
-} from '../db/queries';
+} from '../db/queries-sequelize';
 import { createStewardCheckoutSession, calculateStewardPlatformFee } from '../services/stripe';
 import { authenticate, requireVerifiedMember } from '../middleware/auth';
 import { getFraternityMemberIdFromRequest } from '../utils/getFraternityMemberId';

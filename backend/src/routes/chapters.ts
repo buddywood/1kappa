@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import type { Router as ExpressRouter } from 'express';
-import { getAllChapters, getActiveCollegiateChapters } from '../db/queries';
+import { getAllChapters, getActiveCollegiateChapters } from '../db/queries-sequelize';
 
 const router: ExpressRouter = Router();
 

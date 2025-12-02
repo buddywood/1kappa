@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import type { Router as ExpressRouter } from 'express';
 import { verifyWebhookSignature } from '../services/stripe';
-import { getOrderByStripeSessionId, updateOrderStatus, getSellerById } from '../db/queries';
+import { getOrderByStripeSessionId, updateOrderStatus, getSellerById } from '../db/queries-sequelize';
 import pool from '../db/connection';
 import dotenv from 'dotenv';
 

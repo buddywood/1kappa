@@ -6,7 +6,7 @@ import {
   getFavoritesByUser, 
   isFavorite,
   getFavoriteProductsByUser 
-} from '../db/queries';
+} from '../db/queries-sequelize';
 import { z } from 'zod';
 
 const router: ExpressRouter = Router();

@@ -16,7 +16,7 @@ import {
   linkUserToSteward,
   getStewardListingImages,
   addStewardListingImage
-} from '../db/queries';
+} from '../db/queries-sequelize';
 import { uploadToS3 } from '../services/s3';
 import { z } from 'zod';
 import { authenticate, requireSteward, requireVerifiedMember } from '../middleware/auth';
