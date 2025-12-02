@@ -473,6 +473,7 @@ async function seedTestUsers(): Promise<void> {
               email: testUser.email,
               role: userRole as 'ADMIN' | 'SELLER' | 'PROMOTER' | 'GUEST',
               onboarding_status: 'ONBOARDING_FINISHED',
+              fraternity_member_id: memberId, // Set for GUEST users who are members (required by constraint)
               seller_id: sellerId,
               promoter_id: promoterId,
             });

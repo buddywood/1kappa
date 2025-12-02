@@ -18,6 +18,16 @@ CREATE TABLE IF NOT EXISTS chapters (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Professions table - must be created before fraternity_members that references it
+CREATE TABLE IF NOT EXISTS professions (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL UNIQUE,
+  display_order INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Fraternity Members table - must be created before sellers/promoters that reference it
 CREATE TABLE IF NOT EXISTS fraternity_members (
   id SERIAL PRIMARY KEY,
@@ -38,6 +48,7 @@ CREATE TABLE IF NOT EXISTS fraternity_members (
   phone_is_private BOOLEAN DEFAULT false,
   industry VARCHAR(255),
   job_title VARCHAR(255),
+  profession_id INTEGER REFERENCES professions(id),
   bio TEXT,
   headshot_url TEXT,
   social_links JSONB DEFAULT '{}',
@@ -405,6 +416,9 @@ CREATE INDEX IF NOT EXISTS idx_users_promoter_id ON users(promoter_id);
 CREATE INDEX IF NOT EXISTS idx_users_steward_id ON users(steward_id);
 CREATE INDEX IF NOT EXISTS idx_industries_active ON industries(is_active);
 CREATE INDEX IF NOT EXISTS idx_industries_display_order ON industries(display_order);
+CREATE INDEX IF NOT EXISTS idx_professions_active ON professions(is_active);
+CREATE INDEX IF NOT EXISTS idx_professions_display_order ON professions(display_order);
+CREATE INDEX IF NOT EXISTS idx_fraternity_members_profession_id ON fraternity_members(profession_id);
 -- CREATE INDEX IF NOT EXISTS idx_stewards_fraternity_member_id ON stewards(fraternity_member_id);
 CREATE INDEX IF NOT EXISTS idx_stewards_sponsoring_chapter ON stewards(sponsoring_chapter_id);
 CREATE INDEX IF NOT EXISTS idx_stewards_status ON stewards(status);
@@ -469,6 +483,10 @@ CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
 
 DROP TRIGGER IF EXISTS update_industries_updated_at ON industries;
 CREATE TRIGGER update_industries_updated_at BEFORE UPDATE ON industries
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_professions_updated_at ON professions;
+CREATE TRIGGER update_professions_updated_at BEFORE UPDATE ON professions
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 DROP TRIGGER IF EXISTS update_stewards_updated_at ON stewards;

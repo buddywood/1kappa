@@ -307,16 +307,16 @@ interface SampleEventData {
   image_url: string | null;
   ticket_price_cents: number;
   event_type:
-    | "SOCIAL"
-    | "NETWORKING"
-    | "EDUCATIONAL"
-    | "FUNDRAISING"
-    | "COMMUNITY_SERVICE"
-    | "WELLNESS_SPORTS"
-    | "VIRTUAL"
-    | "CREATIVE_WORKSHOP"
-    | "EXCLUSIVE_VIP";
-  event_audience_type: "CHAPTER" | "ONE_KAPPA" | "GENERAL_PUBLIC";
+    | "social"
+    | "philanthropy"
+    | "professional"
+    | "formal"
+    | "sports"
+    | "educational"
+    | "community_service"
+    | "alumni"
+    | "other";
+  event_audience_type: "all_members" | "chapter_specific" | "public";
   all_day?: boolean;
   duration_minutes?: number;
   event_link?: string | null;
@@ -347,8 +347,8 @@ const sampleEvents: SampleEventData[] = [
     state: "MN",
     image_url: getS3ImageUrl("events/108e9cbe-981d-479e-a917-bd47a9749dcc-kevDaBarber.png"),
     ticket_price_cents: 7500, // $75.00
-    event_type: "SOCIAL",
-    event_audience_type: "ONE_KAPPA",
+    event_type: "social",
+    event_audience_type: "all_members",
     all_day: false,
     duration_minutes: 240, // 4 hours
     dress_codes: ["formal", "semi_formal"],
@@ -364,8 +364,8 @@ const sampleEvents: SampleEventData[] = [
     state: "MN",
     image_url: getS3ImageUrl("events/108e9cbe-981d-479e-a917-bd47a9749dcc-kevDaBarber.png"),
     ticket_price_cents: 2500, // $25.00
-    event_type: "NETWORKING",
-    event_audience_type: "ONE_KAPPA",
+    event_type: "professional",
+    event_audience_type: "all_members",
     all_day: false,
     duration_minutes: 180, // 3 hours
     dress_codes: ["business_casual", "kappa_casual"],
@@ -381,8 +381,8 @@ const sampleEvents: SampleEventData[] = [
     state: "MN",
     image_url: getS3ImageUrl("events/108e9cbe-981d-479e-a917-bd47a9749dcc-kevDaBarber.png"),
     ticket_price_cents: 0, // Free event
-    event_type: "COMMUNITY_SERVICE",
-    event_audience_type: "GENERAL_PUBLIC",
+    event_type: "community_service",
+    event_audience_type: "public",
     all_day: true,
     duration_minutes: 480, // 8 hours
     dress_codes: ["comfortable", "outdoor"],
@@ -399,8 +399,8 @@ const sampleEvents: SampleEventData[] = [
     state: "MN",
     image_url: getS3ImageUrl("events/108e9cbe-981d-479e-a917-bd47a9749dcc-kevDaBarber.png"),
     ticket_price_cents: 5000, // $50.00
-    event_type: "EDUCATIONAL",
-    event_audience_type: "ONE_KAPPA",
+    event_type: "educational",
+    event_audience_type: "all_members",
     all_day: false,
     duration_minutes: 360, // 6 hours
     dress_codes: ["business", "business_casual"],
@@ -416,8 +416,8 @@ const sampleEvents: SampleEventData[] = [
     state: "MN",
     image_url: getS3ImageUrl("events/108e9cbe-981d-479e-a917-bd47a9749dcc-kevDaBarber.png"),
     ticket_price_cents: 10000, // $100.00
-    event_type: "WELLNESS_SPORTS",
-    event_audience_type: "ONE_KAPPA",
+    event_type: "sports",
+    event_audience_type: "all_members",
     all_day: false,
     duration_minutes: 420, // 7 hours (includes lunch and reception)
     dress_codes: ["athletic", "outdoor"],
@@ -434,8 +434,8 @@ const sampleEvents: SampleEventData[] = [
     state: "MN",
     image_url: getS3ImageUrl("events/108e9cbe-981d-479e-a917-bd47a9749dcc-kevDaBarber.png"),
     ticket_price_cents: 2000, // $20.00
-    event_type: "SOCIAL",
-    event_audience_type: "GENERAL_PUBLIC",
+    event_type: "social",
+    event_audience_type: "public",
     all_day: false,
     duration_minutes: 180, // 3 hours
     dress_codes: ["business_casual", "comfortable"],
@@ -451,8 +451,8 @@ const sampleEvents: SampleEventData[] = [
     state: null,
     image_url: getS3ImageUrl("events/108e9cbe-981d-479e-a917-bd47a9749dcc-kevDaBarber.png"),
     ticket_price_cents: 0,
-    event_type: "VIRTUAL",
-    event_audience_type: "CHAPTER",
+    event_type: "other",
+    event_audience_type: "chapter_specific",
     all_day: false,
     duration_minutes: 90, // 1.5 hours
     event_link: "https://zoom.us/j/123456789",
@@ -469,8 +469,8 @@ const sampleEvents: SampleEventData[] = [
     state: "MN",
     image_url: getS3ImageUrl("events/108e9cbe-981d-479e-a917-bd47a9749dcc-kevDaBarber.png"),
     ticket_price_cents: 15000, // $150.00
-    event_type: "FUNDRAISING",
-    event_audience_type: "GENERAL_PUBLIC",
+    event_type: "philanthropy",
+    event_audience_type: "public",
     all_day: false,
     duration_minutes: 300, // 5 hours
     dress_codes: ["formal", "semi_formal"],

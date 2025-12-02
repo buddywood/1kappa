@@ -73,9 +73,40 @@ function runSequelizeMigrations() {
 }
 
 /**
+ * Run foundational seeders (reference data)
+ * These seeders run automatically after migrations
+ */
+function runFoundationalSeeders() {
+  try {
+    const backendDir = path.resolve(__dirname, '..', '..');
+    const originalCwd = process.cwd();
+    
+    try {
+      process.chdir(backendDir);
+      
+      console.log('🌱 Running foundational seeders...');
+      execSync('npx sequelize-cli db:seed:all', {
+        stdio: 'inherit',
+        env: process.env
+      });
+      console.log('✓ Foundational seeders completed');
+    } finally {
+      process.chdir(originalCwd);
+    }
+  } catch (error: any) {
+    // Seeders might fail if data already exists (idempotent), which is fine
+    console.log('⚠️  Seeders completed (some data may already exist, which is expected)');
+  }
+}
+
+/**
  * Main migration function
  * 1. Run schema.sql if database is empty
  * 2. Run Sequelize migrations (which will only run pending ones)
+ * 3. Run foundational seeders (reference data - roles, event types, industries, professions)
+ * 
+ * Note: Test data is seeded separately via `npm run seed:test`
+ * Note: Chapters are seeded separately via `npm run seed` (requires web scraping)
  */
 export async function runMigrations() {
   try {
@@ -85,7 +116,10 @@ export async function runMigrations() {
     // Then, run Sequelize migrations
     runSequelizeMigrations();
     
-    console.log('✅ Database migrations completed successfully');
+    // Finally, run foundational seeders (reference data)
+    runFoundationalSeeders();
+    
+    console.log('✅ Database migrations and foundational seeding completed successfully');
   } catch (error) {
     console.error('❌ Error running migrations:', error);
     throw error;

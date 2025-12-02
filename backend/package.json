@@ -15,6 +15,7 @@
     "verify:roles": "tsx src/scripts/verify-roles.ts",
     "seed": "tsx src/db/seed-foundational.ts",
     "seed:test": "tsx src/db/seed-test.ts",
+    "seed:test-users": "tsx src/scripts/seed-test-users.ts",
     "update:test-images": "tsx src/scripts/update-test-images.ts",
     "seed:attributes": "tsx src/scripts/seed-product-attributes.ts",
     "seed:notifications": "tsx src/scripts/seed-notifications.ts",
@@ -44,7 +45,9 @@
     "sequelize:migrate:undo": "sequelize db:migrate:undo",
     "sequelize:migrate:status": "sequelize db:migrate:status",
     "sequelize:seed": "sequelize db:seed:all",
-    "sequelize:seed:undo": "sequelize db:seed:undo:all"
+    "sequelize:seed:undo": "sequelize db:seed:undo:all",
+    "cleanup:sql-migrations": "tsx src/scripts/cleanup-sql-migrations.ts",
+    "populate:collegiate-chapters": "tsx src/scripts/populate-collegiate-chapters.ts"
   },
   "keywords": [],
   "author": "",

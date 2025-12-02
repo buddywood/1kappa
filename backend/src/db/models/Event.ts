@@ -150,9 +150,17 @@ export class Event extends BaseModel {
     },
     set(value: any) {
       if (typeof value === 'string') {
-        this.setDataValue('dress_codes', value);
+        try {
+          // If it's already a JSON string, parse it first
+          const parsed = JSON.parse(value);
+          this.setDataValue('dress_codes', parsed);
+        } catch {
+          // If parsing fails, use default
+          this.setDataValue('dress_codes', ['business_casual']);
+        }
       } else {
-        this.setDataValue('dress_codes', JSON.stringify(value || ['business_casual']));
+        // For JSONB, Sequelize expects the raw array/object, not a string
+        this.setDataValue('dress_codes', value || ['business_casual']);
       }
     }
   })
