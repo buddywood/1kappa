@@ -28,6 +28,46 @@ CREATE TABLE IF NOT EXISTS professions (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Roles reference table - must be created before users table
+CREATE TABLE IF NOT EXISTS roles (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(50) NOT NULL UNIQUE,
+  description TEXT,
+  display_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Insert all available roles
+INSERT INTO roles (name, description, display_order) VALUES
+  ('ADMIN', 'System administrator with full access', 1),
+  ('SELLER', 'User who can sell products on the platform', 2),
+  ('PROMOTER', 'User who can promote events', 3),
+  ('GUEST', 'Regular user who can browse and purchase', 4),
+  ('STEWARD', 'User who can manage steward listings', 5)
+ON CONFLICT (name) DO NOTHING;
+
+-- Users table - must be created before tables that reference it (fraternity_members, sellers, promoters, stewards, user_addresses)
+-- Note: Role-specific tables (sellers, promoters, stewards) now reference users via user_id
+--   - For SELLER role: sellers.user_id -> users.id
+--   - For PROMOTER role: promoters.user_id -> users.id
+--   - For STEWARD role: stewards.user_id -> users.id
+--   - For GUEST users: fraternity_members.user_id -> users.id (optional)
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  cognito_sub VARCHAR(255) NOT NULL UNIQUE,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  role VARCHAR(20) NOT NULL CHECK (role IN ('ADMIN', 'SELLER', 'PROMOTER', 'GUEST', 'STEWARD')),
+  onboarding_status VARCHAR(50) DEFAULT 'PRE_COGNITO' CHECK (onboarding_status IN ('PRE_COGNITO', 'COGNITO_CONFIRMED', 'ONBOARDING_STARTED', 'ONBOARDING_FINISHED')),
+  features JSONB DEFAULT '{}',
+  last_login TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT check_role_foreign_key CHECK (
+    role IN ('ADMIN', 'SELLER', 'PROMOTER', 'GUEST', 'STEWARD')
+  )
+);
+
 -- Fraternity Members table
 -- Note: user_id links to users table (nullable - not all members have user accounts)
 CREATE TABLE IF NOT EXISTS fraternity_members (
@@ -228,25 +268,6 @@ CREATE TABLE IF NOT EXISTS industries (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Roles reference table - must be created before users table
-CREATE TABLE IF NOT EXISTS roles (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(50) NOT NULL UNIQUE,
-  description TEXT,
-  display_order INTEGER NOT NULL DEFAULT 0,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Insert all available roles
-INSERT INTO roles (name, description, display_order) VALUES
-  ('ADMIN', 'System administrator with full access', 1),
-  ('SELLER', 'User who can sell products on the platform', 2),
-  ('PROMOTER', 'User who can promote events', 3),
-  ('GUEST', 'Regular user who can browse and purchase', 4),
-  ('STEWARD', 'User who can manage steward listings', 5)
-ON CONFLICT (name) DO NOTHING;
-
 -- Stewards table
 -- Note: fraternity_member relationship accessed via fraternity_members table associations
 CREATE TABLE IF NOT EXISTS stewards (
@@ -260,27 +281,6 @@ CREATE TABLE IF NOT EXISTS stewards (
   stripe_account_id VARCHAR(255),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Users table - for authentication and role management
--- Note: Role-specific tables (sellers, promoters, stewards) now reference users via user_id
---   - For SELLER role: sellers.user_id -> users.id
---   - For PROMOTER role: promoters.user_id -> users.id
---   - For STEWARD role: stewards.user_id -> users.id
---   - For GUEST users: fraternity_members.user_id -> users.id (optional)
-CREATE TABLE IF NOT EXISTS users (
-  id SERIAL PRIMARY KEY,
-  cognito_sub VARCHAR(255) NOT NULL UNIQUE,
-  email VARCHAR(255) NOT NULL UNIQUE,
-  role VARCHAR(20) NOT NULL CHECK (role IN ('ADMIN', 'SELLER', 'PROMOTER', 'GUEST', 'STEWARD')),
-  onboarding_status VARCHAR(50) DEFAULT 'PRE_COGNITO' CHECK (onboarding_status IN ('PRE_COGNITO', 'COGNITO_CONFIRMED', 'ONBOARDING_STARTED', 'ONBOARDING_FINISHED')),
-  features JSONB DEFAULT '{}',
-  last_login TIMESTAMP,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT check_role_foreign_key CHECK (
-    role IN ('ADMIN', 'SELLER', 'PROMOTER', 'GUEST', 'STEWARD')
-  )
 );
 
 -- Steward listings table
