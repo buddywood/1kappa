@@ -410,70 +410,55 @@ async function seedTestUsers(): Promise<void> {
 
         if (existingUser.rows.length > 0) {
           const userId = existingUser.rows[0].id;
-          // Update user to link to role records
-          // Note: For SELLER role, fraternity_member_id can be NULL (not all sellers are members)
-          // For PROMOTER and SELLER, fraternity_member_id must be NULL (stored on role-specific tables)
-          // For STEWARD and MEMBER (GUEST), fraternity_member_id can be set
-          // Note: fraternity_member_id was removed from users table (migration 026)
-          // It's stored on role-specific tables: sellers, promoters, stewards
+          // Update user record
+          // Note: Role-specific tables (sellers, promoters, stewards) now reference users via user_id
           await pool.query(
             `UPDATE users 
              SET email = $1, 
                  role = $2, 
-                 onboarding_status = 'ONBOARDING_FINISHED',
-                 seller_id = COALESCE(seller_id, $3),
-                 promoter_id = COALESCE(promoter_id, $4),
-                 steward_id = COALESCE(steward_id, $5)
-             WHERE id = $6`,
+                 onboarding_status = 'ONBOARDING_FINISHED'
+             WHERE id = $3`,
             [
               testUser.email,
               userRole,
-              sellerId,
-              promoterId,
-              stewardId,
               userId,
             ]
           );
+          
+          // Link user to role-specific tables by updating their user_id columns
+          if (sellerId) {
+            await pool.query(`UPDATE sellers SET user_id = $1 WHERE id = $2`, [userId, sellerId]);
+          }
+          if (promoterId) {
+            await pool.query(`UPDATE promoters SET user_id = $1 WHERE id = $2`, [userId, promoterId]);
+          }
+          if (stewardId) {
+            await pool.query(`UPDATE stewards SET user_id = $1 WHERE id = $2`, [userId, stewardId]);
+          }
+          
           console.log(`  ✓ Updated user record: ${testUser.name}`);
         } else {
-          // For stewards, we need to insert directly since createUser doesn't support steward_id
-          if (testUser.type === 'steward') {
-            // Note: fraternity_member_id was removed from users table (migration 026)
-            // It's stored on the stewards table
-            await pool.query(
-              `INSERT INTO users (cognito_sub, email, role, onboarding_status, steward_id, features)
-               VALUES ($1, $2, $3, $4, $5, $6)
-               RETURNING *`,
-              [
-                finalCognitoSub,
-                testUser.email,
-                'STEWARD',
-                'ONBOARDING_FINISHED',
-                stewardId,
-                JSON.stringify({}),
-              ]
-            );
-            console.log(`  ✓ Created user record: ${testUser.name}`);
-          } else {
-            // Create new user record for other types
-            // Note: fraternity_member_id was removed from users table (migration 026)
-            // It's stored on role-specific tables: sellers, promoters, stewards
-            // For GUEST users who are members, link through email/cognito_sub matching
-            
-            // Type guard: createUser doesn't accept 'STEWARD' role
-            if (userRole === 'STEWARD') {
-              throw new Error('STEWARD role should be handled by direct SQL insert, not createUser');
-            }
-            
-            await createUser({
-              cognito_sub: finalCognitoSub,
-              email: testUser.email,
-              role: userRole as 'ADMIN' | 'SELLER' | 'PROMOTER' | 'GUEST',
-              onboarding_status: 'ONBOARDING_FINISHED',
-              promoter_id: promoterId,
-            });
-            console.log(`  ✓ Created user record: ${testUser.name}`);
+          // Create new user record
+          // Note: Role-specific tables (sellers, promoters, stewards) now reference users via user_id
+          const newUser = await createUser({
+            cognito_sub: finalCognitoSub,
+            email: testUser.email,
+            role: userRole as 'ADMIN' | 'SELLER' | 'PROMOTER' | 'GUEST' | 'STEWARD',
+            onboarding_status: 'ONBOARDING_FINISHED',
+          });
+          
+          // Link user to role-specific tables by updating their user_id columns
+          if (sellerId) {
+            await pool.query(`UPDATE sellers SET user_id = $1 WHERE id = $2`, [newUser.id, sellerId]);
           }
+          if (promoterId) {
+            await pool.query(`UPDATE promoters SET user_id = $1 WHERE id = $2`, [newUser.id, promoterId]);
+          }
+          if (stewardId) {
+            await pool.query(`UPDATE stewards SET user_id = $1 WHERE id = $2`, [newUser.id, stewardId]);
+          }
+          
+          console.log(`  ✓ Created user record: ${testUser.name}`);
         }
 
         console.log(`  ✅ Completed setup for ${testUser.name}`);
