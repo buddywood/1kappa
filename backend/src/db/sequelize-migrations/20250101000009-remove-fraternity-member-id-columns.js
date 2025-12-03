@@ -148,17 +148,44 @@ module.exports = {
     // Step 4: Drop columns
     console.log('  Step 4: Dropping columns...');
     
-    // Drop from stewards
+    // Drop from stewards (handle both old 'member_id' and new 'fraternity_member_id' column names)
     const [stewardsCols] = await queryInterface.sequelize.query(`
       SELECT column_name 
       FROM information_schema.columns 
-      WHERE table_name = 'stewards' AND column_name = 'fraternity_member_id'
+      WHERE table_name = 'stewards' 
+        AND (column_name = 'fraternity_member_id' OR column_name = 'member_id')
     `);
-    if (stewardsCols.length > 0) {
-      await queryInterface.sequelize.query(`
-        ALTER TABLE stewards DROP COLUMN IF EXISTS fraternity_member_id
+    for (const col of stewardsCols) {
+      const columnName = col.column_name;
+      
+      // First, drop any foreign key constraints
+      const [fks] = await queryInterface.sequelize.query(`
+        SELECT constraint_name 
+        FROM information_schema.table_constraints 
+        WHERE table_name = 'stewards' 
+          AND constraint_type = 'FOREIGN KEY'
+          AND constraint_name LIKE '%${columnName}%'
       `);
-      console.log('    ✓ Dropped fraternity_member_id from stewards');
+      for (const fk of fks) {
+        await queryInterface.sequelize.query(`
+          ALTER TABLE stewards DROP CONSTRAINT IF EXISTS ${queryInterface.quoteIdentifier(fk.constraint_name)}
+        `);
+      }
+      
+      // Drop NOT NULL constraint if it exists
+      try {
+        await queryInterface.sequelize.query(`
+          ALTER TABLE stewards ALTER COLUMN ${queryInterface.quoteIdentifier(columnName)} DROP NOT NULL
+        `);
+      } catch (error) {
+        // Ignore if NOT NULL doesn't exist or column doesn't have NOT NULL
+      }
+      
+      // Now drop the column
+      await queryInterface.sequelize.query(`
+        ALTER TABLE stewards DROP COLUMN IF EXISTS ${queryInterface.quoteIdentifier(columnName)}
+      `);
+      console.log(`    ✓ Dropped ${columnName} from stewards`);
     }
 
     // Drop from sellers
