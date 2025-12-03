@@ -1,3 +1,11 @@
 {
-  "regions": ["iad1"]
+  "regions": ["iad1"],
+  "redirects": [
+    {
+      "source": "https://www.one-kappa.com/:path*",
+      "destination": "https://one-kappa.com/:path*",
+      "permanent": true,
+      "statusCode": 308
+    }
+  ]
 }
