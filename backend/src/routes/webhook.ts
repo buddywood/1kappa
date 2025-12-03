@@ -1,7 +1,14 @@
 import { Router, Request, Response } from 'express';
 import type { Router as ExpressRouter } from 'express';
 import { verifyWebhookSignature } from '../services/stripe';
-import { getOrderByStripeSessionId, updateOrderStatus, getSellerById } from '../db/queries-sequelize';
+import { 
+  getOrderByStripeSessionId, 
+  updateOrderStatus, 
+  getSellerById,
+  getStewardClaimByStripeSessionId,
+  updateStewardClaimStatus,
+  getChapterById
+} from '../db/queries-sequelize';
 import pool from '../db/connection';
 import dotenv from 'dotenv';
 
@@ -43,6 +50,38 @@ router.post('/stripe', async (req: Request, res: Response) => {
       if (order && order.status === 'PENDING') {
         await updateOrderStatus(order.id, 'PAID');
         console.log(`Order ${order.id} marked as PAID`);
+      }
+
+      // Handle steward claim payments
+      if (session.metadata?.type === 'steward_claim' && session.metadata?.listing_id) {
+        const claim = await getStewardClaimByStripeSessionId(session.id);
+        
+        if (claim && claim.status === 'PENDING') {
+          // Update claim status to PAID
+          await updateStewardClaimStatus(claim.id, 'PAID');
+          console.log(`Steward claim ${claim.id} marked as PAID`);
+
+          // Transfer chapter donation to chapter Stripe account
+          if (claim.chapter_donation_cents > 0 && session.metadata?.chapter_account_id) {
+            const { stripe } = await import('../services/stripe');
+            const paymentIntentId = session.payment_intent;
+            
+            if (paymentIntentId) {
+              // Create transfer to chapter account for the donation amount
+              await stripe.transfers.create({
+                amount: claim.chapter_donation_cents,
+                currency: 'usd',
+                destination: session.metadata.chapter_account_id,
+                metadata: {
+                  type: 'steward_chapter_donation',
+                  claim_id: claim.id.toString(),
+                  listing_id: session.metadata.listing_id,
+                },
+              });
+              console.log(`Transferred ${claim.chapter_donation_cents} cents to chapter ${session.metadata.chapter_account_id} for claim ${claim.id}`);
+            }
+          }
+        }
       }
 
       // Handle featured event promotion payments
