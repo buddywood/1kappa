@@ -27,44 +27,22 @@ module.exports = {
       console.log('  ✓ Dropped existing check_role_foreign_key constraint');
     }
 
-    // Now update any existing STEWARD users to have NULL fraternity_member_id
-    // (it will be accessed via steward_id -> stewards.fraternity_member_id)
-    // Only update STEWARD users that have a steward_id (skip orphaned STEWARD users)
+    // Note: Since seller_id, promoter_id, and steward_id columns were removed from users table,
+    // we only need to ensure STEWARD users have NULL fraternity_member_id
+    // (fraternity_member_id is now accessed via stewards table -> fraternity_members table)
     const [updateResult] = await queryInterface.sequelize.query(`
       UPDATE users 
       SET fraternity_member_id = NULL 
       WHERE role = 'STEWARD' 
         AND fraternity_member_id IS NOT NULL
-        AND steward_id IS NOT NULL
     `);
     console.log(`  ✓ Set fraternity_member_id to NULL for ${updateResult[1] || 0} STEWARD users`);
 
-    // Fix any orphaned STEWARD users (STEWARD role but no steward_id) by changing to GUEST
-    const [orphanedResult] = await queryInterface.sequelize.query(`
-      UPDATE users 
-      SET role = 'GUEST'
-      WHERE role = 'STEWARD' 
-        AND steward_id IS NULL
-    `);
-    console.log(`  ✓ Fixed ${orphanedResult[1] || 0} orphaned STEWARD users (changed to GUEST)`);
-
-    // Add updated constraint
-    // STEWARD users: steward_id IS NOT NULL, fraternity_member_id IS NULL
+    // Add updated constraint - simplified to just check valid role values
+    // Role-specific foreign keys are now handled via user_id in role tables (sellers, promoters, stewards)
     await queryInterface.sequelize.query(`
       ALTER TABLE users ADD CONSTRAINT check_role_foreign_key CHECK (
-        (role = 'GUEST' AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL AND (
-          (fraternity_member_id IS NOT NULL) OR 
-          (fraternity_member_id IS NULL AND onboarding_status != 'ONBOARDING_FINISHED')
-        )) OR
-        (role = 'SELLER' AND seller_id IS NOT NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
-        (role = 'PROMOTER' AND promoter_id IS NOT NULL AND fraternity_member_id IS NOT NULL AND seller_id IS NULL AND steward_id IS NULL) OR
-        (role = 'STEWARD' AND steward_id IS NOT NULL AND fraternity_member_id IS NULL AND (
-          (seller_id IS NULL AND promoter_id IS NULL) OR
-          (seller_id IS NOT NULL AND promoter_id IS NULL) OR
-          (seller_id IS NULL AND promoter_id IS NOT NULL) OR
-          (seller_id IS NOT NULL AND promoter_id IS NOT NULL)
-        )) OR
-        (role = 'ADMIN' AND fraternity_member_id IS NULL AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL)
+        role IN ('ADMIN', 'SELLER', 'PROMOTER', 'GUEST', 'STEWARD')
       )
     `);
     console.log('  ✓ Added updated check_role_foreign_key constraint');
@@ -89,37 +67,13 @@ module.exports = {
       console.log('  ✓ Dropped check_role_foreign_key constraint');
     }
 
-    // Restore old constraint (STEWARD requires fraternity_member_id)
+    // Restore old constraint (simplified - just check valid role values)
     await queryInterface.sequelize.query(`
       ALTER TABLE users ADD CONSTRAINT check_role_foreign_key CHECK (
-        (role = 'GUEST' AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL AND (
-          (fraternity_member_id IS NOT NULL) OR 
-          (fraternity_member_id IS NULL AND onboarding_status != 'ONBOARDING_FINISHED')
-        )) OR
-        (role = 'SELLER' AND seller_id IS NOT NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
-        (role = 'PROMOTER' AND promoter_id IS NOT NULL AND fraternity_member_id IS NOT NULL AND seller_id IS NULL AND steward_id IS NULL) OR
-        (role = 'STEWARD' AND steward_id IS NOT NULL AND fraternity_member_id IS NOT NULL AND (
-          (seller_id IS NULL AND promoter_id IS NULL) OR
-          (seller_id IS NOT NULL AND promoter_id IS NULL) OR
-          (seller_id IS NULL AND promoter_id IS NOT NULL) OR
-          (seller_id IS NOT NULL AND promoter_id IS NOT NULL)
-        )) OR
-        (role = 'ADMIN' AND fraternity_member_id IS NULL AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL)
+        role IN ('ADMIN', 'SELLER', 'PROMOTER', 'GUEST', 'STEWARD')
       )
     `);
     console.log('  ✓ Restored original check_role_foreign_key constraint');
-
-    // Update STEWARD users to have fraternity_member_id from stewards table
-    await queryInterface.sequelize.query(`
-      UPDATE users u
-      SET fraternity_member_id = s.fraternity_member_id
-      FROM stewards s
-      WHERE u.role = 'STEWARD' 
-        AND u.steward_id = s.id
-        AND u.fraternity_member_id IS NULL
-        AND s.fraternity_member_id IS NOT NULL
-    `);
-    console.log('  ✓ Updated STEWARD users with fraternity_member_id from stewards table');
 
     console.log('✅ Reverted users table constraint for STEWARD role');
   }
