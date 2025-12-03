@@ -151,8 +151,9 @@ router.post(
 
       // Upload image to S3 if provided
       let imageUrl: string | undefined;
-      if ((req as any).file) {
-        const file = (req as any).file;
+      const multerReq = req as MulterRequest;
+      if (multerReq.file) {
+        const file = multerReq.file;
         const uploadResult = await uploadToS3(
           file.buffer,
           file.originalname,
@@ -522,8 +523,9 @@ router.put(
 
       // Upload image to S3 if provided
       let imageUrl: string | undefined;
-      if ((req as any).file) {
-        const file = (req as any).file;
+      const multerReq = req as MulterRequest;
+      if (multerReq.file) {
+        const file = multerReq.file;
         const uploadResult = await uploadToS3(
           file.buffer,
           file.originalname,
