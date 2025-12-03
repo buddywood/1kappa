@@ -12,6 +12,7 @@
     "migrate": "tsx src/db/migrations.ts",
     "reset:db": "tsx src/scripts/reset-db.ts",
     "verify:db": "tsx src/scripts/verify-db-setup.ts",
+    "verify:env": "tsx src/scripts/verify-env-vars.ts",
     "verify:roles": "tsx src/scripts/verify-roles.ts",
     "seed": "tsx src/db/seed-foundational.ts",
     "seed:test": "tsx src/db/seed-test.ts",
