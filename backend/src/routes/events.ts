@@ -1,12 +1,11 @@
 import { Router, Request, Response } from "express";
 import type { Router as ExpressRouter } from "express";
 import multer from "multer";
-import type { File } from "multer";
 import { z } from "zod";
 
 // Extend Express Request to include multer file
 interface MulterRequest extends Request {
-  file?: File;
+  file?: Express.Multer.File;
 }
 import {
   getActiveEvents,
