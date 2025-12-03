@@ -1689,9 +1689,10 @@ async function seedTestUsers(): Promise<void> {
           }
 
           // Check if steward already exists via users table
+          // Note: stewards table now has user_id that references users.id
           const existingSteward = await pool.query(
             `SELECT st.id FROM stewards st
-             JOIN users u ON u.steward_id = st.id
+             JOIN users u ON st.user_id = u.id
              JOIN fraternity_members m ON (u.email = m.email OR u.cognito_sub = m.cognito_sub)
              WHERE m.id = $1`,
             [memberId]
