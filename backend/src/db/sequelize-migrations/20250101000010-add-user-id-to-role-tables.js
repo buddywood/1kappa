@@ -72,80 +72,119 @@ module.exports = {
     // Step 2: Populate user_id columns from existing users table relationships
     console.log('  Step 2: Populating user_id columns from existing relationships...');
     
-    // Populate sellers.user_id from users.seller_id
-    await queryInterface.sequelize.query(`
-      UPDATE sellers s
-      SET user_id = u.id
-      FROM users u
-      WHERE u.seller_id = s.id
-        AND s.user_id IS NULL
+    // Check if seller_id, promoter_id, and steward_id columns exist in users table
+    // (they won't exist in fresh databases created from schema.sql)
+    const [userColumns] = await queryInterface.sequelize.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'users' 
+        AND column_name IN ('seller_id', 'promoter_id', 'steward_id')
     `);
-    console.log('    ✓ Populated user_id for sellers');
-
-    // Populate promoters.user_id from users.promoter_id
-    await queryInterface.sequelize.query(`
-      UPDATE promoters p
-      SET user_id = u.id
-      FROM users u
-      WHERE u.promoter_id = p.id
-        AND p.user_id IS NULL
-    `);
-    console.log('    ✓ Populated user_id for promoters');
-
-    // Populate stewards.user_id from users.steward_id
-    await queryInterface.sequelize.query(`
-      UPDATE stewards st
-      SET user_id = u.id
-      FROM users u
-      WHERE u.steward_id = st.id
-        AND st.user_id IS NULL
-    `);
-    console.log('    ✓ Populated user_id for stewards');
-
-    // Populate fraternity_members.user_id from users (GUEST role or via email/cognito_sub matching)
-    await queryInterface.sequelize.query(`
-      UPDATE fraternity_members fm
-      SET user_id = u.id
-      FROM users u
-      WHERE (u.email = fm.email OR u.cognito_sub = fm.cognito_sub)
-        AND fm.user_id IS NULL
-        AND u.role = 'GUEST'
-    `);
-    console.log('    ✓ Populated user_id for fraternity_members (GUEST users)');
-
-    // Also populate for role-specific users via their role tables
-    // Update sellers' fraternity_members
-    await queryInterface.sequelize.query(`
-      UPDATE fraternity_members fm
-      SET user_id = u.id
-      FROM users u
-      JOIN sellers s ON u.seller_id = s.id
-      WHERE s.email = fm.email
-        AND fm.user_id IS NULL
-        AND (u.email = fm.email OR u.cognito_sub = fm.cognito_sub)
-    `);
+    const hasSellerId = userColumns.some(col => col.column_name === 'seller_id');
+    const hasPromoterId = userColumns.some(col => col.column_name === 'promoter_id');
+    const hasStewardId = userColumns.some(col => col.column_name === 'steward_id');
     
-    // Update promoters' fraternity_members
-    await queryInterface.sequelize.query(`
-      UPDATE fraternity_members fm
-      SET user_id = u.id
-      FROM users u
-      JOIN promoters p ON u.promoter_id = p.id
-      WHERE p.email = fm.email
-        AND fm.user_id IS NULL
-        AND (u.email = fm.email OR u.cognito_sub = fm.cognito_sub)
-    `);
-    
-    // Update stewards' fraternity_members (via user email/cognito_sub matching)
-    await queryInterface.sequelize.query(`
-      UPDATE fraternity_members fm
-      SET user_id = u.id
-      FROM users u
-      JOIN stewards st ON u.steward_id = st.id
-      WHERE fm.user_id IS NULL
-        AND (u.email = fm.email OR u.cognito_sub = fm.cognito_sub)
-    `);
-    console.log('    ✓ Populated user_id for fraternity_members (role-specific users)');
+    if (hasSellerId || hasPromoterId || hasStewardId) {
+      // Existing database - migrate data from old structure
+      
+      // Populate sellers.user_id from users.seller_id
+      if (hasSellerId) {
+        await queryInterface.sequelize.query(`
+          UPDATE sellers s
+          SET user_id = u.id
+          FROM users u
+          WHERE u.seller_id = s.id
+            AND s.user_id IS NULL
+        `);
+        console.log('    ✓ Populated user_id for sellers');
+      }
+
+      // Populate promoters.user_id from users.promoter_id
+      if (hasPromoterId) {
+        await queryInterface.sequelize.query(`
+          UPDATE promoters p
+          SET user_id = u.id
+          FROM users u
+          WHERE u.promoter_id = p.id
+            AND p.user_id IS NULL
+        `);
+        console.log('    ✓ Populated user_id for promoters');
+      }
+
+      // Populate stewards.user_id from users.steward_id
+      if (hasStewardId) {
+        await queryInterface.sequelize.query(`
+          UPDATE stewards st
+          SET user_id = u.id
+          FROM users u
+          WHERE u.steward_id = st.id
+            AND st.user_id IS NULL
+        `);
+        console.log('    ✓ Populated user_id for stewards');
+      }
+
+      // Populate fraternity_members.user_id from users (GUEST role or via email/cognito_sub matching)
+      await queryInterface.sequelize.query(`
+        UPDATE fraternity_members fm
+        SET user_id = u.id
+        FROM users u
+        WHERE (u.email = fm.email OR u.cognito_sub = fm.cognito_sub)
+          AND fm.user_id IS NULL
+          AND u.role = 'GUEST'
+      `);
+      console.log('    ✓ Populated user_id for fraternity_members (GUEST users)');
+
+      // Also populate for role-specific users via their role tables
+      // Update sellers' fraternity_members
+      if (hasSellerId) {
+        await queryInterface.sequelize.query(`
+          UPDATE fraternity_members fm
+          SET user_id = u.id
+          FROM users u
+          JOIN sellers s ON u.seller_id = s.id
+          WHERE s.email = fm.email
+            AND fm.user_id IS NULL
+            AND (u.email = fm.email OR u.cognito_sub = fm.cognito_sub)
+        `);
+      }
+      
+      // Update promoters' fraternity_members
+      if (hasPromoterId) {
+        await queryInterface.sequelize.query(`
+          UPDATE fraternity_members fm
+          SET user_id = u.id
+          FROM users u
+          JOIN promoters p ON u.promoter_id = p.id
+          WHERE p.email = fm.email
+            AND fm.user_id IS NULL
+            AND (u.email = fm.email OR u.cognito_sub = fm.cognito_sub)
+        `);
+      }
+      
+      // Update stewards' fraternity_members (via user email/cognito_sub matching)
+      if (hasStewardId) {
+        await queryInterface.sequelize.query(`
+          UPDATE fraternity_members fm
+          SET user_id = u.id
+          FROM users u
+          JOIN stewards st ON u.steward_id = st.id
+          WHERE fm.user_id IS NULL
+            AND (u.email = fm.email OR u.cognito_sub = fm.cognito_sub)
+        `);
+      }
+      console.log('    ✓ Populated user_id for fraternity_members (role-specific users)');
+    } else {
+      // Fresh database - no existing data to migrate
+      // Just populate fraternity_members.user_id from users via email/cognito_sub matching
+      await queryInterface.sequelize.query(`
+        UPDATE fraternity_members fm
+        SET user_id = u.id
+        FROM users u
+        WHERE (u.email = fm.email OR u.cognito_sub = fm.cognito_sub)
+          AND fm.user_id IS NULL
+      `);
+      console.log('    ✓ Populated user_id for fraternity_members (fresh database - email/cognito matching)');
+    }
 
     // Step 3: Add indexes on user_id columns
     console.log('  Step 3: Adding indexes on user_id columns...');
