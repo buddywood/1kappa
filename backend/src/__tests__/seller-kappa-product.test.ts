@@ -50,7 +50,17 @@ describe('Seller Kappa Branded Product Verification', () => {
       status: 'APPROVED',
       verification_status: 'VERIFIED',
       stripe_account_id: 'acct_test123',
-      seller_id: 1,
+    });
+
+    // Mock pool.query for seller email lookup and member verification check
+    (pool.query as jest.Mock).mockImplementation((query: string) => {
+      if (query.includes('SELECT email FROM sellers WHERE id')) {
+        return Promise.resolve({ rows: [{ email: 'seller@example.com' }] });
+      } else if (query.includes('SELECT verification_status FROM fraternity_members WHERE email')) {
+        // Seller is not a verified member, so they can only sell Kappa branded products
+        return Promise.resolve({ rows: [] }); // No member found or not verified
+      }
+      return Promise.resolve({ rows: [] });
     });
 
     // Mock product creation
@@ -108,12 +118,14 @@ describe('Seller Kappa Branded Product Verification', () => {
       status: 'APPROVED',
       verification_status: 'VERIFIED',
       stripe_account_id: 'acct_test123',
-      seller_id: 1,
     });
 
-    // Mock member verification status query
+    // Mock pool.query for seller email lookup and member verification check
     (pool.query as jest.Mock).mockImplementation((query: string) => {
-      if (query.includes('verification_status') && query.includes('fraternity_members')) {
+      if (query.includes('SELECT email FROM sellers WHERE id')) {
+        return Promise.resolve({ rows: [{ email: 'seller@example.com' }] });
+      } else if (query.includes('SELECT verification_status FROM fraternity_members WHERE email')) {
+        // Seller is a verified member, so they can sell anything
         return Promise.resolve({ rows: [{ verification_status: 'VERIFIED' }] });
       }
       return Promise.resolve({ rows: [] });
@@ -164,8 +176,10 @@ describe('Seller Kappa Branded Product Verification', () => {
       status: 'APPROVED',
       verification_status: 'PENDING',
       stripe_account_id: 'acct_test123',
-      seller_id: 1,
     });
+
+    // Mock pool.query for seller email lookup (won't be used since verification_status is not VERIFIED)
+    (pool.query as jest.Mock).mockResolvedValue({ rows: [] });
 
     // Mock product creation
     (queries.createProduct as jest.Mock).mockResolvedValue({

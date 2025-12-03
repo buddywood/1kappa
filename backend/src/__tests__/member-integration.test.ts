@@ -20,6 +20,7 @@ jest.mock('../db/queries-sequelize', () => ({
   getPlatformSetting: jest.fn(),
   createStewardClaim: jest.fn(),
   createSeller: jest.fn(),
+  getSellerById: jest.fn(),
   createPromoter: jest.fn(),
   createSteward: jest.fn(),
   linkUserToMember: jest.fn(),
@@ -83,7 +84,7 @@ const mockRequireAdmin = jest.fn((req: any, res: any, next: any) => {
 
 // Mock S3 service
 jest.mock('../services/s3', () => ({
-  uploadToS3: jest.fn().mockResolvedValue('https://example.com/headshot.jpg'),
+  uploadToS3: jest.fn().mockResolvedValue({ url: 'https://example.com/headshot.jpg' }),
 }));
 
 // Mock token generation
@@ -98,11 +99,18 @@ jest.mock('../services/stripe', () => ({
     url: 'https://checkout.stripe.com/cs_test_123',
   }),
   calculateStewardPlatformFee: jest.fn().mockResolvedValue(500),
+  createConnectAccount: jest.fn().mockResolvedValue({ id: 'acct_test123' }),
 }));
 
 // Mock email service
 jest.mock('../services/email', () => ({
   sendSellerApplicationSubmittedEmail: jest.fn().mockResolvedValue(undefined),
+  sendSellerApprovedEmail: jest.fn().mockResolvedValue(undefined),
+}));
+
+// Mock notifications service
+jest.mock('../services/notifications', () => ({
+  notifyInterestedUsersForSeller: jest.fn().mockResolvedValue(undefined),
 }));
 
 const app = express();
@@ -286,7 +294,7 @@ describe('Member Role Integration Tests', () => {
 
   describe('End-to-End: Member → Seller/Promoter/Steward Transitions', () => {
     it('should allow member to apply for seller role', async () => {
-      const { createSeller, getMemberById } = require('../db/queries-sequelize');
+      const { createSeller, getMemberById, linkUserToSeller, getUserByEmail, updateSellerInvitationToken, getSellerById } = require('../db/queries-sequelize');
       
       const mockMember = {
         id: 1,
@@ -295,23 +303,38 @@ describe('Member Role Integration Tests', () => {
 
       const mockSeller = {
         id: 1,
-        fraternity_member_id: 1,
-        status: 'PENDING',
+        email: 'seller@example.com',
+        name: 'Test Seller',
+        status: 'APPROVED', // Auto-approved for verified members
+        user_id: null,
       };
 
       getMemberById.mockResolvedValue(mockMember);
       createSeller.mockResolvedValue(mockSeller);
-      
-      // Mock: Seller route checks for member by email
-      (jest.spyOn(pool, 'query') as jest.Mock)
-        .mockResolvedValueOnce({ rows: [{ id: 1, verification_status: 'VERIFIED' }] }) // Member lookup by email (line 157-160)
-        .mockResolvedValueOnce({ rows: [{ id: 1, verification_status: 'VERIFIED' }] }); // Member verification check (line 212-215)
-
-      // Mock linkUserToSeller and getUserByEmail for auto-approval
-      const { linkUserToSeller, getUserByEmail, updateSellerInvitationToken } = require('../db/queries-sequelize');
       linkUserToSeller.mockResolvedValue(undefined);
       getUserByEmail.mockResolvedValue(null); // No existing user
       updateSellerInvitationToken.mockResolvedValue(undefined);
+      getSellerById.mockResolvedValue(mockSeller);
+      
+      // Mock pool.query calls:
+      // 1. Member lookup by email (line 174-177)
+      // 2. Member verification check (line 230-233)
+      // 3. Update seller status to APPROVED (line 274-277 or 324-327)
+      (jest.spyOn(pool, 'query') as jest.Mock).mockImplementation((query: string) => {
+        if (query.includes('SELECT id, verification_status FROM fraternity_members WHERE email')) {
+          // First call: Member lookup by email
+          return Promise.resolve({ rows: [{ id: 1, verification_status: 'VERIFIED' }] });
+        } else if (query.includes('SELECT verification_status FROM fraternity_members WHERE id')) {
+          // Second call: Member verification check
+          return Promise.resolve({ rows: [{ verification_status: 'VERIFIED' }] });
+        } else if (query.includes('UPDATE sellers SET status')) {
+          // Third call: Update seller status to APPROVED
+          return Promise.resolve({ rows: [] });
+        }
+        return Promise.resolve({ rows: [] });
+      });
+
+      // S3 is already mocked at the top level
 
       // Seller apply requires a store_logo file
       const response = await request(app)
@@ -325,7 +348,7 @@ describe('Member Role Integration Tests', () => {
         .expect(201);
 
       expect(response.body).toHaveProperty('id');
-      expect(response.body).toHaveProperty('status', 'PENDING');
+      expect(response.body).toHaveProperty('status', 'APPROVED'); // Auto-approved for verified members
     });
 
     it('should allow member to apply for promoter role', async () => {
