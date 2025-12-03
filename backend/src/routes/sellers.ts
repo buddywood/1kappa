@@ -198,10 +198,9 @@ router.post(
         headshotUrl = req.body.existing_headshot_url;
       }
 
-      // Create seller record with member_id if available
+      // Create seller record (fraternity_member relationship via email matching)
       const seller = await createSeller({
         ...body,
-        fraternity_member_id: memberId,
         headshot_url: headshotUrl,
         store_logo_url: storeLogoUrl,
         social_links: body.social_links || {},
@@ -414,18 +413,20 @@ router.get("/collections", async (req: Request, res: Response) => {
         s.business_name,
         s.headshot_url,
         s.sponsoring_chapter_id,
-        s.fraternity_member_id,
+        m.id as fraternity_member_id,
         s.social_links,
         s.email,
         COUNT(p.id) as product_count,
-        CASE WHEN s.fraternity_member_id IS NOT NULL THEN true ELSE false END as is_fraternity_member,
+        CASE WHEN m.id IS NOT NULL THEN true ELSE false END as is_fraternity_member,
         CASE WHEN s.status = 'APPROVED' THEN true ELSE false END as is_seller,
         CASE WHEN st.id IS NOT NULL THEN true ELSE false END as is_steward,
         CASE WHEN pr.id IS NOT NULL THEN true ELSE false END as is_promoter
       FROM sellers s
       LEFT JOIN products p ON s.id = p.seller_id
-      LEFT JOIN stewards st ON s.fraternity_member_id = st.fraternity_member_id AND st.status = 'APPROVED'
-      LEFT JOIN promoters pr ON (s.fraternity_member_id = pr.fraternity_member_id OR s.email = pr.email) AND pr.status = 'APPROVED'
+      LEFT JOIN fraternity_members m ON s.email = m.email
+      LEFT JOIN users u_st ON u_st.email = m.email OR u_st.cognito_sub = m.cognito_sub
+      LEFT JOIN stewards st ON u_st.steward_id = st.id AND st.status = 'APPROVED'
+      LEFT JOIN promoters pr ON s.email = pr.email AND pr.status = 'APPROVED'
       WHERE s.status = 'APPROVED'
       GROUP BY s.id, s.name, s.business_name, s.headshot_url, s.sponsoring_chapter_id, s.fraternity_member_id, s.social_links, s.email, st.id, pr.id
       HAVING COUNT(p.id) > 0

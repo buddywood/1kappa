@@ -5,17 +5,40 @@ import { getUserByCognitoSub } from '../db/queries-sequelize';
 /**
  * Get fraternity_member_id from role-specific tables based on user's role
  * Returns null if user doesn't have a fraternity member ID
+ * All lookups now use email/cognito_sub matching since fraternity_member_id columns have been removed
  */
 export async function getFraternityMemberId(user: User): Promise<number | null> {
   if (user.role === 'SELLER' && user.seller_id) {
-    const sellerResult = await pool.query('SELECT fraternity_member_id FROM sellers WHERE id = $1', [user.seller_id]);
-    return sellerResult.rows[0]?.fraternity_member_id || null;
+    // Match seller email with fraternity_members
+    const sellerResult = await pool.query('SELECT email FROM sellers WHERE id = $1', [user.seller_id]);
+    const sellerEmail = sellerResult.rows[0]?.email;
+    if (sellerEmail) {
+      const memberResult = await pool.query(
+        'SELECT id FROM fraternity_members WHERE email = $1',
+        [sellerEmail]
+      );
+      return memberResult.rows[0]?.id || null;
+    }
+    return null;
   } else if (user.role === 'PROMOTER' && user.promoter_id) {
-    const promoterResult = await pool.query('SELECT fraternity_member_id FROM promoters WHERE id = $1', [user.promoter_id]);
-    return promoterResult.rows[0]?.fraternity_member_id || null;
+    // Match promoter email with fraternity_members
+    const promoterResult = await pool.query('SELECT email FROM promoters WHERE id = $1', [user.promoter_id]);
+    const promoterEmail = promoterResult.rows[0]?.email;
+    if (promoterEmail) {
+      const memberResult = await pool.query(
+        'SELECT id FROM fraternity_members WHERE email = $1',
+        [promoterEmail]
+      );
+      return memberResult.rows[0]?.id || null;
+    }
+    return null;
   } else if (user.role === 'STEWARD' && user.steward_id) {
-    const stewardResult = await pool.query('SELECT fraternity_member_id FROM stewards WHERE id = $1', [user.steward_id]);
-    return stewardResult.rows[0]?.fraternity_member_id || null;
+    // Match user email/cognito_sub with fraternity_members (stewards linked via users table)
+    const memberResult = await pool.query(
+      'SELECT id FROM fraternity_members WHERE email = $1 OR cognito_sub = $2',
+      [user.email, user.cognito_sub]
+    );
+    return memberResult.rows[0]?.id || null;
   } else if (user.role === 'GUEST') {
     // For GUEST, match by email/cognito_sub with fraternity_members table
     const memberResult = await pool.query(

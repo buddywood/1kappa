@@ -30,7 +30,9 @@ const sampleProducts = [
     description:
       "Premium cotton polo shirt with embroidered Kappa Alpha Psi logo. Perfect for chapter events and casual wear. Available in multiple colors.",
     price_cents: 4500, // $45.00
-    image_url: getS3ImageUrl("products/4df62c41-fb96-45f1-bd10-58bfc2993d1a-kappashirt1a.png"),
+    image_url: getS3ImageUrl(
+      "products/4df62c41-fb96-45f1-bd10-58bfc2993d1a-kappashirt1a.png"
+    ),
     category: "Apparel",
   },
   {
@@ -38,7 +40,9 @@ const sampleProducts = [
     description:
       "Limited edition commemorative pin celebrating the founding of Kappa Alpha Psi. Gold-plated with intricate detailing.",
     price_cents: 2500, // $25.00
-    image_url: getS3ImageUrl("products/415f672f-be3e-49c3-9bae-1213f1e2a7ab-sample_merch1.png"),
+    image_url: getS3ImageUrl(
+      "products/415f672f-be3e-49c3-9bae-1213f1e2a7ab-sample_merch1.png"
+    ),
     category: "Accessories",
   },
   {
@@ -46,7 +50,9 @@ const sampleProducts = [
     description:
       "Comfortable fleece hoodie with screen-printed Kappa Alpha Psi design. Perfect for chilly chapter meetings and casual outings.",
     price_cents: 5500, // $55.00
-    image_url: getS3ImageUrl("products/2adf45a0-1908-4558-b1a9-876859099084-sample_merch2.png"),
+    image_url: getS3ImageUrl(
+      "products/2adf45a0-1908-4558-b1a9-876859099084-sample_merch2.png"
+    ),
     category: "Outerwear",
   },
   {
@@ -54,7 +60,9 @@ const sampleProducts = [
     description:
       "Set of 3 premium cotton t-shirts featuring different Kappa Alpha Psi designs. Great for everyday wear and chapter events.",
     price_cents: 3500, // $35.00
-    image_url: getS3ImageUrl("products/bc23755b-3c89-43a8-a679-299d6f2cb17f-kappashirt1b.png"),
+    image_url: getS3ImageUrl(
+      "products/bc23755b-3c89-43a8-a679-299d6f2cb17f-kappashirt1b.png"
+    ),
     category: "Apparel",
   },
   {
@@ -62,7 +70,9 @@ const sampleProducts = [
     description:
       "Genuine leather wallet with embossed Kappa Alpha Psi letters. Features multiple card slots and cash compartment.",
     price_cents: 4500, // $45.00
-    image_url: getS3ImageUrl("products/364752d7-3cf6-413c-a1c3-83c3feb960c2-sample_merch3.png"),
+    image_url: getS3ImageUrl(
+      "products/364752d7-3cf6-413c-a1c3-83c3feb960c2-sample_merch3.png"
+    ),
     category: "Accessories",
   },
   {
@@ -70,7 +80,9 @@ const sampleProducts = [
     description:
       "Ceramic coffee mug with custom chapter name and Kappa Alpha Psi logo. Microwave and dishwasher safe.",
     price_cents: 1800, // $18.00
-    image_url: getS3ImageUrl("products/21fc876b-3112-4053-b797-c25b1be0ed0b-sample_merch4.png"),
+    image_url: getS3ImageUrl(
+      "products/21fc876b-3112-4053-b797-c25b1be0ed0b-sample_merch4.png"
+    ),
     category: "Home Goods",
   },
   {
@@ -78,7 +90,9 @@ const sampleProducts = [
     description:
       "Adjustable snapback cap with embroidered Kappa Alpha Psi logo. One size fits all. Perfect for outdoor events.",
     price_cents: 2800, // $28.00
-    image_url: getS3ImageUrl("products/778772a1-9394-442c-b699-743b171a2341-sample_merch5.png"),
+    image_url: getS3ImageUrl(
+      "products/778772a1-9394-442c-b699-743b171a2341-sample_merch5.png"
+    ),
     category: "Accessories",
   },
   {
@@ -86,7 +100,9 @@ const sampleProducts = [
     description:
       "Elegant silk tie featuring Kappa Alpha Psi colors and subtle pattern. Perfect for formal chapter events and banquets.",
     price_cents: 3800, // $38.00
-    image_url: getS3ImageUrl("products/8d9c7579-f998-416c-b843-1c3b3b3a211d-kappa-cigar1b.png"),
+    image_url: getS3ImageUrl(
+      "products/8d9c7579-f998-416c-b843-1c3b3b3a211d-kappa-cigar1b.png"
+    ),
     category: "Apparel",
   },
   {
@@ -94,7 +110,9 @@ const sampleProducts = [
     description:
       "Durable canvas tote bag with screen-printed Kappa Alpha Psi design. Perfect for carrying books, gym gear, or groceries.",
     price_cents: 2200, // $22.00
-    image_url: getS3ImageUrl("products/d1c87439-5397-46bd-bf6a-b26916d91fc1-kappa-cigar1a.png"),
+    image_url: getS3ImageUrl(
+      "products/d1c87439-5397-46bd-bf6a-b26916d91fc1-kappa-cigar1a.png"
+    ),
     category: "Accessories",
   },
   {
@@ -102,7 +120,9 @@ const sampleProducts = [
     description:
       "Stainless steel insulated water bottle with custom chapter engraving. Keeps drinks cold for 24 hours or hot for 12 hours.",
     price_cents: 3200, // $32.00
-    image_url: getS3ImageUrl("products/5dfb4bfb-8fbf-4be4-a478-88e4d3a85af6-sample_merch1.png"),
+    image_url: getS3ImageUrl(
+      "products/5dfb4bfb-8fbf-4be4-a478-88e4d3a85af6-sample_merch1.png"
+    ),
     category: "Accessories",
   },
   {
@@ -110,7 +130,9 @@ const sampleProducts = [
     description:
       "Brass keychain with engraved Kappa Alpha Psi letters. Makes a great gift for brothers or pledges.",
     price_cents: 1200, // $12.00
-    image_url: getS3ImageUrl("products/740f56e0-146e-4025-975e-6fa596bc5fd7-sample_merch3.png"),
+    image_url: getS3ImageUrl(
+      "products/740f56e0-146e-4025-975e-6fa596bc5fd7-sample_merch3.png"
+    ),
     category: "Accessories",
   },
   {
@@ -118,7 +140,9 @@ const sampleProducts = [
     description:
       "Set of 20 vinyl stickers featuring various Kappa Alpha Psi designs. Waterproof and weather-resistant.",
     price_cents: 1500, // $15.00
-    image_url: getS3ImageUrl("products/84ede5d7-4eb6-4857-8513-b4503793b107-sample_merch4.png"),
+    image_url: getS3ImageUrl(
+      "products/84ede5d7-4eb6-4857-8513-b4503793b107-sample_merch4.png"
+    ),
     category: "Accessories",
   },
   {
@@ -126,7 +150,9 @@ const sampleProducts = [
     description:
       "Protective phone case with Kappa Alpha Psi logo. Compatible with iPhone and Samsung models. Available in multiple colors.",
     price_cents: 2500, // $25.00
-    image_url: getS3ImageUrl("products/98884723-d334-436d-9cc1-6922f1503d73-sample_merch4.png"),
+    image_url: getS3ImageUrl(
+      "products/98884723-d334-436d-9cc1-6922f1503d73-sample_merch4.png"
+    ),
     category: "Electronics",
   },
   {
@@ -134,7 +160,9 @@ const sampleProducts = [
     description:
       "Premium leather-bound notebook with custom chapter name embossed on the cover. Perfect for taking notes at meetings.",
     price_cents: 2800, // $28.00
-    image_url: getS3ImageUrl("products/9a4e76ef-b57e-4f60-9a20-ac134f826db4-sample_merch2.png"),
+    image_url: getS3ImageUrl(
+      "products/9a4e76ef-b57e-4f60-9a20-ac134f826db4-sample_merch2.png"
+    ),
     category: "Books & Media",
   },
   {
@@ -142,7 +170,9 @@ const sampleProducts = [
     description:
       "Protective laptop sleeve with Kappa Alpha Psi design. Fits 13-15 inch laptops. Padded interior for extra protection.",
     price_cents: 4200, // $42.00
-    image_url: getS3ImageUrl("products/a97a52c2-eade-4454-8b1f-3ea000d48fbc-sample_merch1.png"),
+    image_url: getS3ImageUrl(
+      "products/a97a52c2-eade-4454-8b1f-3ea000d48fbc-sample_merch1.png"
+    ),
     category: "Electronics",
   },
   {
@@ -150,7 +180,9 @@ const sampleProducts = [
     description:
       "Hardcover book chronicling the history of Kappa Alpha Psi. Includes photos, stories, and important milestones.",
     price_cents: 3500, // $35.00
-    image_url: getS3ImageUrl("products/ad290749-27e2-4cef-ac34-07ff090ce00e-sample_merch5.png"),
+    image_url: getS3ImageUrl(
+      "products/ad290749-27e2-4cef-ac34-07ff090ce00e-sample_merch5.png"
+    ),
     category: "Books & Media",
   },
   // Additional products for non-member sellers (non-kappa branded)
@@ -159,7 +191,9 @@ const sampleProducts = [
     description:
       "Stylish canvas tote bag featuring Kappa Alpha Psi colors. Perfect for everyday use.",
     price_cents: 2800, // $28.00
-    image_url: getS3ImageUrl("products/c31ee9e9-9a55-4eb4-a9ec-35c1b68d6cbc-sample_merch3.png"),
+    image_url: getS3ImageUrl(
+      "products/c31ee9e9-9a55-4eb4-a9ec-35c1b68d6cbc-sample_merch3.png"
+    ),
     category: "Accessories",
     seller_email: "buddy+seller2@ebilly.com", // Assign to non-member seller
     is_kappa_branded: false, // Not explicitly branded
@@ -169,7 +203,9 @@ const sampleProducts = [
     description:
       "Set of 5 vintage-style Kappa Alpha Psi pins. Collectible items perfect for display.",
     price_cents: 3200, // $32.00
-    image_url: getS3ImageUrl("products/c758379d-5ade-456c-bc6f-16d2c25fe3af-sample_merch5.png"),
+    image_url: getS3ImageUrl(
+      "products/c758379d-5ade-456c-bc6f-16d2c25fe3af-sample_merch5.png"
+    ),
     category: "Accessories",
     seller_email: "buddy+seller2@ebilly.com",
     is_kappa_branded: true, // Has "Kappa" in name, so branded
@@ -179,7 +215,9 @@ const sampleProducts = [
     description:
       "Beautiful hardcover coffee table book showcasing Kappa Alpha Psi history and achievements.",
     price_cents: 4500, // $45.00
-    image_url: getS3ImageUrl("products/d090f4dd-36d8-425c-b4ba-ff47f244450c-sample_merch2.png"),
+    image_url: getS3ImageUrl(
+      "products/d090f4dd-36d8-425c-b4ba-ff47f244450c-sample_merch2.png"
+    ),
     category: "Books & Media",
     seller_email: "buddy+seller2@ebilly.com", // Assign to non-member seller
     is_kappa_branded: true, // Mentions Kappa Alpha Psi
@@ -189,7 +227,9 @@ const sampleProducts = [
     description:
       "Elegant timepiece with custom Kappa Alpha Psi engraving. Perfect gift for special occasions.",
     price_cents: 8500, // $85.00
-    image_url: getS3ImageUrl("products/d1a90fcc-02ae-42ac-9d0e-ede81e745677-sample_merch1.png"),
+    image_url: getS3ImageUrl(
+      "products/d1a90fcc-02ae-42ac-9d0e-ede81e745677-sample_merch1.png"
+    ),
     category: "Accessories",
     seller_email: "buddy+seller2@ebilly.com",
   },
@@ -345,7 +385,9 @@ const sampleEvents: SampleEventData[] = [
     location: "Minneapolis Convention Center",
     city: "Minneapolis",
     state: "MN",
-    image_url: getS3ImageUrl("events/108e9cbe-981d-479e-a917-bd47a9749dcc-kevDaBarber.png"),
+    image_url: getS3ImageUrl(
+      "events/108e9cbe-981d-479e-a917-bd47a9749dcc-kevDaBarber.png"
+    ),
     ticket_price_cents: 7500, // $75.00
     event_type: "social",
     event_audience_type: "all_members",
@@ -362,7 +404,9 @@ const sampleEvents: SampleEventData[] = [
     location: "St. Paul Event Center",
     city: "St. Paul",
     state: "MN",
-    image_url: getS3ImageUrl("events/108e9cbe-981d-479e-a917-bd47a9749dcc-kevDaBarber.png"),
+    image_url: getS3ImageUrl(
+      "events/108e9cbe-981d-479e-a917-bd47a9749dcc-kevDaBarber.png"
+    ),
     ticket_price_cents: 2500, // $25.00
     event_type: "professional",
     event_audience_type: "all_members",
@@ -379,7 +423,9 @@ const sampleEvents: SampleEventData[] = [
     location: "University of Minnesota Campus",
     city: "Minneapolis",
     state: "MN",
-    image_url: getS3ImageUrl("events/108e9cbe-981d-479e-a917-bd47a9749dcc-kevDaBarber.png"),
+    image_url: getS3ImageUrl(
+      "events/108e9cbe-981d-479e-a917-bd47a9749dcc-kevDaBarber.png"
+    ),
     ticket_price_cents: 0, // Free event
     event_type: "community_service",
     event_audience_type: "public",
@@ -397,7 +443,9 @@ const sampleEvents: SampleEventData[] = [
     location: "Hilton Downtown",
     city: "Minneapolis",
     state: "MN",
-    image_url: getS3ImageUrl("events/108e9cbe-981d-479e-a917-bd47a9749dcc-kevDaBarber.png"),
+    image_url: getS3ImageUrl(
+      "events/108e9cbe-981d-479e-a917-bd47a9749dcc-kevDaBarber.png"
+    ),
     ticket_price_cents: 5000, // $50.00
     event_type: "educational",
     event_audience_type: "all_members",
@@ -414,7 +462,9 @@ const sampleEvents: SampleEventData[] = [
     location: "Prestige Golf Club",
     city: "Bloomington",
     state: "MN",
-    image_url: getS3ImageUrl("events/108e9cbe-981d-479e-a917-bd47a9749dcc-kevDaBarber.png"),
+    image_url: getS3ImageUrl(
+      "events/108e9cbe-981d-479e-a917-bd47a9749dcc-kevDaBarber.png"
+    ),
     ticket_price_cents: 10000, // $100.00
     event_type: "sports",
     event_audience_type: "all_members",
@@ -432,7 +482,9 @@ const sampleEvents: SampleEventData[] = [
     location: "Community Center",
     city: "St. Paul",
     state: "MN",
-    image_url: getS3ImageUrl("events/108e9cbe-981d-479e-a917-bd47a9749dcc-kevDaBarber.png"),
+    image_url: getS3ImageUrl(
+      "events/108e9cbe-981d-479e-a917-bd47a9749dcc-kevDaBarber.png"
+    ),
     ticket_price_cents: 2000, // $20.00
     event_type: "social",
     event_audience_type: "public",
@@ -449,7 +501,9 @@ const sampleEvents: SampleEventData[] = [
     location: "Online",
     city: null,
     state: null,
-    image_url: getS3ImageUrl("events/108e9cbe-981d-479e-a917-bd47a9749dcc-kevDaBarber.png"),
+    image_url: getS3ImageUrl(
+      "events/108e9cbe-981d-479e-a917-bd47a9749dcc-kevDaBarber.png"
+    ),
     ticket_price_cents: 0,
     event_type: "other",
     event_audience_type: "chapter_specific",
@@ -467,7 +521,9 @@ const sampleEvents: SampleEventData[] = [
     location: "Grand Ballroom, Marriott",
     city: "Minneapolis",
     state: "MN",
-    image_url: getS3ImageUrl("events/108e9cbe-981d-479e-a917-bd47a9749dcc-kevDaBarber.png"),
+    image_url: getS3ImageUrl(
+      "events/108e9cbe-981d-479e-a917-bd47a9749dcc-kevDaBarber.png"
+    ),
     ticket_price_cents: 15000, // $150.00
     event_type: "philanthropy",
     event_audience_type: "public",
@@ -543,7 +599,9 @@ async function seedStewardSellers(): Promise<void> {
 
     // Get product categories
     const categories = await getAllProductCategories();
-    const categoryMap = new Map(categories.map((cat: any) => [cat.name, cat.id]));
+    const categoryMap = new Map(
+      categories.map((cat: any) => [cat.name, cat.id])
+    );
 
     // Get or create steward sellers
     const stewardSellersList = [];
@@ -604,15 +662,18 @@ async function seedStewardSellers(): Promise<void> {
         }
 
         // Ensure memberId is defined before proceeding
-        if (!memberId || typeof memberId !== 'number') {
+        if (!memberId || typeof memberId !== "number") {
           throw new Error(
-            `Failed to get or create fraternity_member_id for steward ${stewardData.email} - memberId is ${memberId}`
+            `Failed to get or create fraternity_member for steward ${stewardData.email} - memberId is ${memberId}`
           );
         }
 
-        // Check if steward already exists
+        // Check if steward already exists via users table
         const existingSteward = await pool.query(
-          "SELECT id FROM stewards WHERE fraternity_member_id = $1",
+          `SELECT st.id FROM stewards st
+           JOIN users u ON u.steward_id = st.id
+           JOIN fraternity_members m ON (u.email = m.email OR u.cognito_sub = m.cognito_sub)
+           WHERE m.id = $1`,
           [memberId]
         );
 
@@ -637,7 +698,6 @@ async function seedStewardSellers(): Promise<void> {
               Math.floor(Math.random() * availableChapters.length)
             ];
           const steward = await createSteward({
-            fraternity_member_id: memberId,
             sponsoring_chapter_id: sponsoringChapter.id,
           });
           stewardId = steward.id;
@@ -670,17 +730,20 @@ async function seedStewardSellers(): Promise<void> {
             "SELECT stripe_account_id FROM sellers WHERE id = $1",
             [sellerId]
           );
-          const hasStripeAccount = existingStripeCheck.rows[0]?.stripe_account_id;
+          const hasStripeAccount =
+            existingStripeCheck.rows[0]?.stripe_account_id;
           if (!hasStripeAccount) {
-            const testStripeAccountId = `acct_test_${sellerId.toString().padStart(10, '0')}`;
+            const testStripeAccountId = `acct_test_${sellerId
+              .toString()
+              .padStart(10, "0")}`;
             await pool.query(
-              "UPDATE sellers SET fraternity_member_id = $1, status = $2, stripe_account_id = $3 WHERE id = $4",
-              [memberId, "APPROVED", testStripeAccountId, sellerId]
+              "UPDATE sellers SET status = $1, stripe_account_id = $2 WHERE id = $3",
+              ["APPROVED", testStripeAccountId, sellerId]
             );
           } else {
             await pool.query(
-              "UPDATE sellers SET fraternity_member_id = $1, status = $2 WHERE id = $3",
-              [memberId, "APPROVED", sellerId]
+              "UPDATE sellers SET status = $1 WHERE id = $2",
+              ["APPROVED", sellerId]
             );
           }
         } else {
@@ -692,7 +755,6 @@ async function seedStewardSellers(): Promise<void> {
           const seller = await createSeller({
             email: stewardData.email,
             name: stewardData.name,
-            fraternity_member_id: memberId,
             sponsoring_chapter_id: sponsoringChapter.id,
             business_name: stewardData.business_name,
             kappa_vendor_id: stewardData.kappa_vendor_id,
@@ -702,7 +764,9 @@ async function seedStewardSellers(): Promise<void> {
           });
           sellerId = seller.id;
           // Approve the seller, set verification_status to VERIFIED, and add test Stripe account ID
-          const testStripeAccountId = `acct_test_${sellerId.toString().padStart(10, '0')}`;
+          const testStripeAccountId = `acct_test_${sellerId
+            .toString()
+            .padStart(10, "0")}`;
           await pool.query(
             "UPDATE sellers SET status = $1, verification_status = $2, stripe_account_id = $3 WHERE id = $4",
             ["APPROVED", "VERIFIED", testStripeAccountId, sellerId]
@@ -819,21 +883,23 @@ async function seedProducts(): Promise<void> {
   try {
     // Get product categories
     const categories = await getAllProductCategories();
-    const categoryMap = new Map(categories.map((cat: any) => [cat.name, cat.id]));
+    const categoryMap = new Map(
+      categories.map((cat: any) => [cat.name, cat.id])
+    );
 
     // Get existing sellers (should already exist from seedTestUsers)
     // Query for the buddy+ seller emails
     const sellerEmails = [
       testUsers.seller.email,
-      testUsers.sellerNonMember.email
+      testUsers.sellerNonMember.email,
     ];
-    
+
     const sellersResult = await pool.query(
       `SELECT id, email, status, verification_status FROM sellers WHERE email = ANY($1::text[])`,
       [sellerEmails]
     );
 
-    let sellers = sellersResult.rows.map(row => {
+    let sellers = sellersResult.rows.map((row) => {
       // Ensure email is set for matching
       (row as any).email = row.email;
       return row;
@@ -842,14 +908,14 @@ async function seedProducts(): Promise<void> {
     if (sellers.length === 0) {
       console.error("  ❌ No sellers found in database!");
       console.error("  ⚠️  Sellers should be created by seedTestUsers first.");
-      console.error(`  ⚠️  Looking for sellers: ${sellerEmails.join(', ')}`);
+      console.error(`  ⚠️  Looking for sellers: ${sellerEmails.join(", ")}`);
       console.error("  ⚠️  Make sure seedTestUsers runs before seedProducts.");
       return;
     }
 
     // Ensure all sellers are approved
     for (const seller of sellers) {
-      if (seller.status !== 'APPROVED') {
+      if (seller.status !== "APPROVED") {
         await pool.query("UPDATE sellers SET status = $1 WHERE id = $2", [
           "APPROVED",
           seller.id,
@@ -857,7 +923,7 @@ async function seedProducts(): Promise<void> {
         seller.status = "APPROVED";
         console.log(`  ✓ Approved seller: ${seller.email}`);
       }
-      if (seller.verification_status !== 'VERIFIED') {
+      if (seller.verification_status !== "VERIFIED") {
         await pool.query(
           "UPDATE sellers SET verification_status = $1 WHERE id = $2",
           ["VERIFIED", seller.id]
@@ -865,8 +931,14 @@ async function seedProducts(): Promise<void> {
       }
     }
 
-    console.log(`  ✓ Found ${sellers.length} seller(s) for products: ${sellers.map((s: any) => s.email).join(', ')}\n`);
-    console.log(`  📦 Ready to create ${sampleProducts.length} products using ${sellers.length} seller(s)\n`);
+    console.log(
+      `  ✓ Found ${sellers.length} seller(s) for products: ${sellers
+        .map((s: any) => s.email)
+        .join(", ")}\n`
+    );
+    console.log(
+      `  📦 Ready to create ${sampleProducts.length} products using ${sellers.length} seller(s)\n`
+    );
 
     // Create products
     let inserted = 0;
@@ -910,7 +982,7 @@ async function seedProducts(): Promise<void> {
           seller = sellers.find(
             (s: any) => s.email === (productData as any).seller_email
           );
-          
+
           // If not found in array, query database
           if (!seller) {
             const sellerResult = await pool.query(
@@ -922,19 +994,23 @@ async function seedProducts(): Promise<void> {
               (seller as any).email = seller.email;
               // Ensure seller is approved
               if (seller.status !== "APPROVED") {
-                await pool.query("UPDATE sellers SET status = $1 WHERE id = $2", [
-                  "APPROVED",
-                  seller.id,
-                ]);
+                await pool.query(
+                  "UPDATE sellers SET status = $1 WHERE id = $2",
+                  ["APPROVED", seller.id]
+                );
                 seller.status = "APPROVED";
               }
               sellers.push(seller);
             }
           }
-          
+
           // Fallback to random seller if still not found
           if (!seller && sellers.length > 0) {
-            console.warn(`  ⚠️  Seller ${(productData as any).seller_email} not found, using random seller`);
+            console.warn(
+              `  ⚠️  Seller ${
+                (productData as any).seller_email
+              } not found, using random seller`
+            );
             seller = sellers[Math.floor(Math.random() * sellers.length)];
           }
         } else {
@@ -945,8 +1021,12 @@ async function seedProducts(): Promise<void> {
         }
 
         if (!seller || !seller.id) {
-          console.error(`  ❌ Could not assign seller to product: ${productData.name}`);
-          console.error(`  ❌ No sellers available. Make sure seedTestUsers runs before seedProducts.`);
+          console.error(
+            `  ❌ Could not assign seller to product: ${productData.name}`
+          );
+          console.error(
+            `  ❌ No sellers available. Make sure seedTestUsers runs before seedProducts.`
+          );
           continue;
         }
 
@@ -1094,11 +1174,10 @@ async function seedPromoters(): Promise<void> {
         memberId = memberResult.rows[0].id;
       }
 
-      // Create promoter with fraternity_member_id
+      // Create promoter (fraternity_member relationship via email matching)
       const promoter = await createPromoter({
         email: promoterData.email,
         name: promoterData.name,
-        fraternity_member_id: memberId,
         sponsoring_chapter_id: randomChapter.id,
         headshot_url: undefined,
         social_links: Object.fromEntries(
@@ -1109,7 +1188,10 @@ async function seedPromoters(): Promise<void> {
       });
 
       // Update status if provided and not PENDING
-      if (promoterData.status && (promoterData.status as string) !== "PENDING") {
+      if (
+        promoterData.status &&
+        (promoterData.status as string) !== "PENDING"
+      ) {
         await pool.query("UPDATE promoters SET status = $1 WHERE id = $2", [
           promoterData.status,
           promoter.id,
@@ -1355,18 +1437,20 @@ async function seedOrders(): Promise<void> {
           testUsers.sellerNonMember.email,
         ];
         const buyerEmail = testUserEmails[i % testUserEmails.length];
-        
+
         // Get user_id from email
         const userResult = await pool.query(
-          'SELECT id FROM users WHERE email = $1',
+          "SELECT id FROM users WHERE email = $1",
           [buyerEmail]
         );
-        
+
         if (userResult.rows.length === 0) {
-          console.warn(`  ⚠️  Skipping order ${i + 1}: User ${buyerEmail} not found`);
+          console.warn(
+            `  ⚠️  Skipping order ${i + 1}: User ${buyerEmail} not found`
+          );
           continue;
         }
-        
+
         const userId = userResult.rows[0].id;
 
         await pool.query(
@@ -1374,13 +1458,7 @@ async function seedOrders(): Promise<void> {
            VALUES ($1, $2, $3, $4, $5, 'PAID', NOW() - INTERVAL '${Math.floor(
              Math.random() * 90
            )} days')`,
-          [
-            product.id,
-            userId,
-            amount,
-            `test_session_${i}`,
-            chapterId,
-          ]
+          [product.id, userId, amount, `test_session_${i}`, chapterId]
         );
         inserted++;
       } catch (error: any) {
@@ -1402,26 +1480,26 @@ async function clearOldTestData() {
   await pool.query(
     "DELETE FROM events WHERE promoter_id IN (SELECT id FROM promoters WHERE email LIKE '%@example.com')"
   );
-  await pool.query(
-    "DELETE FROM promoters WHERE email LIKE '%@example.com'"
-  );
+  await pool.query("DELETE FROM promoters WHERE email LIKE '%@example.com'");
   await pool.query(
     "DELETE FROM orders WHERE stripe_session_id LIKE 'test_session_%'"
   );
   await pool.query(
     "DELETE FROM products WHERE seller_id IN (SELECT id FROM sellers WHERE email LIKE '%@example.com')"
   );
-  await pool.query(
-    "DELETE FROM sellers WHERE email LIKE '%@example.com'"
-  );
-  await pool.query(
-    "DELETE FROM users WHERE email LIKE '%@example.com'"
-  );
+  await pool.query("DELETE FROM sellers WHERE email LIKE '%@example.com'");
+  await pool.query("DELETE FROM users WHERE email LIKE '%@example.com'");
   await pool.query(
     "DELETE FROM fraternity_members WHERE email LIKE '%@example.com'"
   );
+  // Delete stewards via users table -> email/cognito_sub -> fraternity_members
   await pool.query(
-    "DELETE FROM stewards WHERE fraternity_member_id IN (SELECT id FROM fraternity_members WHERE email LIKE '%@example.com')"
+    `DELETE FROM stewards WHERE id IN (
+      SELECT st.id FROM stewards st
+      JOIN users u ON u.steward_id = st.id
+      JOIN fraternity_members m ON (u.email = m.email OR u.cognito_sub = m.cognito_sub)
+      WHERE m.email LIKE '%@example.com'
+    )`
   );
 
   console.log("✓ Old test data cleared\n");
@@ -1433,37 +1511,49 @@ async function seedTestUsers(): Promise<void> {
   try {
     // Get chapters for assigning to users
     const chapters = await getAllChapters();
-    const collegiateChapters = chapters.filter((c: any) => c.type === 'Collegiate' && c.status === 'Active');
-    const availableChapters = collegiateChapters.length > 0 ? collegiateChapters : chapters;
+    const collegiateChapters = chapters.filter(
+      (c: any) => c.type === "Collegiate" && c.status === "Active"
+    );
+    const availableChapters =
+      collegiateChapters.length > 0 ? collegiateChapters : chapters;
 
     if (availableChapters.length === 0) {
-      console.warn('⚠️  No chapters found. Please seed chapters first.');
+      console.warn("⚠️  No chapters found. Please seed chapters first.");
       return;
     }
 
     // Helper to generate placeholder cognito_sub for test users (no Cognito creation)
     const generateCognitoSub = (email: string): string => {
-      return `test-${email.replace(/[@+]/g, '-')}-${Date.now()}`;
+      return `test-${email.replace(/[@+]/g, "-")}-${Date.now()}`;
     };
 
     // Process each test user
     for (const [key, testUser] of Object.entries(testUsers)) {
       try {
-        console.log(`\n📝 Processing ${key}: ${testUser.name} (${testUser.email})`);
+        console.log(
+          `\n📝 Processing ${key}: ${testUser.name} (${testUser.email})`
+        );
 
         const cognitoSub = generateCognitoSub(testUser.email);
 
         // Get or create fraternity member (needed for member, steward, promoter, and member sellers)
         let memberId: number | null = null;
-        if (key === 'member' || key === 'steward' || key === 'promoter' || (key === 'seller' && testUser.membership_number)) {
+        if (
+          key === "member" ||
+          key === "steward" ||
+          key === "promoter" ||
+          (key === "seller" && testUser.membership_number)
+        ) {
           // Members must have a membership_number
           if (!testUser.membership_number) {
-            throw new Error(`${testUser.name} (${key}) must have a membership_number to be a fraternity member`);
+            throw new Error(
+              `${testUser.name} (${key}) must have a membership_number to be a fraternity member`
+            );
           }
 
           // Check if member already exists
           const existingMember = await pool.query(
-            'SELECT id FROM fraternity_members WHERE email = $1',
+            "SELECT id FROM fraternity_members WHERE email = $1",
             [testUser.email]
           );
 
@@ -1472,11 +1562,14 @@ async function seedTestUsers(): Promise<void> {
             console.log(`  ✓ Member already exists: ${testUser.name}`);
           } else {
             // Create new member
-            const initiatedChapter = availableChapters[Math.floor(Math.random() * availableChapters.length)];
-            const seasons = ['Fall', 'Spring'];
+            const initiatedChapter =
+              availableChapters[
+                Math.floor(Math.random() * availableChapters.length)
+              ];
+            const seasons = ["Fall", "Spring"];
             const season = seasons[Math.floor(Math.random() * seasons.length)];
             const year = 2015 + Math.floor(Math.random() * 10);
-            
+
             const memberResult = await pool.query(
               `INSERT INTO fraternity_members (
                 email, name, membership_number, registration_status, 
@@ -1487,14 +1580,16 @@ async function seedTestUsers(): Promise<void> {
                 testUser.email,
                 testUser.name,
                 testUser.membership_number, // Required for all members
-                'COMPLETE',
+                "COMPLETE",
                 initiatedChapter.id,
                 season,
                 year,
               ]
             );
             memberId = memberResult.rows[0].id;
-            console.log(`  ✓ Created member: ${testUser.name} (membership: ${testUser.membership_number}, initiated at ${initiatedChapter.name}, ${season} ${year})`);
+            console.log(
+              `  ✓ Created member: ${testUser.name} (membership: ${testUser.membership_number}, initiated at ${initiatedChapter.name}, ${season} ${year})`
+            );
           }
         }
 
@@ -1503,10 +1598,10 @@ async function seedTestUsers(): Promise<void> {
         let promoterId: number | null = null;
         let stewardId: number | null = null;
 
-        if (key === 'seller' || key === 'sellerNonMember') {
+        if (key === "seller" || key === "sellerNonMember") {
           // Check if seller already exists
           const existingSeller = await pool.query(
-            'SELECT id FROM sellers WHERE email = $1',
+            "SELECT id FROM sellers WHERE email = $1",
             [testUser.email]
           );
 
@@ -1514,38 +1609,46 @@ async function seedTestUsers(): Promise<void> {
             sellerId = existingSeller.rows[0].id;
             console.log(`  ✓ Seller already exists: ${testUser.name}`);
           } else {
-            const sponsoringChapter = availableChapters[Math.floor(Math.random() * availableChapters.length)];
+            const sponsoringChapter =
+              availableChapters[
+                Math.floor(Math.random() * availableChapters.length)
+              ];
             const seller = await createSeller({
               email: testUser.email,
               name: testUser.name,
               sponsoring_chapter_id: sponsoringChapter.id,
               business_name: (testUser as any).business_name || null,
-              kappa_vendor_id: (testUser as any).kappa_vendor_id || 'VL-TEST',
-              fraternity_member_id: memberId,
+              kappa_vendor_id: (testUser as any).kappa_vendor_id || "VL-TEST",
             });
             sellerId = seller.id;
 
             // Approve the seller and add test Stripe account ID
             // Using a test Stripe Connect account ID format (acct_xxxxx)
             // In production, this would be set up through the seller onboarding flow
-            if (!sellerId) throw new Error('Seller ID is required');
-            const testStripeAccountId = `acct_test_${sellerId.toString().padStart(10, '0')}`;
+            if (!sellerId) throw new Error("Seller ID is required");
+            const testStripeAccountId = `acct_test_${sellerId
+              .toString()
+              .padStart(10, "0")}`;
             await pool.query(
-              'UPDATE sellers SET status = $1, verification_status = $2, stripe_account_id = $3 WHERE id = $4',
-              ['APPROVED', 'VERIFIED', testStripeAccountId, sellerId]
+              "UPDATE sellers SET status = $1, verification_status = $2, stripe_account_id = $3 WHERE id = $4",
+              ["APPROVED", "VERIFIED", testStripeAccountId, sellerId]
             );
-            console.log(`  ✓ Created and approved seller: ${testUser.name} (Stripe: ${testStripeAccountId})`);
+            console.log(
+              `  ✓ Created and approved seller: ${testUser.name} (Stripe: ${testStripeAccountId})`
+            );
           }
         }
 
-        if (key === 'promoter') {
+        if (key === "promoter") {
           if (!memberId) {
-            throw new Error(`Promoter ${testUser.name} must be a fraternity member`);
+            throw new Error(
+              `Promoter ${testUser.name} must be a fraternity member`
+            );
           }
 
           // Check if promoter already exists
           const existingPromoter = await pool.query(
-            'SELECT id FROM promoters WHERE email = $1',
+            "SELECT id FROM promoters WHERE email = $1",
             [testUser.email]
           );
 
@@ -1553,11 +1656,13 @@ async function seedTestUsers(): Promise<void> {
             promoterId = existingPromoter.rows[0].id;
             console.log(`  ✓ Promoter already exists: ${testUser.name}`);
           } else {
-            const sponsoringChapter = availableChapters[Math.floor(Math.random() * availableChapters.length)];
+            const sponsoringChapter =
+              availableChapters[
+                Math.floor(Math.random() * availableChapters.length)
+              ];
             const promoter = await createPromoter({
               email: testUser.email,
               name: testUser.name,
-              fraternity_member_id: memberId,
               sponsoring_chapter_id: sponsoringChapter.id,
               headshot_url: undefined,
               social_links: {},
@@ -1565,22 +1670,25 @@ async function seedTestUsers(): Promise<void> {
             promoterId = promoter.id;
 
             // Approve the promoter
-            await pool.query(
-              'UPDATE promoters SET status = $1 WHERE id = $2',
-              ['APPROVED', promoterId]
-            );
+            await pool.query("UPDATE promoters SET status = $1 WHERE id = $2", [
+              "APPROVED",
+              promoterId,
+            ]);
             console.log(`  ✓ Created and approved promoter: ${testUser.name}`);
           }
         }
 
-        if (key === 'steward') {
+        if (key === "steward") {
           if (!memberId) {
-            throw new Error('Member ID required for steward');
+            throw new Error("Member ID required for steward");
           }
 
-          // Check if steward already exists
+          // Check if steward already exists via users table
           const existingSteward = await pool.query(
-            'SELECT id FROM stewards WHERE fraternity_member_id = $1',
+            `SELECT st.id FROM stewards st
+             JOIN users u ON u.steward_id = st.id
+             JOIN fraternity_members m ON (u.email = m.email OR u.cognito_sub = m.cognito_sub)
+             WHERE m.id = $1`,
             [memberId]
           );
 
@@ -1588,49 +1696,55 @@ async function seedTestUsers(): Promise<void> {
             stewardId = existingSteward.rows[0].id;
             console.log(`  ✓ Steward already exists: ${testUser.name}`);
           } else {
-            const sponsoringChapter = availableChapters[Math.floor(Math.random() * availableChapters.length)];
+            const sponsoringChapter =
+              availableChapters[
+                Math.floor(Math.random() * availableChapters.length)
+              ];
             const steward = await createSteward({
-              fraternity_member_id: memberId,
               sponsoring_chapter_id: sponsoringChapter.id,
             });
             stewardId = steward.id;
 
             // Approve the steward
-            await updateStewardStatus(stewardId, 'APPROVED');
+            await updateStewardStatus(stewardId, "APPROVED");
             console.log(`  ✓ Created and approved steward: ${testUser.name}`);
           }
         }
 
         // Create or update user record
         const existingUser = await pool.query(
-          'SELECT id FROM users WHERE cognito_sub = $1 OR email = $2',
+          "SELECT id FROM users WHERE cognito_sub = $1 OR email = $2",
           [cognitoSub, testUser.email]
         );
 
-        const userRole = key === 'seller' || key === 'sellerNonMember' ? 'SELLER' : 
-                        key === 'promoter' ? 'PROMOTER' :
-                        key === 'steward' ? 'STEWARD' : 
-                        key === 'guest' ? 'GUEST' : null;
+        const userRole =
+          key === "seller" || key === "sellerNonMember"
+            ? "SELLER"
+            : key === "promoter"
+            ? "PROMOTER"
+            : key === "steward"
+            ? "STEWARD"
+            : key === "guest"
+            ? "GUEST"
+            : null;
 
         // Members who are not sellers/promoters/stewards don't get user accounts
         // They only exist in the fraternity_members table
-        if (key === 'member') {
-          console.log(`  ✓ Member record created (no user account - members and guests are separate)`);
+        if (key === "member") {
+          console.log(
+            `  ✓ Member record created (no user account - members and guests are separate)`
+          );
           continue;
         }
 
         if (existingUser.rows.length > 0) {
           const userId = existingUser.rows[0].id;
-          
-          // Determine onboarding_status based on role and fraternity_member_id
-          // GUEST users without fraternity_member_id cannot have ONBOARDING_FINISHED
-          let onboardingStatus = 'ONBOARDING_FINISHED';
-          if (userRole === 'GUEST' && !memberId) {
-            onboardingStatus = 'COGNITO_CONFIRMED';
-          }
-          
-          // Update fraternity_member_id for PROMOTER and STEWARD users (required by constraint)
-          if (userRole === 'PROMOTER' || userRole === 'STEWARD') {
+
+          // Determine onboarding_status (fraternity_member relationship via email/cognito_sub matching)
+          let onboardingStatus = "ONBOARDING_FINISHED";
+
+          // Update user (fraternity_member relationship accessed via email/cognito_sub matching)
+          if (userRole === "PROMOTER") {
             await pool.query(
               `UPDATE users 
                SET email = $1, 
@@ -1638,9 +1752,8 @@ async function seedTestUsers(): Promise<void> {
                    onboarding_status = $3,
                    seller_id = COALESCE(seller_id, $4),
                    promoter_id = COALESCE(promoter_id, $5),
-                   steward_id = COALESCE(steward_id, $6),
-                   fraternity_member_id = COALESCE(fraternity_member_id, $7)
-               WHERE id = $8`,
+                   steward_id = COALESCE(steward_id, $6)
+               WHERE id = $7`,
               [
                 testUser.email,
                 userRole,
@@ -1648,7 +1761,27 @@ async function seedTestUsers(): Promise<void> {
                 sellerId,
                 promoterId,
                 stewardId,
-                memberId, // Set fraternity_member_id for PROMOTER/STEWARD
+                userId,
+              ]
+            );
+          } else if (userRole === "STEWARD") {
+            // STEWARD users: fraternity_member accessed via users table -> email/cognito_sub -> fraternity_members
+            await pool.query(
+              `UPDATE users 
+               SET email = $1, 
+                   role = $2, 
+                   onboarding_status = $3,
+                   seller_id = COALESCE(seller_id, $4),
+                   promoter_id = COALESCE(promoter_id, $5),
+                   steward_id = COALESCE(steward_id, $6)
+               WHERE id = $7`,
+              [
+                testUser.email,
+                userRole,
+                onboardingStatus,
+                sellerId,
+                promoterId,
+                stewardId,
                 userId,
               ]
             );
@@ -1675,45 +1808,43 @@ async function seedTestUsers(): Promise<void> {
           }
           console.log(`  ✓ Updated user record: ${testUser.name}`);
         } else {
-          if (userRole === 'STEWARD') {
+          if (userRole === "STEWARD") {
+            // STEWARD users: fraternity_member accessed via users table -> email/cognito_sub -> fraternity_members
             await pool.query(
-              `INSERT INTO users (cognito_sub, email, role, onboarding_status, steward_id, fraternity_member_id, features)
-               VALUES ($1, $2, $3, $4, $5, $6, $7)
+              `INSERT INTO users (cognito_sub, email, role, onboarding_status, steward_id, features)
+               VALUES ($1, $2, $3, $4, $5, $6)
                RETURNING *`,
               [
                 cognitoSub,
                 testUser.email,
-                'STEWARD',
-                'ONBOARDING_FINISHED',
+                "STEWARD",
+                "ONBOARDING_FINISHED",
                 stewardId,
-                memberId, // STEWARD must have fraternity_member_id
                 JSON.stringify({}),
               ]
             );
-          } else if (userRole === 'PROMOTER') {
-            // PROMOTER must have fraternity_member_id, so use direct SQL
+          } else if (userRole === "PROMOTER") {
+            // PROMOTER: fraternity_member accessed via email matching
             await pool.query(
-              `INSERT INTO users (cognito_sub, email, role, onboarding_status, promoter_id, fraternity_member_id, features)
-               VALUES ($1, $2, $3, $4, $5, $6, $7)
+              `INSERT INTO users (cognito_sub, email, role, onboarding_status, promoter_id, features)
+               VALUES ($1, $2, $3, $4, $5, $6)
                RETURNING *`,
               [
                 cognitoSub,
                 testUser.email,
-                'PROMOTER',
-                'ONBOARDING_FINISHED',
+                "PROMOTER",
+                "ONBOARDING_FINISHED",
                 promoterId,
-                memberId, // PROMOTER must have fraternity_member_id
                 JSON.stringify({}),
               ]
             );
-          } else if (userRole === 'GUEST') {
-            // GUEST users without fraternity_member_id cannot have onboarding_status = 'ONBOARDING_FINISHED'
-            // Use 'COGNITO_CONFIRMED' instead to satisfy the constraint
+          } else if (userRole === "GUEST") {
+            // GUEST users: fraternity_member accessed via email/cognito_sub matching
             await createUser({
               cognito_sub: cognitoSub,
               email: testUser.email,
-              role: 'GUEST',
-              onboarding_status: 'COGNITO_CONFIRMED', // Not 'ONBOARDING_FINISHED' for GUEST without fraternity_member_id
+              role: "GUEST",
+              onboarding_status: "ONBOARDING_FINISHED",
               seller_id: null,
               promoter_id: null,
             });
@@ -1721,8 +1852,8 @@ async function seedTestUsers(): Promise<void> {
             await createUser({
               cognito_sub: cognitoSub,
               email: testUser.email,
-              role: userRole as 'ADMIN' | 'SELLER',
-              onboarding_status: 'ONBOARDING_FINISHED',
+              role: userRole as "ADMIN" | "SELLER",
+              onboarding_status: "ONBOARDING_FINISHED",
               seller_id: sellerId,
               promoter_id: promoterId,
             });
@@ -1737,14 +1868,14 @@ async function seedTestUsers(): Promise<void> {
       }
     }
 
-    console.log('\n✅ Test users seeded successfully!');
-    console.log('\n📋 Test User Emails:');
-    Object.values(testUsers).forEach(user => {
+    console.log("\n✅ Test users seeded successfully!");
+    console.log("\n📋 Test User Emails:");
+    Object.values(testUsers).forEach((user) => {
       console.log(`   - ${user.name}: ${user.email}`);
     });
-    console.log('\n');
+    console.log("\n");
   } catch (error) {
-    console.error('❌ Error seeding test users:', error);
+    console.error("❌ Error seeding test users:", error);
     throw error;
   }
 }

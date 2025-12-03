@@ -65,63 +65,70 @@ router.get("/me", authenticate, async (req: Request, res: Response) => {
     let is_promoter = false;
     let is_steward = false;
 
-    // Get fraternity_member_id from role-specific tables
+    // Get fraternity_member_id from role-specific tables via email matching
     if (user.role === "SELLER" && user.seller_id) {
       const sellerResult = await pool.query(
-        "SELECT name, fraternity_member_id FROM sellers WHERE id = $1",
+        "SELECT name, email, status FROM sellers WHERE id = $1",
         [user.seller_id]
       );
       if (sellerResult.rows.length > 0) {
         name = sellerResult.rows[0]?.name || null;
-        fraternity_member_id =
-          sellerResult.rows[0]?.fraternity_member_id || null;
+        const sellerEmail = sellerResult.rows[0]?.email;
         if (sellerResult.rows[0]?.status === "APPROVED") {
           is_seller = true;
         }
-        // Check if member is verified
-        if (fraternity_member_id) {
+        // Match seller email with fraternity_members
+        if (sellerEmail) {
           const memberResult = await pool.query(
-            "SELECT verification_status FROM fraternity_members WHERE id = $1",
-            [fraternity_member_id]
+            "SELECT id, verification_status FROM fraternity_members WHERE email = $1",
+            [sellerEmail]
           );
-          if (
-            memberResult.rows.length > 0 &&
-            memberResult.rows[0]?.verification_status === "VERIFIED"
-          ) {
-            is_fraternity_member = true;
+          if (memberResult.rows.length > 0) {
+            fraternity_member_id = memberResult.rows[0]?.id || null;
+            if (memberResult.rows[0]?.verification_status === "VERIFIED") {
+              is_fraternity_member = true;
+            }
           }
         }
       }
     } else if (user.role === "PROMOTER" && user.promoter_id) {
       const promoterResult = await pool.query(
-        "SELECT name, fraternity_member_id FROM promoters WHERE id = $1",
+        "SELECT name, email, status FROM promoters WHERE id = $1",
         [user.promoter_id]
       );
       if (promoterResult.rows.length > 0) {
         name = promoterResult.rows[0]?.name || null;
-        fraternity_member_id =
-          promoterResult.rows[0]?.fraternity_member_id || null;
+        const promoterEmail = promoterResult.rows[0]?.email;
         if (promoterResult.rows[0]?.status === "APPROVED") {
           is_promoter = true;
+        }
+        // Match promoter email with fraternity_members
+        if (promoterEmail) {
+          const memberResult = await pool.query(
+            "SELECT id FROM fraternity_members WHERE email = $1",
+            [promoterEmail]
+          );
+          if (memberResult.rows.length > 0) {
+            fraternity_member_id = memberResult.rows[0]?.id || null;
+          }
         }
       }
     } else if (user.role === "STEWARD" && user.steward_id) {
       const stewardResult = await pool.query(
-        "SELECT fraternity_member_id FROM stewards WHERE id = $1",
+        "SELECT status FROM stewards WHERE id = $1",
         [user.steward_id]
       );
       if (stewardResult.rows.length > 0) {
-        fraternity_member_id =
-          stewardResult.rows[0]?.fraternity_member_id || null;
         if (stewardResult.rows[0]?.status === "APPROVED") {
           is_steward = true;
         }
-        // Get name from fraternity_members
-        if (fraternity_member_id) {
-          const memberResult = await pool.query(
-            "SELECT name FROM fraternity_members WHERE id = $1",
-            [fraternity_member_id]
-          );
+        // Match user email/cognito_sub with fraternity_members (stewards linked via users table)
+        const memberResult = await pool.query(
+          "SELECT id, name FROM fraternity_members WHERE email = $1 OR cognito_sub = $2",
+          [user.email, user.cognito_sub]
+        );
+        if (memberResult.rows.length > 0) {
+          fraternity_member_id = memberResult.rows[0]?.id || null;
           name = memberResult.rows[0]?.name || null;
         }
       }
@@ -140,10 +147,13 @@ router.get("/me", authenticate, async (req: Request, res: Response) => {
       }
     }
 
-    // Check for steward role (even if not primary role)
+    // Check for steward role (even if not primary role) via users table
     if (fraternity_member_id && !is_steward) {
       const stewardResult = await pool.query(
-        "SELECT status FROM stewards WHERE fraternity_member_id = $1 AND status = $2",
+        `SELECT st.status FROM stewards st
+         JOIN users u ON u.steward_id = st.id
+         JOIN fraternity_members m ON (u.email = m.email OR u.cognito_sub = m.cognito_sub)
+         WHERE m.id = $1 AND st.status = $2`,
         [fraternity_member_id, "APPROVED"]
       );
       if (stewardResult.rows.length > 0) {
@@ -225,63 +235,70 @@ router.post("/upsert-on-login", async (req: Request, res: Response) => {
     let is_promoter = false;
     let is_steward = false;
 
-    // Get fraternity_member_id from role-specific tables
+    // Get fraternity_member_id from role-specific tables via email matching
     if (user.role === "SELLER" && user.seller_id) {
       const sellerResult = await pool.query(
-        "SELECT name, fraternity_member_id FROM sellers WHERE id = $1",
+        "SELECT name, email, status FROM sellers WHERE id = $1",
         [user.seller_id]
       );
       if (sellerResult.rows.length > 0) {
         name = sellerResult.rows[0]?.name || null;
-        fraternity_member_id =
-          sellerResult.rows[0]?.fraternity_member_id || null;
+        const sellerEmail = sellerResult.rows[0]?.email;
         if (sellerResult.rows[0]?.status === "APPROVED") {
           is_seller = true;
         }
-        // Check if member is verified
-        if (fraternity_member_id) {
+        // Match seller email with fraternity_members
+        if (sellerEmail) {
           const memberResult = await pool.query(
-            "SELECT verification_status FROM fraternity_members WHERE id = $1",
-            [fraternity_member_id]
+            "SELECT id, verification_status FROM fraternity_members WHERE email = $1",
+            [sellerEmail]
           );
-          if (
-            memberResult.rows.length > 0 &&
-            memberResult.rows[0]?.verification_status === "VERIFIED"
-          ) {
-            is_fraternity_member = true;
+          if (memberResult.rows.length > 0) {
+            fraternity_member_id = memberResult.rows[0]?.id || null;
+            if (memberResult.rows[0]?.verification_status === "VERIFIED") {
+              is_fraternity_member = true;
+            }
           }
         }
       }
     } else if (user.role === "PROMOTER" && user.promoter_id) {
       const promoterResult = await pool.query(
-        "SELECT name, fraternity_member_id FROM promoters WHERE id = $1",
+        "SELECT name, email, status FROM promoters WHERE id = $1",
         [user.promoter_id]
       );
       if (promoterResult.rows.length > 0) {
         name = promoterResult.rows[0]?.name || null;
-        fraternity_member_id =
-          promoterResult.rows[0]?.fraternity_member_id || null;
+        const promoterEmail = promoterResult.rows[0]?.email;
         if (promoterResult.rows[0]?.status === "APPROVED") {
           is_promoter = true;
+        }
+        // Match promoter email with fraternity_members
+        if (promoterEmail) {
+          const memberResult = await pool.query(
+            "SELECT id FROM fraternity_members WHERE email = $1",
+            [promoterEmail]
+          );
+          if (memberResult.rows.length > 0) {
+            fraternity_member_id = memberResult.rows[0]?.id || null;
+          }
         }
       }
     } else if (user.role === "STEWARD" && user.steward_id) {
       const stewardResult = await pool.query(
-        "SELECT fraternity_member_id FROM stewards WHERE id = $1",
+        "SELECT status FROM stewards WHERE id = $1",
         [user.steward_id]
       );
       if (stewardResult.rows.length > 0) {
-        fraternity_member_id =
-          stewardResult.rows[0]?.fraternity_member_id || null;
         if (stewardResult.rows[0]?.status === "APPROVED") {
           is_steward = true;
         }
-        // Get name from fraternity_members
-        if (fraternity_member_id) {
-          const memberResult = await pool.query(
-            "SELECT name FROM fraternity_members WHERE id = $1",
-            [fraternity_member_id]
-          );
+        // Match user email/cognito_sub with fraternity_members (stewards linked via users table)
+        const memberResult = await pool.query(
+          "SELECT id, name FROM fraternity_members WHERE email = $1 OR cognito_sub = $2",
+          [user.email, user.cognito_sub]
+        );
+        if (memberResult.rows.length > 0) {
+          fraternity_member_id = memberResult.rows[0]?.id || null;
           name = memberResult.rows[0]?.name || null;
         }
       }
@@ -300,10 +317,13 @@ router.post("/upsert-on-login", async (req: Request, res: Response) => {
       }
     }
 
-    // Check for steward role (even if not primary role)
+    // Check for steward role (even if not primary role) via users table
     if (fraternity_member_id && !is_steward) {
       const stewardResult = await pool.query(
-        "SELECT status FROM stewards WHERE fraternity_member_id = $1 AND status = $2",
+        `SELECT st.status FROM stewards st
+         JOIN users u ON u.steward_id = st.id
+         JOIN fraternity_members m ON (u.email = m.email OR u.cognito_sub = m.cognito_sub)
+         WHERE m.id = $1 AND st.status = $2`,
         [fraternity_member_id, "APPROVED"]
       );
       if (stewardResult.rows.length > 0) {
@@ -350,26 +370,41 @@ router.delete(
         return res.status(404).json({ error: "User not found" });
       }
 
-      // Store IDs before deleting - get memberId from role-specific tables
+      // Store IDs before deleting - get memberId from role-specific tables via email matching
       let memberId: number | null = null;
       if (user.role === "SELLER" && user.seller_id) {
         const sellerResult = await pool.query(
-          "SELECT fraternity_member_id FROM sellers WHERE id = $1",
+          "SELECT email FROM sellers WHERE id = $1",
           [user.seller_id]
         );
-        memberId = sellerResult.rows[0]?.fraternity_member_id || null;
+        const sellerEmail = sellerResult.rows[0]?.email;
+        if (sellerEmail) {
+          const memberResult = await pool.query(
+            "SELECT id FROM fraternity_members WHERE email = $1",
+            [sellerEmail]
+          );
+          memberId = memberResult.rows[0]?.id || null;
+        }
       } else if (user.role === "PROMOTER" && user.promoter_id) {
         const promoterResult = await pool.query(
-          "SELECT fraternity_member_id FROM promoters WHERE id = $1",
+          "SELECT email FROM promoters WHERE id = $1",
           [user.promoter_id]
         );
-        memberId = promoterResult.rows[0]?.fraternity_member_id || null;
+        const promoterEmail = promoterResult.rows[0]?.email;
+        if (promoterEmail) {
+          const memberResult = await pool.query(
+            "SELECT id FROM fraternity_members WHERE email = $1",
+            [promoterEmail]
+          );
+          memberId = memberResult.rows[0]?.id || null;
+        }
       } else if (user.role === "STEWARD" && user.steward_id) {
-        const stewardResult = await pool.query(
-          "SELECT fraternity_member_id FROM stewards WHERE id = $1",
-          [user.steward_id]
+        // Match user email/cognito_sub with fraternity_members
+        const memberResult = await pool.query(
+          "SELECT id FROM fraternity_members WHERE email = $1 OR cognito_sub = $2",
+          [user.email, user.cognito_sub]
         );
-        memberId = stewardResult.rows[0]?.fraternity_member_id || null;
+        memberId = memberResult.rows[0]?.id || null;
       } else if (user.role === "GUEST") {
         const memberResult = await pool.query(
           "SELECT id FROM fraternity_members WHERE email = $1 OR cognito_sub = $2",

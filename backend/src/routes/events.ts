@@ -291,13 +291,14 @@ router.get("/upcoming", async (req: Request, res: Response) => {
         e.updated_at,
         p.name as promoter_name,
         p.email as promoter_email,
-        p.fraternity_member_id as promoter_fraternity_member_id,
+        m.id as promoter_fraternity_member_id,
         p.sponsoring_chapter_id as promoter_sponsoring_chapter_id,
         c.name as chapter_name,
         eat.description as event_audience_type_description,
-        CASE WHEN p.fraternity_member_id IS NOT NULL THEN true ELSE false END as is_fraternity_member
+        CASE WHEN m.id IS NOT NULL THEN true ELSE false END as is_fraternity_member
       FROM events e
       JOIN promoters p ON e.promoter_id = p.id
+      LEFT JOIN fraternity_members m ON p.email = m.email
       LEFT JOIN chapters c ON e.sponsored_chapter_id = c.id
       LEFT JOIN event_audience_types eat ON e.event_audience_type_id = eat.id
       WHERE p.status = 'APPROVED' AND e.status = 'ACTIVE' AND e.event_date >= NOW()

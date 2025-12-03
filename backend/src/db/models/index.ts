@@ -69,20 +69,11 @@ Chapter.hasMany(Event, {
 });
 
 // FraternityMember associations
-FraternityMember.hasOne(Seller, {
-  foreignKey: 'fraternity_member_id',
-  as: 'seller'
-});
-
-FraternityMember.hasOne(Promoter, {
-  foreignKey: 'fraternity_member_id',
-  as: 'promoter'
-});
-
-FraternityMember.hasOne(Steward, {
-  foreignKey: 'fraternity_member_id',
-  as: 'steward'
-});
+// Note: Seller, Promoter, and Steward associations are now handled via email/cognito_sub matching
+// since fraternity_member_id columns have been removed. Associations are loaded manually in queries.
+// FraternityMember.hasOne(Seller, { foreignKey: 'fraternity_member_id', as: 'seller' });
+// FraternityMember.hasOne(Promoter, { foreignKey: 'fraternity_member_id', as: 'promoter' });
+// FraternityMember.hasOne(Steward, { foreignKey: 'fraternity_member_id', as: 'steward' });
 
 FraternityMember.hasMany(StewardListing, {
   foreignKey: 'claimed_by_fraternity_member_id',

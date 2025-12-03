@@ -42,7 +42,7 @@ export interface Brother {
 }
 
 export interface Seller extends Brother {
-  fraternity_member_id: number | null; // Foreign key to fraternity_members table (sellers can optionally be fraternity members)
+  // fraternity_member relationship accessed via fraternity_members table (email matching)
   sponsoring_chapter_id: number;
   business_name: string | null;
   business_email: string | null;
@@ -210,7 +210,7 @@ export interface User {
   email: string;
   role: 'ADMIN' | 'SELLER' | 'PROMOTER' | 'GUEST' | 'STEWARD';
   onboarding_status: 'PRE_COGNITO' | 'COGNITO_CONFIRMED' | 'ONBOARDING_STARTED' | 'ONBOARDING_FINISHED';
-  fraternity_member_id: number | null; // Populated during member registration
+  // fraternity_member relationship accessed via email/cognito_sub matching or through role-specific tables
   seller_id: number | null;
   promoter_id: number | null;
   steward_id: number | null;
@@ -222,7 +222,7 @@ export interface User {
 
 export interface Steward {
   id: number;
-  fraternity_member_id: number;
+  // fraternity_member relationship accessed via users table -> email/cognito_sub -> fraternity_members
   sponsoring_chapter_id: number;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   verification_status: 'PENDING' | 'VERIFIED' | 'FAILED' | 'MANUAL_REVIEW';

@@ -72,9 +72,8 @@ router.post('/apply', authenticate, requireVerifiedMember, async (req: Request, 
 
     const body = stewardApplicationSchema.parse(req.body);
 
-    // Create steward application
+    // Create steward application (fraternity_member relationship via email/cognito_sub matching)
     const steward = await createSteward({
-      fraternity_member_id: fraternityMemberId,
       sponsoring_chapter_id: body.sponsoring_chapter_id,
     });
 
@@ -201,8 +200,20 @@ router.get('/profile', authenticate, requireSteward, async (req: Request, res: R
       return res.status(404).json({ error: 'Steward not found' });
     }
 
-    // Get member and chapter info
-    const member = await getMemberById(steward.fraternity_member_id);
+    // Get member and chapter info via users table
+    const userResult = await pool.query(
+      'SELECT email, cognito_sub FROM users WHERE steward_id = $1',
+      [stewardId]
+    );
+    const user = userResult.rows[0];
+    let member = null;
+    if (user) {
+      const memberResult = await pool.query(
+        'SELECT * FROM fraternity_members WHERE email = $1 OR cognito_sub = $2',
+        [user.email, user.cognito_sub]
+      );
+      member = memberResult.rows[0];
+    }
     const chapterResult = await pool.query('SELECT * FROM chapters WHERE id = $1', [steward.sponsoring_chapter_id]);
     const chapter = chapterResult.rows[0];
 
@@ -401,9 +412,23 @@ router.get('/listings/:id/public', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Listing not found' });
     }
 
-    // Get steward and chapter info
+    // Get steward and chapter info via users table
     const steward = await getStewardById(listing.steward_id);
-    const member = steward && steward.fraternity_member_id ? await getMemberById(steward.fraternity_member_id) : null;
+    let member = null;
+    if (steward) {
+      const userResult = await pool.query(
+        'SELECT email, cognito_sub FROM users WHERE steward_id = $1',
+        [listing.steward_id]
+      );
+      const user = userResult.rows[0];
+      if (user) {
+        const memberResult = await pool.query(
+          'SELECT * FROM fraternity_members WHERE email = $1 OR cognito_sub = $2',
+          [user.email, user.cognito_sub]
+        );
+        member = memberResult.rows[0];
+      }
+    }
     const chapterResult = await pool.query('SELECT * FROM chapters WHERE id = $1', [listing.sponsoring_chapter_id]);
     const chapter = chapterResult.rows[0];
 
@@ -433,9 +458,23 @@ router.get('/listings/:id', authenticate, requireVerifiedMember, async (req: Req
       return res.status(404).json({ error: 'Listing not found' });
     }
 
-    // Get steward and chapter info
+    // Get steward and chapter info via users table
     const steward = await getStewardById(listing.steward_id);
-    const member = steward && steward.fraternity_member_id ? await getMemberById(steward.fraternity_member_id) : null;
+    let member = null;
+    if (steward) {
+      const userResult = await pool.query(
+        'SELECT email, cognito_sub FROM users WHERE steward_id = $1',
+        [listing.steward_id]
+      );
+      const user = userResult.rows[0];
+      if (user) {
+        const memberResult = await pool.query(
+          'SELECT * FROM fraternity_members WHERE email = $1 OR cognito_sub = $2',
+          [user.email, user.cognito_sub]
+        );
+        member = memberResult.rows[0];
+      }
+    }
     const chapterResult = await pool.query('SELECT * FROM chapters WHERE id = $1', [listing.sponsoring_chapter_id]);
     const chapter = chapterResult.rows[0];
 
@@ -532,7 +571,21 @@ router.get('/marketplace/public', async (req: Request, res: Response) => {
     const enrichedListings = await Promise.all(
       listings.map(async (listing) => {
         const steward = await getStewardById(listing.steward_id);
-        const member = steward && steward.fraternity_member_id ? await getMemberById(steward.fraternity_member_id) : null;
+        let member = null;
+        if (steward) {
+          const userResult = await pool.query(
+            'SELECT email, cognito_sub FROM users WHERE steward_id = $1',
+            [listing.steward_id]
+          );
+          const user = userResult.rows[0];
+          if (user) {
+            const memberResult = await pool.query(
+              'SELECT * FROM fraternity_members WHERE email = $1 OR cognito_sub = $2',
+              [user.email, user.cognito_sub]
+            );
+            member = memberResult.rows[0];
+          }
+        }
         const chapterResult = await pool.query('SELECT * FROM chapters WHERE id = $1', [listing.sponsoring_chapter_id]);
         const chapter = chapterResult.rows[0];
 
@@ -561,7 +614,21 @@ router.get('/marketplace', authenticate, requireVerifiedMember, async (req: Requ
     const enrichedListings = await Promise.all(
       listings.map(async (listing) => {
         const steward = await getStewardById(listing.steward_id);
-        const member = steward && steward.fraternity_member_id ? await getMemberById(steward.fraternity_member_id) : null;
+        let member = null;
+        if (steward) {
+          const userResult = await pool.query(
+            'SELECT email, cognito_sub FROM users WHERE steward_id = $1',
+            [listing.steward_id]
+          );
+          const user = userResult.rows[0];
+          if (user) {
+            const memberResult = await pool.query(
+              'SELECT * FROM fraternity_members WHERE email = $1 OR cognito_sub = $2',
+              [user.email, user.cognito_sub]
+            );
+            member = memberResult.rows[0];
+          }
+        }
         const chapterResult = await pool.query('SELECT * FROM chapters WHERE id = $1', [listing.sponsoring_chapter_id]);
         const chapter = chapterResult.rows[0];
 

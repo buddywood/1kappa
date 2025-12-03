@@ -18,14 +18,6 @@ export class Steward extends BaseModel {
   })
   id!: number;
 
-  @ForeignKey(() => FraternityMember)
-  @Column({
-    type: DataType.INTEGER,
-    allowNull: false,
-    unique: true
-  })
-  fraternity_member_id!: number;
-
   @ForeignKey(() => Chapter)
   @Column({
     type: DataType.INTEGER,
@@ -76,7 +68,7 @@ export class Steward extends BaseModel {
   updated_at!: Date;
 
   // Associations will be defined in index.ts
-  @BelongsTo(() => FraternityMember, 'fraternity_member_id')
+  // fraternityMember association accessed via email/cognito_sub matching
   fraternityMember?: FraternityMember;
 
   @BelongsTo(() => Chapter, 'sponsoring_chapter_id')

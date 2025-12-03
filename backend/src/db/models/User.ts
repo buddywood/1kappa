@@ -46,13 +46,6 @@ export class User extends BaseModel {
   })
   onboarding_status!: 'PRE_COGNITO' | 'COGNITO_CONFIRMED' | 'ONBOARDING_STARTED' | 'ONBOARDING_FINISHED';
 
-  @ForeignKey(() => FraternityMember)
-  @Column({
-    type: DataType.INTEGER,
-    allowNull: true
-  })
-  fraternity_member_id!: number | null;
-
   @ForeignKey(() => Seller)
   @Column({
     type: DataType.INTEGER,
@@ -117,7 +110,7 @@ export class User extends BaseModel {
   updated_at!: Date;
 
   // Associations will be defined in index.ts
-  @BelongsTo(() => FraternityMember, 'fraternity_member_id')
+  // fraternityMember association accessed via email/cognito_sub matching or through role-specific tables
   fraternityMember?: FraternityMember;
 
   @BelongsTo(() => Seller, 'seller_id')

@@ -166,11 +166,10 @@ export async function seedTestData(): Promise<void> {
     verification_status: 'VERIFIED'
   });
   
-  // Create test sellers
+  // Create test sellers (fraternity_member relationship via email matching)
   const seller1 = await Seller.create({
     email: 'test.seller@example.com',
     name: 'Test Seller',
-    fraternity_member_id: member1.id,
     sponsoring_chapter_id: chapter1.id,
     business_name: 'Test Business',
     kappa_vendor_id: 'VENDOR001',
@@ -197,13 +196,12 @@ export async function seedTestData(): Promise<void> {
     is_kappa_branded: true
   });
   
-  // Create test users
+  // Create test users (fraternity_member relationship via email/cognito_sub matching)
   const user1 = await User.create({
     cognito_sub: 'test-cognito-sub-1',
     email: 'test.user@example.com',
     role: 'GUEST',
-    onboarding_status: 'ONBOARDING_FINISHED',
-    fraternity_member_id: member1.id
+    onboarding_status: 'ONBOARDING_FINISHED'
   });
   
   const user2 = await User.create({
@@ -214,19 +212,17 @@ export async function seedTestData(): Promise<void> {
     seller_id: seller1.id
   });
   
-  // Create test promoter
+  // Create test promoter (fraternity_member relationship via email matching)
   const promoter1 = await Promoter.create({
     email: 'test.promoter@example.com',
     name: 'Test Promoter',
-    fraternity_member_id: member1.id,
     sponsoring_chapter_id: chapter1.id,
     status: 'APPROVED',
     verification_status: 'VERIFIED'
   });
   
-  // Create test steward
+  // Create test steward (fraternity_member relationship via users table -> email/cognito_sub)
   const steward1 = await Steward.create({
-    fraternity_member_id: member1.id,
     sponsoring_chapter_id: chapter1.id,
     status: 'APPROVED',
     verification_status: 'VERIFIED'

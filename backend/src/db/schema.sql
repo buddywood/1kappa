@@ -64,7 +64,6 @@ CREATE TABLE IF NOT EXISTS sellers (
   id SERIAL PRIMARY KEY,
   email VARCHAR(255) NOT NULL UNIQUE,
   name VARCHAR(255) NOT NULL,
-  fraternity_member_id INTEGER REFERENCES fraternity_members(id),
   sponsoring_chapter_id INTEGER NOT NULL REFERENCES chapters(id),
   business_name VARCHAR(255),
   kappa_vendor_id VARCHAR(100) NOT NULL,
@@ -150,7 +149,6 @@ CREATE TABLE IF NOT EXISTS promoters (
   id SERIAL PRIMARY KEY,
   email VARCHAR(255) NOT NULL UNIQUE,
   name VARCHAR(255) NOT NULL,
-  fraternity_member_id INTEGER REFERENCES fraternity_members(id),
   sponsoring_chapter_id INTEGER REFERENCES chapters(id),
   headshot_url TEXT,
   social_links JSONB DEFAULT '{}',
@@ -246,10 +244,9 @@ INSERT INTO roles (name, description, display_order) VALUES
 ON CONFLICT (name) DO NOTHING;
 
 -- Stewards table - must be created before users table (users references stewards)
--- Note: Uses fraternity_member_id from the start (not member_id)
+-- Note: fraternity_member relationship accessed via fraternity_members table associations
 CREATE TABLE IF NOT EXISTS stewards (
   id SERIAL PRIMARY KEY,
-  fraternity_member_id INTEGER NOT NULL REFERENCES fraternity_members(id),
   sponsoring_chapter_id INTEGER NOT NULL REFERENCES chapters(id),
   status VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
   verification_status VARCHAR(20) DEFAULT 'PENDING' CHECK (verification_status IN ('PENDING', 'VERIFIED', 'FAILED', 'MANUAL_REVIEW')),
@@ -261,18 +258,17 @@ CREATE TABLE IF NOT EXISTS stewards (
 );
 
 -- Users table - for authentication and role management
--- Note: fraternity_member_id is NOT stored here - it's kept on role-specific tables:
---   - sellers.fraternity_member_id for SELLER role
---   - promoters.fraternity_member_id for PROMOTER role
---   - stewards.fraternity_member_id for STEWARD role
---   - For GUEST users who are members, link through email/cognito_sub matching with fraternity_members table
+-- Note: fraternity_member relationship accessed via fraternity_members table associations:
+--   - For SELLER role: access via sellers table -> fraternity_members (email match)
+--   - For PROMOTER role: access via promoters table -> fraternity_members (email match)
+--   - For STEWARD role: access via stewards table -> fraternity_members (via user cognito_sub/email)
+--   - For GUEST users: match by email/cognito_sub with fraternity_members table
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   cognito_sub VARCHAR(255) NOT NULL UNIQUE,
   email VARCHAR(255) NOT NULL UNIQUE,
   role VARCHAR(20) NOT NULL CHECK (role IN ('ADMIN', 'SELLER', 'PROMOTER', 'GUEST', 'STEWARD')),
   onboarding_status VARCHAR(50) DEFAULT 'PRE_COGNITO' CHECK (onboarding_status IN ('PRE_COGNITO', 'COGNITO_CONFIRMED', 'ONBOARDING_STARTED', 'ONBOARDING_FINISHED')),
-  fraternity_member_id INTEGER REFERENCES fraternity_members(id) ON DELETE SET NULL,
   seller_id INTEGER REFERENCES sellers(id),
   promoter_id INTEGER REFERENCES promoters(id),
   steward_id INTEGER REFERENCES stewards(id),
@@ -281,22 +277,17 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   -- Ensure only one foreign key is set based on role
-  -- Note: SELLER users can have fraternity_member_id (sellers can be fraternity members)
-  -- Note: PROMOTER users must have fraternity_member_id (promoters must be fraternity members)
   CONSTRAINT check_role_foreign_key CHECK (
-    (role = 'GUEST' AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL AND (
-      (fraternity_member_id IS NOT NULL) OR 
-      (fraternity_member_id IS NULL AND onboarding_status != 'ONBOARDING_FINISHED')
-    )) OR
+    (role = 'GUEST' AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
     (role = 'SELLER' AND seller_id IS NOT NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
-    (role = 'PROMOTER' AND promoter_id IS NOT NULL AND fraternity_member_id IS NOT NULL AND seller_id IS NULL AND steward_id IS NULL) OR
-    (role = 'STEWARD' AND steward_id IS NOT NULL AND fraternity_member_id IS NOT NULL AND (
+    (role = 'PROMOTER' AND promoter_id IS NOT NULL AND seller_id IS NULL AND steward_id IS NULL) OR
+    (role = 'STEWARD' AND steward_id IS NOT NULL AND (
       (seller_id IS NULL AND promoter_id IS NULL) OR
       (seller_id IS NOT NULL AND promoter_id IS NULL) OR
       (seller_id IS NULL AND promoter_id IS NOT NULL) OR
       (seller_id IS NOT NULL AND promoter_id IS NOT NULL)
     )) OR
-    (role = 'ADMIN' AND fraternity_member_id IS NULL AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL)
+    (role = 'ADMIN' AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL)
   )
 );
 
@@ -381,8 +372,6 @@ CREATE TABLE IF NOT EXISTS user_addresses (
 
 -- Indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_sellers_status ON sellers(status);
--- Note: Indexes for fraternity_member_id columns are created by migration 016 after columns are renamed
--- CREATE INDEX IF NOT EXISTS idx_sellers_fraternity_member_id ON sellers(fraternity_member_id);
 CREATE INDEX IF NOT EXISTS idx_sellers_invitation_token ON sellers(invitation_token);
 CREATE INDEX IF NOT EXISTS idx_products_seller ON products(seller_id);
 -- Note: idx_products_category is created by migration 013
@@ -391,7 +380,6 @@ CREATE INDEX IF NOT EXISTS idx_orders_product ON orders(product_id);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
 CREATE INDEX IF NOT EXISTS idx_orders_stripe_session ON orders(stripe_session_id);
 CREATE INDEX IF NOT EXISTS idx_promoters_status ON promoters(status);
--- CREATE INDEX IF NOT EXISTS idx_promoters_fraternity_member_id ON promoters(fraternity_member_id);
 CREATE INDEX IF NOT EXISTS idx_fraternity_members_email ON fraternity_members(email);
 CREATE INDEX IF NOT EXISTS idx_fraternity_members_membership_number ON fraternity_members(membership_number);
 CREATE INDEX IF NOT EXISTS idx_fraternity_members_initiated_chapter ON fraternity_members(initiated_chapter_id);
@@ -401,16 +389,6 @@ CREATE INDEX IF NOT EXISTS idx_events_sponsored_chapter ON events(sponsored_chap
 CREATE INDEX IF NOT EXISTS idx_users_cognito_sub ON users(cognito_sub);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
--- Index for users.fraternity_member_id - created conditionally since column may be added by migration 028
-DO $$
-BEGIN
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns 
-    WHERE table_name = 'users' AND column_name = 'fraternity_member_id'
-  ) THEN
-    CREATE INDEX IF NOT EXISTS idx_users_fraternity_member_id ON users(fraternity_member_id);
-  END IF;
-END $$;
 CREATE INDEX IF NOT EXISTS idx_users_seller_id ON users(seller_id);
 CREATE INDEX IF NOT EXISTS idx_users_promoter_id ON users(promoter_id);
 CREATE INDEX IF NOT EXISTS idx_users_steward_id ON users(steward_id);
@@ -419,7 +397,6 @@ CREATE INDEX IF NOT EXISTS idx_industries_display_order ON industries(display_or
 CREATE INDEX IF NOT EXISTS idx_professions_active ON professions(is_active);
 CREATE INDEX IF NOT EXISTS idx_professions_display_order ON professions(display_order);
 CREATE INDEX IF NOT EXISTS idx_fraternity_members_profession_id ON fraternity_members(profession_id);
--- CREATE INDEX IF NOT EXISTS idx_stewards_fraternity_member_id ON stewards(fraternity_member_id);
 CREATE INDEX IF NOT EXISTS idx_stewards_sponsoring_chapter ON stewards(sponsoring_chapter_id);
 CREATE INDEX IF NOT EXISTS idx_stewards_status ON stewards(status);
 CREATE INDEX IF NOT EXISTS idx_steward_listings_steward ON steward_listings(steward_id);

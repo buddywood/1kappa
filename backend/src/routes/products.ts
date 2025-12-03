@@ -129,16 +129,21 @@ router.post('/', authenticate, upload.array('images', 10), async (req: Request, 
 
     // Business rule validation:
     // 1. Verified sellers (seller.verification_status = 'VERIFIED') → must sell Kappa Alpha Psi branded merchandise only
-    // 2. Verified members (seller.fraternity_member_id IS NOT NULL AND member.verification_status = 'VERIFIED') → can sell anything
+    // 2. Verified members (seller email matches fraternity_member AND member.verification_status = 'VERIFIED') → can sell anything
     let isKappaBranded = body.is_kappa_branded ?? false;
 
     if (seller.verification_status === 'VERIFIED') {
-      // Check if seller is also a verified member
+      // Check if seller is also a verified member via email matching
       let isVerifiedMember = false;
-      if (seller.fraternity_member_id) {
+      const sellerResult = await pool.query(
+        'SELECT email FROM sellers WHERE id = $1',
+        [sellerId]
+      );
+      const sellerEmail = sellerResult.rows[0]?.email;
+      if (sellerEmail) {
         const memberResult = await pool.query(
-          'SELECT verification_status FROM fraternity_members WHERE id = $1',
-          [seller.fraternity_member_id]
+          'SELECT verification_status FROM fraternity_members WHERE email = $1',
+          [sellerEmail]
         );
         if (memberResult.rows[0]?.verification_status === 'VERIFIED') {
           isVerifiedMember = true;

@@ -100,14 +100,13 @@ describe('Seller Kappa Branded Product Verification', () => {
   });
 
   it('should NOT change seller verification_status if product is not kappa branded', async () => {
-    // Mock seller with VERIFIED verification_status, fraternity_member_id (verified member can sell anything), and Stripe account
+    // Mock seller with VERIFIED verification_status (verified member can sell anything via email matching), and Stripe account
     (queries.getSellerById as jest.Mock).mockResolvedValue({
       id: 1,
       email: 'seller@example.com',
       name: 'Test Seller',
       status: 'APPROVED',
       verification_status: 'VERIFIED',
-      fraternity_member_id: 1,
       stripe_account_id: 'acct_test123',
       seller_id: 1,
     });

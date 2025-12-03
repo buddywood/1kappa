@@ -286,7 +286,19 @@ router.get('/stewards/pending', async (req: Request, res: Response) => {
     // Enrich with member and chapter info
     const enrichedStewards = await Promise.all(
       stewards.map(async (steward) => {
-        const memberResult = await pool.query('SELECT * FROM fraternity_members WHERE id = $1', [steward.fraternity_member_id]);
+        // Get member via users table -> email/cognito_sub -> fraternity_members
+        const userResult = await pool.query(
+          'SELECT email, cognito_sub FROM users WHERE steward_id = $1',
+          [steward.id]
+        );
+        const user = userResult.rows[0];
+        let memberResult = { rows: [] };
+        if (user) {
+          memberResult = await pool.query(
+            'SELECT * FROM fraternity_members WHERE email = $1 OR cognito_sub = $2',
+            [user.email, user.cognito_sub]
+          );
+        }
         const chapterResult = await pool.query('SELECT * FROM chapters WHERE id = $1', [steward.sponsoring_chapter_id]);
         return {
           ...steward,
@@ -318,20 +330,20 @@ router.put('/stewards/:id', async (req: Request, res: Response) => {
     
     // If approving, link user to steward
     if (body.status === 'APPROVED') {
-      const memberResult = await pool.query('SELECT id, email, cognito_sub FROM fraternity_members WHERE id = $1', [steward.fraternity_member_id]);
-      const member = memberResult.rows[0];
+      // Get member via users table -> email/cognito_sub -> fraternity_members
+      const userResult = await pool.query(
+        'SELECT id, email, cognito_sub FROM users WHERE steward_id = $1',
+        [stewardId]
+      );
+      const user = userResult.rows[0];
       
-      if (member) {
-        // Find user by email or cognito_sub (users table doesn't have member_id/fraternity_member_id)
-        // Try cognito_sub first, then email
-        let userResult;
-        if (member.cognito_sub) {
-          userResult = await pool.query('SELECT id FROM users WHERE cognito_sub = $1', [member.cognito_sub]);
-        } else if (member.email) {
-          userResult = await pool.query('SELECT id FROM users WHERE email = $1', [member.email]);
-        }
-        
-        const user = userResult?.rows[0];
+      if (user) {
+        // Find member by email or cognito_sub
+        const memberResult = await pool.query(
+          'SELECT id, email, cognito_sub FROM fraternity_members WHERE email = $1 OR cognito_sub = $2',
+          [user.email, user.cognito_sub]
+        );
+        const member = memberResult.rows[0];
         
         if (user) {
           await linkUserToSteward(user.id, stewardId);

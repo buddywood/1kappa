@@ -345,7 +345,7 @@ describe('Registration Flow Tests', () => {
       expect(queries.linkUserToMember).toHaveBeenCalled();
     });
 
-    it('should set fraternity_member_id in users table after successful member registration', async () => {
+    it('should link user to fraternity_member via email/cognito_sub matching after successful member registration', async () => {
       const memberData = {
         name: 'Test Member',
         email: 'test-member@example.com',
