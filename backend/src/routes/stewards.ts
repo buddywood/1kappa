@@ -73,7 +73,9 @@ router.post('/apply', authenticate, requireVerifiedMember, async (req: Request, 
     const body = stewardApplicationSchema.parse(req.body);
 
     // Create steward application (fraternity_member relationship via email/cognito_sub matching)
+    // user_id will be set when user is linked via linkUserToSteward
     const steward = await createSteward({
+      user_id: null, // Will be set when user is linked
       sponsoring_chapter_id: body.sponsoring_chapter_id,
     });
 
@@ -203,7 +205,7 @@ router.get('/profile', authenticate, requireSteward, async (req: Request, res: R
     // Get member and chapter info via users table
     const userResult = await pool.query(
       'SELECT email, cognito_sub FROM users WHERE steward_id = $1',
-      [stewardId]
+      [steward.id]
     );
     const user = userResult.rows[0];
     let member = null;

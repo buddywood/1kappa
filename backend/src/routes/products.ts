@@ -137,7 +137,7 @@ router.post('/', authenticate, upload.array('images', 10), async (req: Request, 
       let isVerifiedMember = false;
       const sellerResult = await pool.query(
         'SELECT email FROM sellers WHERE id = $1',
-        [sellerId]
+        [seller.id]
       );
       const sellerEmail = sellerResult.rows[0]?.email;
       if (sellerEmail) {

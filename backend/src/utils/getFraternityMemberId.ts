@@ -8,9 +8,9 @@ import { getUserByCognitoSub } from '../db/queries-sequelize';
  * All lookups now use email/cognito_sub matching since fraternity_member_id columns have been removed
  */
 export async function getFraternityMemberId(user: User): Promise<number | null> {
-  if (user.role === 'SELLER' && user.seller_id) {
-    // Match seller email with fraternity_members
-    const sellerResult = await pool.query('SELECT email FROM sellers WHERE id = $1', [user.seller_id]);
+  if (user.role === 'SELLER') {
+    // Look up seller by user_id, then match seller email with fraternity_members
+    const sellerResult = await pool.query('SELECT email FROM sellers WHERE user_id = $1', [user.id]);
     const sellerEmail = sellerResult.rows[0]?.email;
     if (sellerEmail) {
       const memberResult = await pool.query(
@@ -20,9 +20,9 @@ export async function getFraternityMemberId(user: User): Promise<number | null> 
       return memberResult.rows[0]?.id || null;
     }
     return null;
-  } else if (user.role === 'PROMOTER' && user.promoter_id) {
-    // Match promoter email with fraternity_members
-    const promoterResult = await pool.query('SELECT email FROM promoters WHERE id = $1', [user.promoter_id]);
+  } else if (user.role === 'PROMOTER') {
+    // Look up promoter by user_id, then match promoter email with fraternity_members
+    const promoterResult = await pool.query('SELECT email FROM promoters WHERE user_id = $1', [user.id]);
     const promoterEmail = promoterResult.rows[0]?.email;
     if (promoterEmail) {
       const memberResult = await pool.query(
@@ -32,7 +32,7 @@ export async function getFraternityMemberId(user: User): Promise<number | null> 
       return memberResult.rows[0]?.id || null;
     }
     return null;
-  } else if (user.role === 'STEWARD' && user.steward_id) {
+  } else if (user.role === 'STEWARD') {
     // Match user email/cognito_sub with fraternity_members (stewards linked via users table)
     const memberResult = await pool.query(
       'SELECT id FROM fraternity_members WHERE email = $1 OR cognito_sub = $2',

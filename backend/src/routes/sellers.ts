@@ -92,14 +92,31 @@ const optionalAuthenticate = async (req: Request, res: Response, next: any) => {
       const user = await getUserByCognitoSub(cognitoSub);
       if (user) {
         // Attach user to request
+        // Look up role-specific IDs from role tables
+        const { Seller, Promoter, Steward } = await import('../db/models');
+        let sellerId: number | null = null;
+        let promoterId: number | null = null;
+        let stewardId: number | null = null;
+
+        if (user.role === 'SELLER') {
+          const seller = await Seller.findOne({ where: { user_id: user.id } });
+          sellerId = seller?.id || null;
+        } else if (user.role === 'PROMOTER') {
+          const promoter = await Promoter.findOne({ where: { user_id: user.id } });
+          promoterId = promoter?.id || null;
+        } else if (user.role === 'STEWARD') {
+          const steward = await Steward.findOne({ where: { user_id: user.id } });
+          stewardId = steward?.id || null;
+        }
+
         req.user = {
           id: user.id,
           cognitoSub: user.cognito_sub,
           email: user.email,
           role: user.role,
-          sellerId: user.seller_id,
-          promoterId: user.promoter_id,
-          stewardId: user.steward_id,
+          sellerId,
+          promoterId,
+          stewardId,
           features: user.features,
         };
       }
@@ -199,7 +216,9 @@ router.post(
       }
 
       // Create seller record (fraternity_member relationship via email matching)
+      // Create seller record - user_id will be set when user account is created and linked
       const seller = await createSeller({
+        user_id: null, // Will be set when user is linked
         ...body,
         headshot_url: headshotUrl,
         store_logo_url: storeLogoUrl,

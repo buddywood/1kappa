@@ -2,6 +2,7 @@ import { Table, Column, Model, DataType, BelongsTo, ForeignKey } from 'sequelize
 import { BaseModel } from './BaseModel';
 import { Chapter } from './Chapter';
 import { FraternityMember } from './FraternityMember';
+import { User } from './User';
 
 @Table({
   tableName: 'promoters',
@@ -17,6 +18,13 @@ export class Promoter extends BaseModel {
     autoIncrement: true
   })
   id!: number;
+
+  @ForeignKey(() => User)
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: true
+  })
+  user_id!: number | null;
 
   @Column({
     type: DataType.STRING(255),
@@ -116,5 +124,8 @@ export class Promoter extends BaseModel {
 
   @BelongsTo(() => Chapter, 'sponsoring_chapter_id')
   sponsoringChapter?: Chapter;
+
+  @BelongsTo(() => User, 'user_id')
+  user?: User;
 }
 

@@ -98,14 +98,31 @@ router.post('/:productId', authenticateOptional, async (req: Request, res: Respo
             if (cognitoSub) {
               const dbUser = await getUserByCognitoSub(cognitoSub);
               if (dbUser) {
+                // Look up role-specific IDs from role tables
+                const { Seller, Promoter, Steward } = await import('../db/models');
+                let sellerId: number | null = null;
+                let promoterId: number | null = null;
+                let stewardId: number | null = null;
+
+                if (dbUser.role === 'SELLER') {
+                  const seller = await Seller.findOne({ where: { user_id: dbUser.id } });
+                  sellerId = seller?.id || null;
+                } else if (dbUser.role === 'PROMOTER') {
+                  const promoter = await Promoter.findOne({ where: { user_id: dbUser.id } });
+                  promoterId = promoter?.id || null;
+                } else if (dbUser.role === 'STEWARD') {
+                  const steward = await Steward.findOne({ where: { user_id: dbUser.id } });
+                  stewardId = steward?.id || null;
+                }
+
                 user = {
                   id: dbUser.id,
                   cognitoSub: dbUser.cognito_sub,
                   email: dbUser.email,
                   role: dbUser.role,
-                  sellerId: dbUser.seller_id,
-                  promoterId: dbUser.promoter_id,
-                  stewardId: dbUser.steward_id || null,
+                  sellerId,
+                  promoterId,
+                  stewardId,
                   features: dbUser.features,
                 };
               }
@@ -163,8 +180,6 @@ router.post('/:productId', authenticateOptional, async (req: Request, res: Respo
               email: body.data.email,
               role: 'GUEST',
               onboarding_status: 'COGNITO_CONFIRMED', // Guests don't need onboarding
-              seller_id: null,
-              promoter_id: null,
             });
 
             user = {
@@ -172,9 +187,9 @@ router.post('/:productId', authenticateOptional, async (req: Request, res: Respo
               cognitoSub: dbUser.cognito_sub,
               email: dbUser.email,
               role: dbUser.role,
-              sellerId: dbUser.seller_id,
-              promoterId: dbUser.promoter_id,
-              stewardId: dbUser.steward_id || null,
+              sellerId: null,
+              promoterId: null,
+              stewardId: null,
               features: dbUser.features,
             };
           } catch (createError: any) {
@@ -205,14 +220,31 @@ router.post('/:productId', authenticateOptional, async (req: Request, res: Respo
                 if (cognitoSub) {
                   const dbUser = await getUserByCognitoSub(cognitoSub);
                   if (dbUser) {
+                    // Look up role-specific IDs from role tables
+                    const { Seller, Promoter, Steward } = await import('../db/models');
+                    let sellerId: number | null = null;
+                    let promoterId: number | null = null;
+                    let stewardId: number | null = null;
+
+                    if (dbUser.role === 'SELLER') {
+                      const seller = await Seller.findOne({ where: { user_id: dbUser.id } });
+                      sellerId = seller?.id || null;
+                    } else if (dbUser.role === 'PROMOTER') {
+                      const promoter = await Promoter.findOne({ where: { user_id: dbUser.id } });
+                      promoterId = promoter?.id || null;
+                    } else if (dbUser.role === 'STEWARD') {
+                      const steward = await Steward.findOne({ where: { user_id: dbUser.id } });
+                      stewardId = steward?.id || null;
+                    }
+
                     user = {
                       id: dbUser.id,
                       cognitoSub: dbUser.cognito_sub,
                       email: dbUser.email,
                       role: dbUser.role,
-                      sellerId: dbUser.seller_id,
-                      promoterId: dbUser.promoter_id,
-                      stewardId: dbUser.steward_id || null,
+                      sellerId,
+                      promoterId,
+                      stewardId,
                       features: dbUser.features,
                     };
                   } else {
@@ -222,17 +254,15 @@ router.post('/:productId', authenticateOptional, async (req: Request, res: Respo
                       email: body.data.email,
                       role: 'GUEST',
                       onboarding_status: 'COGNITO_CONFIRMED',
-                      seller_id: null,
-                      promoter_id: null,
                     });
                     user = {
                       id: newDbUser.id,
                       cognitoSub: newDbUser.cognito_sub,
                       email: newDbUser.email,
                       role: newDbUser.role,
-                      sellerId: newDbUser.seller_id,
-                      promoterId: newDbUser.promoter_id,
-                      stewardId: newDbUser.steward_id || null,
+                      sellerId: null,
+                      promoterId: null,
+                      stewardId: null,
                       features: newDbUser.features,
                     };
                   }

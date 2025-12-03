@@ -66,70 +66,96 @@ router.get("/me", authenticate, async (req: Request, res: Response) => {
     let is_steward = false;
 
     // Get fraternity_member_id from role-specific tables via email matching
-    if (user.role === "SELLER" && user.seller_id) {
-      const sellerResult = await pool.query(
-        "SELECT name, email, status FROM sellers WHERE id = $1",
-        [user.seller_id]
+    // Look up seller/promoter/steward by user_id
+    let sellerId: number | null = null;
+    let promoterId: number | null = null;
+    let stewardId: number | null = null;
+
+    if (user.role === "SELLER") {
+      const sellerIdResult = await pool.query(
+        "SELECT id FROM sellers WHERE user_id = $1",
+        [user.id]
       );
-      if (sellerResult.rows.length > 0) {
-        name = sellerResult.rows[0]?.name || null;
-        const sellerEmail = sellerResult.rows[0]?.email;
-        if (sellerResult.rows[0]?.status === "APPROVED") {
-          is_seller = true;
-        }
-        // Match seller email with fraternity_members
-        if (sellerEmail) {
-          const memberResult = await pool.query(
-            "SELECT id, verification_status FROM fraternity_members WHERE email = $1",
-            [sellerEmail]
-          );
-          if (memberResult.rows.length > 0) {
-            fraternity_member_id = memberResult.rows[0]?.id || null;
-            if (memberResult.rows[0]?.verification_status === "VERIFIED") {
-              is_fraternity_member = true;
+      sellerId = sellerIdResult.rows[0]?.id || null;
+      if (sellerId) {
+        const sellerResult = await pool.query(
+          "SELECT name, email, status FROM sellers WHERE id = $1",
+          [sellerId]
+        );
+        if (sellerResult.rows.length > 0) {
+          name = sellerResult.rows[0]?.name || null;
+          const sellerEmail = sellerResult.rows[0]?.email;
+          if (sellerResult.rows[0]?.status === "APPROVED") {
+            is_seller = true;
+          }
+          // Match seller email with fraternity_members
+          if (sellerEmail) {
+            const memberResult = await pool.query(
+              "SELECT id, verification_status FROM fraternity_members WHERE email = $1",
+              [sellerEmail]
+            );
+            if (memberResult.rows.length > 0) {
+              fraternity_member_id = memberResult.rows[0]?.id || null;
+              if (memberResult.rows[0]?.verification_status === "VERIFIED") {
+                is_fraternity_member = true;
+              }
             }
           }
         }
       }
-    } else if (user.role === "PROMOTER" && user.promoter_id) {
-      const promoterResult = await pool.query(
-        "SELECT name, email, status FROM promoters WHERE id = $1",
-        [user.promoter_id]
+    } else if (user.role === "PROMOTER") {
+      const promoterIdResult = await pool.query(
+        "SELECT id FROM promoters WHERE user_id = $1",
+        [user.id]
       );
-      if (promoterResult.rows.length > 0) {
-        name = promoterResult.rows[0]?.name || null;
-        const promoterEmail = promoterResult.rows[0]?.email;
-        if (promoterResult.rows[0]?.status === "APPROVED") {
-          is_promoter = true;
-        }
-        // Match promoter email with fraternity_members
-        if (promoterEmail) {
-          const memberResult = await pool.query(
-            "SELECT id FROM fraternity_members WHERE email = $1",
-            [promoterEmail]
-          );
-          if (memberResult.rows.length > 0) {
-            fraternity_member_id = memberResult.rows[0]?.id || null;
+      promoterId = promoterIdResult.rows[0]?.id || null;
+      if (promoterId) {
+        const promoterResult = await pool.query(
+          "SELECT name, email, status FROM promoters WHERE id = $1",
+          [promoterId]
+        );
+        if (promoterResult.rows.length > 0) {
+          name = promoterResult.rows[0]?.name || null;
+          const promoterEmail = promoterResult.rows[0]?.email;
+          if (promoterResult.rows[0]?.status === "APPROVED") {
+            is_promoter = true;
+          }
+          // Match promoter email with fraternity_members
+          if (promoterEmail) {
+            const memberResult = await pool.query(
+              "SELECT id FROM fraternity_members WHERE email = $1",
+              [promoterEmail]
+            );
+            if (memberResult.rows.length > 0) {
+              fraternity_member_id = memberResult.rows[0]?.id || null;
+            }
           }
         }
       }
-    } else if (user.role === "STEWARD" && user.steward_id) {
-      const stewardResult = await pool.query(
-        "SELECT status FROM stewards WHERE id = $1",
-        [user.steward_id]
+    } else if (user.role === "STEWARD") {
+      const stewardIdResult = await pool.query(
+        "SELECT id FROM stewards WHERE user_id = $1",
+        [user.id]
       );
-      if (stewardResult.rows.length > 0) {
-        if (stewardResult.rows[0]?.status === "APPROVED") {
-          is_steward = true;
-        }
-        // Match user email/cognito_sub with fraternity_members (stewards linked via users table)
-        const memberResult = await pool.query(
-          "SELECT id, name FROM fraternity_members WHERE email = $1 OR cognito_sub = $2",
-          [user.email, user.cognito_sub]
+      stewardId = stewardIdResult.rows[0]?.id || null;
+      if (stewardId) {
+        const stewardResult = await pool.query(
+          "SELECT status FROM stewards WHERE id = $1",
+          [stewardId]
         );
-        if (memberResult.rows.length > 0) {
-          fraternity_member_id = memberResult.rows[0]?.id || null;
-          name = memberResult.rows[0]?.name || null;
+        if (stewardResult.rows.length > 0) {
+          if (stewardResult.rows[0]?.status === "APPROVED") {
+            is_steward = true;
+          }
+          // Match user email/cognito_sub with fraternity_members (stewards linked via users table)
+          const memberResult = await pool.query(
+            "SELECT id, name FROM fraternity_members WHERE email = $1 OR cognito_sub = $2",
+            [user.email, user.cognito_sub]
+          );
+          if (memberResult.rows.length > 0) {
+            fraternity_member_id = memberResult.rows[0]?.id || null;
+            name = memberResult.rows[0]?.name || null;
+          }
         }
       }
     } else if (user.role === "GUEST") {
@@ -151,7 +177,7 @@ router.get("/me", authenticate, async (req: Request, res: Response) => {
     if (fraternity_member_id && !is_steward) {
       const stewardResult = await pool.query(
         `SELECT st.status FROM stewards st
-         JOIN users u ON u.steward_id = st.id
+         JOIN users u ON st.user_id = u.id
          JOIN fraternity_members m ON (u.email = m.email OR u.cognito_sub = m.cognito_sub)
          WHERE m.id = $1 AND st.status = $2`,
         [fraternity_member_id, "APPROVED"]
@@ -168,9 +194,9 @@ router.get("/me", authenticate, async (req: Request, res: Response) => {
       role: user.role,
       onboarding_status: user.onboarding_status,
       fraternity_member_id: fraternity_member_id,
-      seller_id: user.seller_id,
-      promoter_id: user.promoter_id,
-      steward_id: user.steward_id,
+      seller_id: sellerId,
+      promoter_id: promoterId,
+      steward_id: stewardId,
       features: user.features,
       name: name,
       last_login: user.last_login,
@@ -236,70 +262,96 @@ router.post("/upsert-on-login", async (req: Request, res: Response) => {
     let is_steward = false;
 
     // Get fraternity_member_id from role-specific tables via email matching
-    if (user.role === "SELLER" && user.seller_id) {
-      const sellerResult = await pool.query(
-        "SELECT name, email, status FROM sellers WHERE id = $1",
-        [user.seller_id]
+    // Look up seller/promoter/steward by user_id
+    let sellerId: number | null = null;
+    let promoterId: number | null = null;
+    let stewardId: number | null = null;
+
+    if (user.role === "SELLER") {
+      const sellerIdResult = await pool.query(
+        "SELECT id FROM sellers WHERE user_id = $1",
+        [user.id]
       );
-      if (sellerResult.rows.length > 0) {
-        name = sellerResult.rows[0]?.name || null;
-        const sellerEmail = sellerResult.rows[0]?.email;
-        if (sellerResult.rows[0]?.status === "APPROVED") {
-          is_seller = true;
-        }
-        // Match seller email with fraternity_members
-        if (sellerEmail) {
-          const memberResult = await pool.query(
-            "SELECT id, verification_status FROM fraternity_members WHERE email = $1",
-            [sellerEmail]
-          );
-          if (memberResult.rows.length > 0) {
-            fraternity_member_id = memberResult.rows[0]?.id || null;
-            if (memberResult.rows[0]?.verification_status === "VERIFIED") {
-              is_fraternity_member = true;
+      sellerId = sellerIdResult.rows[0]?.id || null;
+      if (sellerId) {
+        const sellerResult = await pool.query(
+          "SELECT name, email, status FROM sellers WHERE id = $1",
+          [sellerId]
+        );
+        if (sellerResult.rows.length > 0) {
+          name = sellerResult.rows[0]?.name || null;
+          const sellerEmail = sellerResult.rows[0]?.email;
+          if (sellerResult.rows[0]?.status === "APPROVED") {
+            is_seller = true;
+          }
+          // Match seller email with fraternity_members
+          if (sellerEmail) {
+            const memberResult = await pool.query(
+              "SELECT id, verification_status FROM fraternity_members WHERE email = $1",
+              [sellerEmail]
+            );
+            if (memberResult.rows.length > 0) {
+              fraternity_member_id = memberResult.rows[0]?.id || null;
+              if (memberResult.rows[0]?.verification_status === "VERIFIED") {
+                is_fraternity_member = true;
+              }
             }
           }
         }
       }
-    } else if (user.role === "PROMOTER" && user.promoter_id) {
-      const promoterResult = await pool.query(
-        "SELECT name, email, status FROM promoters WHERE id = $1",
-        [user.promoter_id]
+    } else if (user.role === "PROMOTER") {
+      const promoterIdResult = await pool.query(
+        "SELECT id FROM promoters WHERE user_id = $1",
+        [user.id]
       );
-      if (promoterResult.rows.length > 0) {
-        name = promoterResult.rows[0]?.name || null;
-        const promoterEmail = promoterResult.rows[0]?.email;
-        if (promoterResult.rows[0]?.status === "APPROVED") {
-          is_promoter = true;
-        }
-        // Match promoter email with fraternity_members
-        if (promoterEmail) {
-          const memberResult = await pool.query(
-            "SELECT id FROM fraternity_members WHERE email = $1",
-            [promoterEmail]
-          );
-          if (memberResult.rows.length > 0) {
-            fraternity_member_id = memberResult.rows[0]?.id || null;
+      promoterId = promoterIdResult.rows[0]?.id || null;
+      if (promoterId) {
+        const promoterResult = await pool.query(
+          "SELECT name, email, status FROM promoters WHERE id = $1",
+          [promoterId]
+        );
+        if (promoterResult.rows.length > 0) {
+          name = promoterResult.rows[0]?.name || null;
+          const promoterEmail = promoterResult.rows[0]?.email;
+          if (promoterResult.rows[0]?.status === "APPROVED") {
+            is_promoter = true;
+          }
+          // Match promoter email with fraternity_members
+          if (promoterEmail) {
+            const memberResult = await pool.query(
+              "SELECT id FROM fraternity_members WHERE email = $1",
+              [promoterEmail]
+            );
+            if (memberResult.rows.length > 0) {
+              fraternity_member_id = memberResult.rows[0]?.id || null;
+            }
           }
         }
       }
-    } else if (user.role === "STEWARD" && user.steward_id) {
-      const stewardResult = await pool.query(
-        "SELECT status FROM stewards WHERE id = $1",
-        [user.steward_id]
+    } else if (user.role === "STEWARD") {
+      const stewardIdResult = await pool.query(
+        "SELECT id FROM stewards WHERE user_id = $1",
+        [user.id]
       );
-      if (stewardResult.rows.length > 0) {
-        if (stewardResult.rows[0]?.status === "APPROVED") {
-          is_steward = true;
-        }
-        // Match user email/cognito_sub with fraternity_members (stewards linked via users table)
-        const memberResult = await pool.query(
-          "SELECT id, name FROM fraternity_members WHERE email = $1 OR cognito_sub = $2",
-          [user.email, user.cognito_sub]
+      stewardId = stewardIdResult.rows[0]?.id || null;
+      if (stewardId) {
+        const stewardResult = await pool.query(
+          "SELECT status FROM stewards WHERE id = $1",
+          [stewardId]
         );
-        if (memberResult.rows.length > 0) {
-          fraternity_member_id = memberResult.rows[0]?.id || null;
-          name = memberResult.rows[0]?.name || null;
+        if (stewardResult.rows.length > 0) {
+          if (stewardResult.rows[0]?.status === "APPROVED") {
+            is_steward = true;
+          }
+          // Match user email/cognito_sub with fraternity_members (stewards linked via users table)
+          const memberResult = await pool.query(
+            "SELECT id, name FROM fraternity_members WHERE email = $1 OR cognito_sub = $2",
+            [user.email, user.cognito_sub]
+          );
+          if (memberResult.rows.length > 0) {
+            fraternity_member_id = memberResult.rows[0]?.id || null;
+            name = memberResult.rows[0]?.name || null;
+          }
         }
       }
     } else if (user.role === "GUEST") {
@@ -321,7 +373,7 @@ router.post("/upsert-on-login", async (req: Request, res: Response) => {
     if (fraternity_member_id && !is_steward) {
       const stewardResult = await pool.query(
         `SELECT st.status FROM stewards st
-         JOIN users u ON u.steward_id = st.id
+         JOIN users u ON st.user_id = u.id
          JOIN fraternity_members m ON (u.email = m.email OR u.cognito_sub = m.cognito_sub)
          WHERE m.id = $1 AND st.status = $2`,
         [fraternity_member_id, "APPROVED"]
@@ -338,9 +390,9 @@ router.post("/upsert-on-login", async (req: Request, res: Response) => {
       role: user.role,
       onboarding_status: user.onboarding_status,
       fraternity_member_id: fraternity_member_id,
-      seller_id: user.seller_id,
-      promoter_id: user.promoter_id,
-      steward_id: user.steward_id,
+      seller_id: sellerId,
+      promoter_id: promoterId,
+      steward_id: stewardId,
       features: user.features,
       name: name,
       last_login: user.last_login,
@@ -372,11 +424,17 @@ router.delete(
 
       // Store IDs before deleting - get memberId from role-specific tables via email matching
       let memberId: number | null = null;
-      if (user.role === "SELLER" && user.seller_id) {
-        const sellerResult = await pool.query(
-          "SELECT email FROM sellers WHERE id = $1",
-          [user.seller_id]
+      if (user.role === "SELLER") {
+        const sellerIdResult = await pool.query(
+          "SELECT id FROM sellers WHERE user_id = $1",
+          [user.id]
         );
+        const sellerId = sellerIdResult.rows[0]?.id || null;
+        if (sellerId) {
+          const sellerResult = await pool.query(
+            "SELECT email FROM sellers WHERE id = $1",
+            [sellerId]
+          );
         const sellerEmail = sellerResult.rows[0]?.email;
         if (sellerEmail) {
           const memberResult = await pool.query(
@@ -385,11 +443,18 @@ router.delete(
           );
           memberId = memberResult.rows[0]?.id || null;
         }
-      } else if (user.role === "PROMOTER" && user.promoter_id) {
-        const promoterResult = await pool.query(
-          "SELECT email FROM promoters WHERE id = $1",
-          [user.promoter_id]
+      }
+      } else if (user.role === "PROMOTER") {
+        const promoterIdResult = await pool.query(
+          "SELECT id FROM promoters WHERE user_id = $1",
+          [user.id]
         );
+        const promoterId = promoterIdResult.rows[0]?.id || null;
+        if (promoterId) {
+          const promoterResult = await pool.query(
+            "SELECT email FROM promoters WHERE id = $1",
+            [promoterId]
+          );
         const promoterEmail = promoterResult.rows[0]?.email;
         if (promoterEmail) {
           const memberResult = await pool.query(
@@ -398,7 +463,8 @@ router.delete(
           );
           memberId = memberResult.rows[0]?.id || null;
         }
-      } else if (user.role === "STEWARD" && user.steward_id) {
+      }
+      } else if (user.role === "STEWARD") {
         // Match user email/cognito_sub with fraternity_members
         const memberResult = await pool.query(
           "SELECT id FROM fraternity_members WHERE email = $1 OR cognito_sub = $2",
@@ -412,9 +478,24 @@ router.delete(
         );
         memberId = memberResult.rows[0]?.id || null;
       }
-      const sellerId = user.seller_id;
-      const promoterId = user.promoter_id;
-      const stewardId = user.steward_id;
+      // Look up role IDs from role tables
+      const sellerIdResult = await pool.query(
+        "SELECT id FROM sellers WHERE user_id = $1",
+        [user.id]
+      );
+      const sellerId = sellerIdResult.rows[0]?.id || null;
+      
+      const promoterIdResult = await pool.query(
+        "SELECT id FROM promoters WHERE user_id = $1",
+        [user.id]
+      );
+      const promoterId = promoterIdResult.rows[0]?.id || null;
+      
+      const stewardIdResult = await pool.query(
+        "SELECT id FROM stewards WHERE user_id = $1",
+        [user.id]
+      );
+      const stewardId = stewardIdResult.rows[0]?.id || null;
 
       // Delete role-specific data first (to handle foreign key constraints)
 

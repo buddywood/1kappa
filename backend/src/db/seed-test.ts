@@ -671,7 +671,7 @@ async function seedStewardSellers(): Promise<void> {
         // Check if steward already exists via users table
         const existingSteward = await pool.query(
           `SELECT st.id FROM stewards st
-           JOIN users u ON u.steward_id = st.id
+           JOIN users u ON st.user_id = u.id
            JOIN fraternity_members m ON (u.email = m.email OR u.cognito_sub = m.cognito_sub)
            WHERE m.id = $1`,
           [memberId]
@@ -698,6 +698,7 @@ async function seedStewardSellers(): Promise<void> {
               Math.floor(Math.random() * availableChapters.length)
             ];
           const steward = await createSteward({
+            user_id: null, // Will be set when user is linked
             sponsoring_chapter_id: sponsoringChapter.id,
           });
           stewardId = steward.id;
@@ -741,10 +742,10 @@ async function seedStewardSellers(): Promise<void> {
               ["APPROVED", testStripeAccountId, sellerId]
             );
           } else {
-            await pool.query(
-              "UPDATE sellers SET status = $1 WHERE id = $2",
-              ["APPROVED", sellerId]
-            );
+            await pool.query("UPDATE sellers SET status = $1 WHERE id = $2", [
+              "APPROVED",
+              sellerId,
+            ]);
           }
         } else {
           // Create new seller
@@ -753,6 +754,7 @@ async function seedStewardSellers(): Promise<void> {
               Math.floor(Math.random() * availableChapters.length)
             ];
           const seller = await createSeller({
+            user_id: null, // Will be set when user is linked
             email: stewardData.email,
             name: stewardData.name,
             sponsoring_chapter_id: sponsoringChapter.id,
@@ -1176,6 +1178,7 @@ async function seedPromoters(): Promise<void> {
 
       // Create promoter (fraternity_member relationship via email matching)
       const promoter = await createPromoter({
+        user_id: null, // Will be set when user is linked
         email: promoterData.email,
         name: promoterData.name,
         sponsoring_chapter_id: randomChapter.id,
@@ -1496,7 +1499,7 @@ async function clearOldTestData() {
   await pool.query(
     `DELETE FROM stewards WHERE id IN (
       SELECT st.id FROM stewards st
-      JOIN users u ON u.steward_id = st.id
+      JOIN users u ON st.user_id = u.id
       JOIN fraternity_members m ON (u.email = m.email OR u.cognito_sub = m.cognito_sub)
       WHERE m.email LIKE '%@example.com'
     )`
@@ -1614,6 +1617,7 @@ async function seedTestUsers(): Promise<void> {
                 Math.floor(Math.random() * availableChapters.length)
               ];
             const seller = await createSeller({
+              user_id: null, // Will be set when user is linked
               email: testUser.email,
               name: testUser.name,
               sponsoring_chapter_id: sponsoringChapter.id,
@@ -1661,6 +1665,7 @@ async function seedTestUsers(): Promise<void> {
                 Math.floor(Math.random() * availableChapters.length)
               ];
             const promoter = await createPromoter({
+              user_id: null, // Will be set when user is linked
               email: testUser.email,
               name: testUser.name,
               sponsoring_chapter_id: sponsoringChapter.id,
@@ -1749,114 +1754,123 @@ async function seedTestUsers(): Promise<void> {
               `UPDATE users 
                SET email = $1, 
                    role = $2, 
-                   onboarding_status = $3,
-                   seller_id = COALESCE(seller_id, $4),
-                   promoter_id = COALESCE(promoter_id, $5),
-                   steward_id = COALESCE(steward_id, $6)
-               WHERE id = $7`,
-              [
-                testUser.email,
-                userRole,
-                onboardingStatus,
-                sellerId,
-                promoterId,
-                stewardId,
-                userId,
-              ]
+                   onboarding_status = $3
+               WHERE id = $4`,
+              [testUser.email, userRole, onboardingStatus, userId]
             );
+
+            // Update role tables with user_id
+            if (sellerId) {
+              await pool.query(
+                `UPDATE sellers SET user_id = $1 WHERE id = $2`,
+                [userId, sellerId]
+              );
+            }
+            if (promoterId) {
+              await pool.query(
+                `UPDATE promoters SET user_id = $1 WHERE id = $2`,
+                [userId, promoterId]
+              );
+            }
+            if (stewardId) {
+              await pool.query(
+                `UPDATE stewards SET user_id = $1 WHERE id = $2`,
+                [userId, stewardId]
+              );
+            }
           } else if (userRole === "STEWARD") {
             // STEWARD users: fraternity_member accessed via users table -> email/cognito_sub -> fraternity_members
             await pool.query(
               `UPDATE users 
                SET email = $1, 
                    role = $2, 
-                   onboarding_status = $3,
-                   seller_id = COALESCE(seller_id, $4),
-                   promoter_id = COALESCE(promoter_id, $5),
-                   steward_id = COALESCE(steward_id, $6)
-               WHERE id = $7`,
-              [
-                testUser.email,
-                userRole,
-                onboardingStatus,
-                sellerId,
-                promoterId,
-                stewardId,
-                userId,
-              ]
+                   onboarding_status = $3
+               WHERE id = $4`,
+              [testUser.email, userRole, onboardingStatus, userId]
             );
+
+            // Update role tables with user_id
+            if (sellerId) {
+              await pool.query(
+                `UPDATE sellers SET user_id = $1 WHERE id = $2`,
+                [userId, sellerId]
+              );
+            }
+            if (promoterId) {
+              await pool.query(
+                `UPDATE promoters SET user_id = $1 WHERE id = $2`,
+                [userId, promoterId]
+              );
+            }
+            if (stewardId) {
+              await pool.query(
+                `UPDATE stewards SET user_id = $1 WHERE id = $2`,
+                [userId, stewardId]
+              );
+            }
           } else {
             await pool.query(
               `UPDATE users 
                SET email = $1, 
                    role = $2, 
-                   onboarding_status = $3,
-                   seller_id = COALESCE(seller_id, $4),
-                   promoter_id = COALESCE(promoter_id, $5),
-                   steward_id = COALESCE(steward_id, $6)
-               WHERE id = $7`,
-              [
-                testUser.email,
-                userRole,
-                onboardingStatus,
-                sellerId,
-                promoterId,
-                stewardId,
-                userId,
-              ]
+                   onboarding_status = $3
+               WHERE id = $4`,
+              [testUser.email, userRole, onboardingStatus, userId]
             );
+
+            // Update role tables with user_id
+            if (sellerId) {
+              await pool.query(
+                `UPDATE sellers SET user_id = $1 WHERE id = $2`,
+                [userId, sellerId]
+              );
+            }
+            if (promoterId) {
+              await pool.query(
+                `UPDATE promoters SET user_id = $1 WHERE id = $2`,
+                [userId, promoterId]
+              );
+            }
+            if (stewardId) {
+              await pool.query(
+                `UPDATE stewards SET user_id = $1 WHERE id = $2`,
+                [userId, stewardId]
+              );
+            }
           }
           console.log(`  ✓ Updated user record: ${testUser.name}`);
         } else {
-          if (userRole === "STEWARD") {
-            // STEWARD users: fraternity_member accessed via users table -> email/cognito_sub -> fraternity_members
+          // Create user record
+          const newUser = await createUser({
+            cognito_sub: cognitoSub,
+            email: testUser.email,
+            role: userRole as
+              | "ADMIN"
+              | "SELLER"
+              | "PROMOTER"
+              | "GUEST"
+              | "STEWARD",
+            onboarding_status: "ONBOARDING_FINISHED",
+          });
+
+          // Link user to role-specific tables
+          if (sellerId) {
+            await pool.query(`UPDATE sellers SET user_id = $1 WHERE id = $2`, [
+              newUser.id,
+              sellerId,
+            ]);
+          }
+          if (promoterId) {
             await pool.query(
-              `INSERT INTO users (cognito_sub, email, role, onboarding_status, steward_id, features)
-               VALUES ($1, $2, $3, $4, $5, $6)
-               RETURNING *`,
-              [
-                cognitoSub,
-                testUser.email,
-                "STEWARD",
-                "ONBOARDING_FINISHED",
-                stewardId,
-                JSON.stringify({}),
-              ]
+              `UPDATE promoters SET user_id = $1 WHERE id = $2`,
+              [newUser.id, promoterId]
             );
-          } else if (userRole === "PROMOTER") {
-            // PROMOTER: fraternity_member accessed via email matching
-            await pool.query(
-              `INSERT INTO users (cognito_sub, email, role, onboarding_status, promoter_id, features)
-               VALUES ($1, $2, $3, $4, $5, $6)
-               RETURNING *`,
-              [
-                cognitoSub,
-                testUser.email,
-                "PROMOTER",
-                "ONBOARDING_FINISHED",
-                promoterId,
-                JSON.stringify({}),
-              ]
-            );
-          } else if (userRole === "GUEST") {
-            // GUEST users: fraternity_member accessed via email/cognito_sub matching
-            await createUser({
-              cognito_sub: cognitoSub,
-              email: testUser.email,
-              role: "GUEST",
-              onboarding_status: "ONBOARDING_FINISHED",
-              seller_id: null,
-              promoter_id: null,
-            });
-          } else {
-            await createUser({
-              cognito_sub: cognitoSub,
-              email: testUser.email,
-              role: userRole as "ADMIN" | "SELLER",
-              onboarding_status: "ONBOARDING_FINISHED",
-              seller_id: sellerId,
-              promoter_id: promoterId,
-            });
+          }
+          if (stewardId) {
+            await pool.query(`UPDATE stewards SET user_id = $1 WHERE id = $2`, [
+              newUser.id,
+              stewardId,
+            ]);
           }
           console.log(`  ✓ Created user record: ${testUser.name}`);
         }

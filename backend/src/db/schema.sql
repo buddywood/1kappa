@@ -28,9 +28,11 @@ CREATE TABLE IF NOT EXISTS professions (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Fraternity Members table - must be created before sellers/promoters that reference it
+-- Fraternity Members table
+-- Note: user_id links to users table (nullable - not all members have user accounts)
 CREATE TABLE IF NOT EXISTS fraternity_members (
   id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
   email VARCHAR(255) NOT NULL UNIQUE,
   name VARCHAR(255),
   membership_number VARCHAR(100) UNIQUE,
@@ -62,6 +64,7 @@ CREATE TABLE IF NOT EXISTS fraternity_members (
 -- Sellers table
 CREATE TABLE IF NOT EXISTS sellers (
   id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
   email VARCHAR(255) NOT NULL UNIQUE,
   name VARCHAR(255) NOT NULL,
   sponsoring_chapter_id INTEGER NOT NULL REFERENCES chapters(id),
@@ -147,6 +150,7 @@ CREATE TABLE IF NOT EXISTS orders (
 -- Promoters table
 CREATE TABLE IF NOT EXISTS promoters (
   id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
   email VARCHAR(255) NOT NULL UNIQUE,
   name VARCHAR(255) NOT NULL,
   sponsoring_chapter_id INTEGER REFERENCES chapters(id),
@@ -243,10 +247,11 @@ INSERT INTO roles (name, description, display_order) VALUES
   ('STEWARD', 'User who can manage steward listings', 5)
 ON CONFLICT (name) DO NOTHING;
 
--- Stewards table - must be created before users table (users references stewards)
+-- Stewards table
 -- Note: fraternity_member relationship accessed via fraternity_members table associations
 CREATE TABLE IF NOT EXISTS stewards (
   id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
   sponsoring_chapter_id INTEGER NOT NULL REFERENCES chapters(id),
   status VARCHAR(20) DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
   verification_status VARCHAR(20) DEFAULT 'PENDING' CHECK (verification_status IN ('PENDING', 'VERIFIED', 'FAILED', 'MANUAL_REVIEW')),
@@ -258,36 +263,23 @@ CREATE TABLE IF NOT EXISTS stewards (
 );
 
 -- Users table - for authentication and role management
--- Note: fraternity_member relationship accessed via fraternity_members table associations:
---   - For SELLER role: access via sellers table -> fraternity_members (email match)
---   - For PROMOTER role: access via promoters table -> fraternity_members (email match)
---   - For STEWARD role: access via stewards table -> fraternity_members (via user cognito_sub/email)
---   - For GUEST users: match by email/cognito_sub with fraternity_members table
+-- Note: Role-specific tables (sellers, promoters, stewards) now reference users via user_id
+--   - For SELLER role: sellers.user_id -> users.id
+--   - For PROMOTER role: promoters.user_id -> users.id
+--   - For STEWARD role: stewards.user_id -> users.id
+--   - For GUEST users: fraternity_members.user_id -> users.id (optional)
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   cognito_sub VARCHAR(255) NOT NULL UNIQUE,
   email VARCHAR(255) NOT NULL UNIQUE,
   role VARCHAR(20) NOT NULL CHECK (role IN ('ADMIN', 'SELLER', 'PROMOTER', 'GUEST', 'STEWARD')),
   onboarding_status VARCHAR(50) DEFAULT 'PRE_COGNITO' CHECK (onboarding_status IN ('PRE_COGNITO', 'COGNITO_CONFIRMED', 'ONBOARDING_STARTED', 'ONBOARDING_FINISHED')),
-  seller_id INTEGER REFERENCES sellers(id),
-  promoter_id INTEGER REFERENCES promoters(id),
-  steward_id INTEGER REFERENCES stewards(id),
   features JSONB DEFAULT '{}',
   last_login TIMESTAMP,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  -- Ensure only one foreign key is set based on role
   CONSTRAINT check_role_foreign_key CHECK (
-    (role = 'GUEST' AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
-    (role = 'SELLER' AND seller_id IS NOT NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
-    (role = 'PROMOTER' AND promoter_id IS NOT NULL AND seller_id IS NULL AND steward_id IS NULL) OR
-    (role = 'STEWARD' AND steward_id IS NOT NULL AND (
-      (seller_id IS NULL AND promoter_id IS NULL) OR
-      (seller_id IS NOT NULL AND promoter_id IS NULL) OR
-      (seller_id IS NULL AND promoter_id IS NOT NULL) OR
-      (seller_id IS NOT NULL AND promoter_id IS NOT NULL)
-    )) OR
-    (role = 'ADMIN' AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL)
+    role IN ('ADMIN', 'SELLER', 'PROMOTER', 'GUEST', 'STEWARD')
   )
 );
 
@@ -389,9 +381,10 @@ CREATE INDEX IF NOT EXISTS idx_events_sponsored_chapter ON events(sponsored_chap
 CREATE INDEX IF NOT EXISTS idx_users_cognito_sub ON users(cognito_sub);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
-CREATE INDEX IF NOT EXISTS idx_users_seller_id ON users(seller_id);
-CREATE INDEX IF NOT EXISTS idx_users_promoter_id ON users(promoter_id);
-CREATE INDEX IF NOT EXISTS idx_users_steward_id ON users(steward_id);
+CREATE INDEX IF NOT EXISTS idx_sellers_user_id ON sellers(user_id);
+CREATE INDEX IF NOT EXISTS idx_promoters_user_id ON promoters(user_id);
+CREATE INDEX IF NOT EXISTS idx_stewards_user_id ON stewards(user_id);
+CREATE INDEX IF NOT EXISTS idx_fraternity_members_user_id ON fraternity_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_industries_active ON industries(is_active);
 CREATE INDEX IF NOT EXISTS idx_industries_display_order ON industries(display_order);
 CREATE INDEX IF NOT EXISTS idx_professions_active ON professions(is_active);

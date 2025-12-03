@@ -140,6 +140,28 @@ User.hasMany(UserAddress, {
   as: 'addresses'
 });
 
+// User hasOne relationships with role-specific tables (via user_id)
+User.hasOne(Seller, {
+  foreignKey: 'user_id',
+  as: 'seller'
+});
+
+User.hasOne(Promoter, {
+  foreignKey: 'user_id',
+  as: 'promoter'
+});
+
+User.hasOne(Steward, {
+  foreignKey: 'user_id',
+  as: 'steward'
+});
+
+// FraternityMember hasOne User (optional - not all members have user accounts)
+FraternityMember.hasOne(User, {
+  foreignKey: 'user_id',
+  as: 'userAccount'
+});
+
 // Promoter associations
 Promoter.hasMany(Event, {
   foreignKey: 'promoter_id',

@@ -121,8 +121,10 @@ router.post('/complete', async (req: Request, res: Response) => {
         email: seller.email,
         role: 'SELLER',
         onboarding_status: 'ONBOARDING_FINISHED',
-        seller_id: seller.id,
       });
+
+      // Link user to seller (update seller.user_id)
+      await linkUserToSeller(user.id, seller.id);
 
       // Clear invitation token
       await updateSellerInvitationToken(seller.id, null);

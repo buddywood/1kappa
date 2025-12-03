@@ -3,6 +3,7 @@ import { verifyCognitoToken, extractUserInfoFromToken } from '../services/cognit
 import { getUserByCognitoSub, createUser, getMemberById } from '../db/queries-sequelize';
 import { getFraternityMemberId } from '../utils/getFraternityMemberId';
 import pool from '../db/connection';
+import { Seller, Promoter, Steward } from '../db/models';
 
 // Extend Express Request to include user
 declare global {
@@ -60,15 +61,31 @@ export async function authenticate(
       return;
     }
 
+    // Look up role-specific IDs from role tables (they now reference users via user_id)
+    let sellerId: number | null = null;
+    let promoterId: number | null = null;
+    let stewardId: number | null = null;
+
+    if (user.role === 'SELLER') {
+      const seller = await Seller.findOne({ where: { user_id: user.id } });
+      sellerId = seller?.id || null;
+    } else if (user.role === 'PROMOTER') {
+      const promoter = await Promoter.findOne({ where: { user_id: user.id } });
+      promoterId = promoter?.id || null;
+    } else if (user.role === 'STEWARD') {
+      const steward = await Steward.findOne({ where: { user_id: user.id } });
+      stewardId = steward?.id || null;
+    }
+
     // Attach user to request (fraternity_member_id is looked up from role-specific tables when needed)
     req.user = {
       id: user.id,
       cognitoSub: user.cognito_sub,
       email: user.email,
       role: user.role,
-      sellerId: user.seller_id,
-      promoterId: user.promoter_id,
-      stewardId: user.steward_id || null,
+      sellerId,
+      promoterId,
+      stewardId,
       features: user.features,
     };
 
@@ -175,15 +192,31 @@ export async function authenticateOptional(
       return;
     }
 
+    // Look up role-specific IDs from role tables (they now reference users via user_id)
+    let sellerId: number | null = null;
+    let promoterId: number | null = null;
+    let stewardId: number | null = null;
+
+    if (user.role === 'SELLER') {
+      const seller = await Seller.findOne({ where: { user_id: user.id } });
+      sellerId = seller?.id || null;
+    } else if (user.role === 'PROMOTER') {
+      const promoter = await Promoter.findOne({ where: { user_id: user.id } });
+      promoterId = promoter?.id || null;
+    } else if (user.role === 'STEWARD') {
+      const steward = await Steward.findOne({ where: { user_id: user.id } });
+      stewardId = steward?.id || null;
+    }
+
     // Attach user to request (fraternity_member_id is looked up from role-specific tables when needed)
     req.user = {
       id: user.id,
       cognitoSub: user.cognito_sub,
       email: user.email,
       role: user.role,
-      sellerId: user.seller_id,
-      promoterId: user.promoter_id,
-      stewardId: user.steward_id || null,
+      sellerId,
+      promoterId,
+      stewardId,
       features: user.features,
     };
 

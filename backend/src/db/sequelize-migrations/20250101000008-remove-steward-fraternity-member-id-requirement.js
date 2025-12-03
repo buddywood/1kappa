@@ -13,16 +13,7 @@ module.exports = {
   async up(queryInterface, Sequelize) {
     console.log('🔍 Updating users table constraint for STEWARD role...');
 
-    // First, update any existing STEWARD users to have NULL fraternity_member_id
-    // (it will be accessed via steward_id -> stewards.fraternity_member_id)
-    const [updateResult] = await queryInterface.sequelize.query(`
-      UPDATE users 
-      SET fraternity_member_id = NULL 
-      WHERE role = 'STEWARD' AND fraternity_member_id IS NOT NULL
-    `);
-    console.log(`  ✓ Set fraternity_member_id to NULL for ${updateResult[1] || 0} STEWARD users`);
-
-    // Drop existing constraint if it exists
+    // Drop existing constraint first to allow data updates
     const [constraints] = await queryInterface.sequelize.query(`
       SELECT constraint_name 
       FROM information_schema.table_constraints 
@@ -35,6 +26,27 @@ module.exports = {
       `);
       console.log('  ✓ Dropped existing check_role_foreign_key constraint');
     }
+
+    // Now update any existing STEWARD users to have NULL fraternity_member_id
+    // (it will be accessed via steward_id -> stewards.fraternity_member_id)
+    // Only update STEWARD users that have a steward_id (skip orphaned STEWARD users)
+    const [updateResult] = await queryInterface.sequelize.query(`
+      UPDATE users 
+      SET fraternity_member_id = NULL 
+      WHERE role = 'STEWARD' 
+        AND fraternity_member_id IS NOT NULL
+        AND steward_id IS NOT NULL
+    `);
+    console.log(`  ✓ Set fraternity_member_id to NULL for ${updateResult[1] || 0} STEWARD users`);
+
+    // Fix any orphaned STEWARD users (STEWARD role but no steward_id) by changing to GUEST
+    const [orphanedResult] = await queryInterface.sequelize.query(`
+      UPDATE users 
+      SET role = 'GUEST'
+      WHERE role = 'STEWARD' 
+        AND steward_id IS NULL
+    `);
+    console.log(`  ✓ Fixed ${orphanedResult[1] || 0} orphaned STEWARD users (changed to GUEST)`);
 
     // Add updated constraint
     // STEWARD users: steward_id IS NOT NULL, fraternity_member_id IS NULL

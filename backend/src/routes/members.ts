@@ -396,9 +396,23 @@ router.post('/cognito/signin', async (req: Request, res: Response) => {
     // Get user role flags - fraternity_member_id comes from role-specific tables
     const { getFraternityMemberId } = await import('../utils/getFraternityMemberId');
     let memberId = await getFraternityMemberId(user);
-    let sellerId = user.seller_id || null;
-    let promoterId = user.promoter_id || null;
-    let stewardId = user.steward_id || null;
+    
+    // Look up role-specific IDs from role tables
+    const { Seller, Promoter, Steward } = await import('../db/models');
+    let sellerId: number | null = null;
+    let promoterId: number | null = null;
+    let stewardId: number | null = null;
+
+    if (user.role === 'SELLER') {
+      const seller = await Seller.findOne({ where: { user_id: user.id } });
+      sellerId = seller?.id || null;
+    } else if (user.role === 'PROMOTER') {
+      const promoter = await Promoter.findOne({ where: { user_id: user.id } });
+      promoterId = promoter?.id || null;
+    } else if (user.role === 'STEWARD') {
+      const steward = await Steward.findOne({ where: { user_id: user.id } });
+      stewardId = steward?.id || null;
+    }
 
     // Get name and headshot from member if available
     let name: string | null = null;
@@ -505,9 +519,23 @@ router.post('/cognito/refresh', async (req: Request, res: Response) => {
     // Get user role flags - fraternity_member_id comes from role-specific tables
     const { getFraternityMemberId } = await import('../utils/getFraternityMemberId');
     let memberId = await getFraternityMemberId(user);
-    let sellerId = user.seller_id || null;
-    let promoterId = user.promoter_id || null;
-    let stewardId = user.steward_id || null;
+    
+    // Look up role-specific IDs from role tables
+    const { Seller, Promoter, Steward } = await import('../db/models');
+    let sellerId: number | null = null;
+    let promoterId: number | null = null;
+    let stewardId: number | null = null;
+
+    if (user.role === 'SELLER') {
+      const seller = await Seller.findOne({ where: { user_id: user.id } });
+      sellerId = seller?.id || null;
+    } else if (user.role === 'PROMOTER') {
+      const promoter = await Promoter.findOne({ where: { user_id: user.id } });
+      promoterId = promoter?.id || null;
+    } else if (user.role === 'STEWARD') {
+      const steward = await Steward.findOne({ where: { user_id: user.id } });
+      stewardId = steward?.id || null;
+    }
 
     // Get name and headshot from member if available
     let name: string | null = null;
@@ -1413,9 +1441,13 @@ router.post('/register', upload.single('headshot'), async (req: Request, res: Re
             email: body.email,
             role: userRole,
             onboarding_status: 'ONBOARDING_FINISHED',
-            fraternity_member_id: existingSeller ? null : member.id, // SELLER role constraint requires null
-            seller_id: existingSeller ? existingSeller.id : null,
           });
+
+          // Link user to seller if seller exists
+          if (existingSeller && userRole === 'SELLER') {
+            const { linkUserToSeller } = await import('../db/queries-sequelize');
+            await linkUserToSeller(user.id, existingSeller.id);
+          }
         } else {
           // Link existing user to member and update onboarding status
           // If user is a seller, we can't set fraternity_member_id on user due to constraint
@@ -1892,7 +1924,7 @@ router.get('/me/metrics', authenticate, async (req: Request, res: Response) => {
         COALESCE(SUM(CASE WHEN status = 'PAID' THEN total_amount_cents ELSE 0 END), 0) as paid_spent_cents
        FROM orders o
        JOIN products p ON o.product_id = p.id
-       JOIN sellers s ON p.seller_id = s.id
+       JOIN sellers s ON s.id = p.seller_id
        JOIN users u ON o.user_id = u.id
        WHERE s.fraternity_member_id = $1 OR u.id = $2`,
       [fraternityMemberId, req.user.id]
@@ -1959,7 +1991,7 @@ router.get('/me/activity', authenticate, async (req: Request, res: Response) => 
         s.name as seller_name
        FROM orders o
        JOIN products p ON o.product_id = p.id
-       JOIN sellers s ON p.seller_id = s.id
+       JOIN sellers s ON s.id = p.seller_id
        WHERE o.user_id = $1
        ORDER BY o.created_at DESC
        LIMIT 10`,

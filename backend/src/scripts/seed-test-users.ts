@@ -323,7 +323,6 @@ async function seedTestUsers(): Promise<void> {
               sponsoring_chapter_id: sponsoringChapter.id,
               business_name: testUser.business_name || null,
               kappa_vendor_id: testUser.kappa_vendor_id || 'VL-TEST',
-              fraternity_member_id: memberId,
             });
             sellerId = seller.id;
 
@@ -356,7 +355,6 @@ async function seedTestUsers(): Promise<void> {
             const promoter = await createPromoter({
               email: testUser.email,
               name: testUser.name,
-              fraternity_member_id: memberId, // Promoters must have fraternity_member_id
               sponsoring_chapter_id: sponsoringChapter.id,
               headshot_url: undefined,
               social_links: {},
@@ -389,7 +387,6 @@ async function seedTestUsers(): Promise<void> {
           } else {
             const sponsoringChapter = availableChapters[Math.floor(Math.random() * availableChapters.length)];
             const steward = await createSteward({
-              fraternity_member_id: memberId,
               sponsoring_chapter_id: sponsoringChapter.id,
             });
             stewardId = steward.id;
@@ -473,8 +470,6 @@ async function seedTestUsers(): Promise<void> {
               email: testUser.email,
               role: userRole as 'ADMIN' | 'SELLER' | 'PROMOTER' | 'GUEST',
               onboarding_status: 'ONBOARDING_FINISHED',
-              fraternity_member_id: memberId, // Set for GUEST users who are members (required by constraint)
-              seller_id: sellerId,
               promoter_id: promoterId,
             });
             console.log(`  ✓ Created user record: ${testUser.name}`);

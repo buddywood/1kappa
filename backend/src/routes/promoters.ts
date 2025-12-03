@@ -48,8 +48,12 @@ router.post('/apply', upload.single('headshot'), async (req: Request, res: Respo
     }
 
     // Create promoter record
+    // user_id will be set when user account is created and linked
     const promoter = await createPromoter({
-      ...body,
+      user_id: null, // Will be set when user is linked
+      email: body.email,
+      name: body.name,
+      sponsoring_chapter_id: body.sponsoring_chapter_id,
       headshot_url: headshotUrl,
       social_links: body.social_links || {},
     });

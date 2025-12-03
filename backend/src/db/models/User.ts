@@ -1,4 +1,4 @@
-import { Table, Column, Model, DataType, BelongsTo, ForeignKey } from 'sequelize-typescript';
+import { Table, Column, Model, DataType, HasOne } from 'sequelize-typescript';
 import { BaseModel } from './BaseModel';
 import { FraternityMember } from './FraternityMember';
 import { Seller } from './Seller';
@@ -46,27 +46,6 @@ export class User extends BaseModel {
   })
   onboarding_status!: 'PRE_COGNITO' | 'COGNITO_CONFIRMED' | 'ONBOARDING_STARTED' | 'ONBOARDING_FINISHED';
 
-  @ForeignKey(() => Seller)
-  @Column({
-    type: DataType.INTEGER,
-    allowNull: true
-  })
-  seller_id!: number | null;
-
-  @ForeignKey(() => Promoter)
-  @Column({
-    type: DataType.INTEGER,
-    allowNull: true
-  })
-  promoter_id!: number | null;
-
-  @ForeignKey(() => Steward)
-  @Column({
-    type: DataType.INTEGER,
-    allowNull: true
-  })
-  steward_id!: number | null;
-
   @Column({
     type: DataType.JSONB,
     defaultValue: {},
@@ -113,13 +92,9 @@ export class User extends BaseModel {
   // fraternityMember association accessed via email/cognito_sub matching or through role-specific tables
   fraternityMember?: FraternityMember;
 
-  @BelongsTo(() => Seller, 'seller_id')
+  // Role-specific associations - these tables now reference users via user_id
   seller?: Seller;
-
-  @BelongsTo(() => Promoter, 'promoter_id')
   promoter?: Promoter;
-
-  @BelongsTo(() => Steward, 'steward_id')
   steward?: Steward;
 }
 

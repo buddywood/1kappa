@@ -349,6 +349,7 @@ export async function getAllEventAudienceTypes(): Promise<
 
 // Seller queries
 export async function createSeller(seller: {
+  user_id?: number | null;
   email: string;
   name: string;
   sponsoring_chapter_id: number;
@@ -362,6 +363,7 @@ export async function createSeller(seller: {
   social_links?: Record<string, string>;
 }): Promise<SellerType> {
   const newSeller = await Seller.create({
+    user_id: seller.user_id || null,
     email: seller.email,
     name: seller.name,
     sponsoring_chapter_id: seller.sponsoring_chapter_id,
@@ -491,10 +493,10 @@ export async function getProductById(id: number): Promise<ProductType | null> {
   // Check if seller is also a steward or promoter (via email matching with fraternity_members)
   const sellerEmail = productData.seller?.email;
   const memberId = productData.seller?.fraternityMember?.id;
-  
+
   const stewardCheck = await sequelize.query(
     `SELECT st.id FROM stewards st
-     JOIN users u ON u.steward_id = st.id
+     JOIN users u ON st.user_id = u.id
      JOIN fraternity_members m ON (u.email = m.email OR u.cognito_sub = m.cognito_sub)
      WHERE m.id = :memberId AND st.status = 'APPROVED'`,
     {
@@ -518,7 +520,8 @@ export async function getProductById(id: number): Promise<ProductType | null> {
     seller_business_name: productData.seller?.business_name,
     seller_status: productData.seller?.status,
     seller_stripe_account_id: productData.seller?.stripe_account_id,
-    seller_fraternity_member_id: productData.seller?.fraternityMember?.id || null,
+    seller_fraternity_member_id:
+      productData.seller?.fraternityMember?.id || null,
     seller_initiated_chapter_id:
       productData.seller?.fraternityMember?.initiated_chapter_id,
     seller_initiated_season:
@@ -558,7 +561,7 @@ export async function getActiveProducts(): Promise<ProductType[]> {
      JOIN sellers s ON p.seller_id = s.id
      LEFT JOIN fraternity_members m ON s.email = m.email
      LEFT JOIN users u_st ON u_st.email = m.email OR u_st.cognito_sub = m.cognito_sub
-     LEFT JOIN stewards st ON u_st.steward_id = st.id AND st.status = 'APPROVED'
+     LEFT JOIN stewards st ON st.user_id = u_st.id AND st.status = 'APPROVED'
      LEFT JOIN promoters pr ON s.email = pr.email AND pr.status = 'APPROVED'
      WHERE s.status = 'APPROVED'
      ORDER BY p.created_at DESC`,
@@ -601,7 +604,7 @@ export async function getProductsBySeller(
      JOIN sellers s ON p.seller_id = s.id
      LEFT JOIN fraternity_members m ON s.email = m.email
      LEFT JOIN users u_st ON u_st.email = m.email OR u_st.cognito_sub = m.cognito_sub
-     LEFT JOIN stewards st ON u_st.steward_id = st.id AND st.status = 'APPROVED'
+     LEFT JOIN stewards st ON st.user_id = u_st.id AND st.status = 'APPROVED'
      LEFT JOIN promoters pr ON s.email = pr.email AND pr.status = 'APPROVED'
      WHERE p.seller_id = :sellerId
      ORDER BY p.created_at DESC`,
@@ -854,6 +857,7 @@ export async function getTotalDonations(): Promise<number> {
 
 // Promoter queries
 export async function createPromoter(promoter: {
+  user_id?: number | null;
   email: string;
   name: string;
   sponsoring_chapter_id?: number;
@@ -861,6 +865,7 @@ export async function createPromoter(promoter: {
   social_links?: Record<string, string>;
 }): Promise<PromoterType> {
   const newPromoter = await Promoter.create({
+    user_id: promoter.user_id || null,
     email: promoter.email,
     name: promoter.name,
     sponsoring_chapter_id: promoter.sponsoring_chapter_id || null,
@@ -998,7 +1003,7 @@ export async function getEventById(id: number): Promise<EventTypeType | null> {
      JOIN promoters pr ON e.promoter_id = pr.id
      LEFT JOIN fraternity_members m ON pr.email = m.email
      LEFT JOIN users u_st ON u_st.email = m.email OR u_st.cognito_sub = m.cognito_sub
-     LEFT JOIN stewards st ON u_st.steward_id = st.id AND st.status = 'APPROVED'
+     LEFT JOIN stewards st ON st.user_id = u_st.id AND st.status = 'APPROVED'
      LEFT JOIN sellers s ON pr.email = s.email AND s.status = 'APPROVED'
      LEFT JOIN event_audience_types eat ON e.event_audience_type_id = eat.id
      WHERE e.id = :id`,
@@ -1160,9 +1165,6 @@ export async function createUser(user: {
     | "COGNITO_CONFIRMED"
     | "ONBOARDING_STARTED"
     | "ONBOARDING_FINISHED";
-  seller_id?: number | null;
-  promoter_id?: number | null;
-  steward_id?: number | null;
   features?: Record<string, any>;
 }): Promise<UserType> {
   const newUser = await User.create({
@@ -1170,9 +1172,6 @@ export async function createUser(user: {
     email: user.email,
     role: user.role,
     onboarding_status: user.onboarding_status || "COGNITO_CONFIRMED",
-    seller_id: user.seller_id || null,
-    promoter_id: user.promoter_id || null,
-    steward_id: user.steward_id || null,
     features: user.features || {},
   });
   return newUser.toJSON() as UserType;
@@ -1222,12 +1221,13 @@ export async function linkUserToMember(
   const member = await FraternityMember.findByPk(memberId);
   if (!member) throw new Error("Fraternity member not found");
   // Ensure email or cognito_sub matches for GUEST users
-  if (user.role === "GUEST" && member.email !== user.email && member.cognito_sub !== user.cognito_sub) {
+  if (
+    user.role === "GUEST" &&
+    member.email !== user.email &&
+    member.cognito_sub !== user.cognito_sub
+  ) {
     throw new Error("User email/cognito_sub does not match fraternity member");
   }
-  user.seller_id = null;
-  user.promoter_id = null;
-  user.steward_id = null;
   user.role = "GUEST";
   await user.save();
   return user.toJSON() as UserType;
@@ -1239,9 +1239,10 @@ export async function linkUserToSeller(
 ): Promise<UserType> {
   const user = await User.findByPk(userId);
   if (!user) throw new Error("User not found");
-  user.seller_id = sellerId;
-  user.promoter_id = null;
-  user.steward_id = null;
+  const seller = await Seller.findByPk(sellerId);
+  if (!seller) throw new Error("Seller not found");
+  seller.user_id = userId;
+  await seller.save();
   user.role = "SELLER";
   await user.save();
   return user.toJSON() as UserType;
@@ -1253,9 +1254,10 @@ export async function linkUserToPromoter(
 ): Promise<UserType> {
   const user = await User.findByPk(userId);
   if (!user) throw new Error("User not found");
-  user.promoter_id = promoterId;
-  user.seller_id = null;
-  user.steward_id = null;
+  const promoter = await Promoter.findByPk(promoterId);
+  if (!promoter) throw new Error("Promoter not found");
+  promoter.user_id = userId;
+  await promoter.save();
   user.role = "PROMOTER";
   await user.save();
   return user.toJSON() as UserType;
@@ -1267,7 +1269,10 @@ export async function linkUserToSteward(
 ): Promise<UserType> {
   const user = await User.findByPk(userId);
   if (!user) throw new Error("User not found");
-  user.steward_id = stewardId;
+  const steward = await Steward.findByPk(stewardId);
+  if (!steward) throw new Error("Steward not found");
+  steward.user_id = userId;
+  await steward.save();
   user.role = "STEWARD";
   await user.save();
   return user.toJSON() as UserType;
@@ -1379,9 +1384,11 @@ export async function getMemberById(id: number): Promise<any | null> {
 
 // Steward queries
 export async function createSteward(steward: {
+  user_id?: number | null;
   sponsoring_chapter_id: number;
 }): Promise<StewardType> {
   const newSteward = await Steward.create({
+    user_id: steward.user_id || null,
     sponsoring_chapter_id: steward.sponsoring_chapter_id,
     status: "PENDING",
   });
@@ -1399,10 +1406,10 @@ export async function getStewardByFraternityMemberId(
   // Find steward via users table -> cognito_sub/email -> fraternity_members
   const member = await FraternityMember.findByPk(fraternityMemberId);
   if (!member) return null;
-  
+
   const result = await sequelize.query(
     `SELECT st.* FROM stewards st
-     JOIN users u ON u.steward_id = st.id
+     JOIN users u ON st.user_id = u.id
      WHERE (u.email = :email OR u.cognito_sub = :cognitoSub)
      LIMIT 1`,
     {
@@ -1410,7 +1417,7 @@ export async function getStewardByFraternityMemberId(
       type: QueryTypes.SELECT,
     }
   );
-  
+
   return result.length > 0 ? (result[0] as StewardType) : null;
 }
 
@@ -1641,7 +1648,7 @@ export async function getStewardActivity(): Promise<
       COUNT(CASE WHEN sl.status = 'CLAIMED' THEN 1 END) as claimed_listings,
       COALESCE(SUM(sc.chapter_donation_cents), 0) as total_donations_cents
      FROM stewards s
-     JOIN users u ON u.steward_id = s.id
+     JOIN users u ON s.user_id = u.id
      JOIN fraternity_members m ON (u.email = m.email OR u.cognito_sub = m.cognito_sub)
      LEFT JOIN steward_listings sl ON s.id = sl.steward_id
      LEFT JOIN steward_claims sc ON sl.id = sc.listing_id AND sc.status = 'PAID'
@@ -1780,7 +1787,7 @@ export async function getFavoriteProductsByUser(
      LEFT JOIN sellers s ON p.seller_id = s.id
      LEFT JOIN fraternity_members m ON s.email = m.email
      LEFT JOIN users u_st ON u_st.email = m.email OR u_st.cognito_sub = m.cognito_sub
-     LEFT JOIN stewards st ON u_st.steward_id = st.id AND st.status = 'APPROVED'
+     LEFT JOIN stewards st ON st.user_id = u_st.id AND st.status = 'APPROVED'
      LEFT JOIN promoters pr ON s.email = pr.email AND pr.status = 'APPROVED'
      WHERE f.user_email = :userEmail
      ORDER BY f.created_at DESC`,

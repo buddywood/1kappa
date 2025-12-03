@@ -43,6 +43,7 @@ export interface Brother {
 
 export interface Seller extends Brother {
   // fraternity_member relationship accessed via fraternity_members table (email matching)
+  user_id: number | null;
   sponsoring_chapter_id: number;
   business_name: string | null;
   business_email: string | null;
@@ -142,6 +143,7 @@ export interface SellerApplication {
 }
 
 export interface Promoter extends Brother {
+  user_id: number | null;
   sponsoring_chapter_id: number | null;
   stripe_account_id: string | null;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -211,9 +213,7 @@ export interface User {
   role: 'ADMIN' | 'SELLER' | 'PROMOTER' | 'GUEST' | 'STEWARD';
   onboarding_status: 'PRE_COGNITO' | 'COGNITO_CONFIRMED' | 'ONBOARDING_STARTED' | 'ONBOARDING_FINISHED';
   // fraternity_member relationship accessed via email/cognito_sub matching or through role-specific tables
-  seller_id: number | null;
-  promoter_id: number | null;
-  steward_id: number | null;
+  // Role-specific tables (sellers, promoters, stewards) now reference users via user_id
   features: Record<string, any>;
   last_login: Date | null;
   created_at: Date;
@@ -223,6 +223,7 @@ export interface User {
 export interface Steward {
   id: number;
   // fraternity_member relationship accessed via users table -> email/cognito_sub -> fraternity_members
+  user_id: number | null;
   sponsoring_chapter_id: number;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   verification_status: 'PENDING' | 'VERIFIED' | 'FAILED' | 'MANUAL_REVIEW';
