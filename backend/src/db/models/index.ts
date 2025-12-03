@@ -156,8 +156,9 @@ User.hasOne(Steward, {
   as: 'steward'
 });
 
-// FraternityMember hasOne User (optional - not all members have user accounts)
-FraternityMember.hasOne(User, {
+// FraternityMember belongsTo User (optional - not all members have user accounts)
+// Note: user_id is on fraternity_members table, not users table
+FraternityMember.belongsTo(User, {
   foreignKey: 'user_id',
   as: 'userAccount'
 });
