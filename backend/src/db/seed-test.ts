@@ -901,7 +901,7 @@ async function seedProducts(): Promise<void> {
       [sellerEmails]
     );
 
-    let sellers = sellersResult.rows.map((row: any) => {
+    let sellers = sellersResult.rows.map((row: { id: number; email: string; status: string; verification_status: string }) => {
       // Ensure email is set for matching
       (row as any).email = row.email;
       return row;
@@ -1247,10 +1247,10 @@ async function seedEvents(): Promise<void> {
 
   // Create lookup maps
   const eventTypeMap = new Map(
-    eventTypesResult.rows.map((row: any) => [row.enum, row.id])
+    eventTypesResult.rows.map((row: { enum: string; id: number }) => [row.enum, row.id])
   );
   const eventAudienceTypeMap = new Map(
-    eventAudienceTypesResult.rows.map((row: any) => [row.enum, row.id])
+    eventAudienceTypesResult.rows.map((row: { enum: string; id: number }) => [row.enum, row.id])
   );
 
   // Get approved promoters (buddy+ users)
