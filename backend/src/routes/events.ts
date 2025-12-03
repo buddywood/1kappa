@@ -145,11 +145,12 @@ router.post(
 
       // Upload image to S3 if provided
       let imageUrl: string | undefined;
-      if (req.file) {
+      if ((req as any).file) {
+        const file = (req as any).file;
         const uploadResult = await uploadToS3(
-          req.file.buffer,
-          req.file.originalname,
-          req.file.mimetype,
+          file.buffer,
+          file.originalname,
+          file.mimetype,
           "events"
         );
         imageUrl = uploadResult.url;
@@ -515,11 +516,12 @@ router.put(
 
       // Upload image to S3 if provided
       let imageUrl: string | undefined;
-      if (req.file) {
+      if ((req as any).file) {
+        const file = (req as any).file;
         const uploadResult = await uploadToS3(
-          req.file.buffer,
-          req.file.originalname,
-          req.file.mimetype,
+          file.buffer,
+          file.originalname,
+          file.mimetype,
           "events"
         );
         imageUrl = uploadResult.url;
