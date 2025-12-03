@@ -115,35 +115,69 @@ module.exports = {
       console.log('    ✓ Dropped existing check_role_foreign_key constraint');
     }
 
-    // Fix any GUEST users with ONBOARDING_FINISHED (they should be ONBOARDING_STARTED or COGNITO_CONFIRMED)
-    await queryInterface.sequelize.query(`
-      UPDATE users 
-      SET onboarding_status = 'COGNITO_CONFIRMED'
-      WHERE role = 'GUEST' 
-        AND onboarding_status = 'ONBOARDING_FINISHED'
-        AND seller_id IS NULL 
-        AND promoter_id IS NULL 
-        AND steward_id IS NULL
+    // Check if seller_id, promoter_id, and steward_id columns exist in users table
+    // (they won't exist in fresh databases created from schema.sql)
+    const [userColumns] = await queryInterface.sequelize.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'users' 
+        AND column_name IN ('seller_id', 'promoter_id', 'steward_id')
     `);
-    console.log('    ✓ Fixed GUEST users with invalid onboarding_status');
+    const hasRoleColumns = userColumns.length > 0;
+    const hasSellerId = userColumns.some(col => col.column_name === 'seller_id');
+    const hasPromoterId = userColumns.some(col => col.column_name === 'promoter_id');
+    const hasStewardId = userColumns.some(col => col.column_name === 'steward_id');
 
-    // Add updated constraint without fraternity_member_id requirements
-    // Note: GUEST users can have any onboarding_status now (removed the restriction)
-    await queryInterface.sequelize.query(`
-      ALTER TABLE users ADD CONSTRAINT check_role_foreign_key CHECK (
-        (role = 'GUEST' AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
-        (role = 'SELLER' AND seller_id IS NOT NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
-        (role = 'PROMOTER' AND promoter_id IS NOT NULL AND seller_id IS NULL AND steward_id IS NULL) OR
-        (role = 'STEWARD' AND steward_id IS NOT NULL AND (
-          (seller_id IS NULL AND promoter_id IS NULL) OR
-          (seller_id IS NOT NULL AND promoter_id IS NULL) OR
-          (seller_id IS NULL AND promoter_id IS NOT NULL) OR
-          (seller_id IS NOT NULL AND promoter_id IS NOT NULL)
-        )) OR
-        (role = 'ADMIN' AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL)
-      )
-    `);
-    console.log('    ✓ Added updated check_role_foreign_key constraint');
+    if (hasRoleColumns) {
+      // Fix any GUEST users with ONBOARDING_FINISHED (they should be ONBOARDING_STARTED or COGNITO_CONFIRMED)
+      let updateQuery = `
+        UPDATE users 
+        SET onboarding_status = 'COGNITO_CONFIRMED'
+        WHERE role = 'GUEST' 
+          AND onboarding_status = 'ONBOARDING_FINISHED'
+      `;
+      
+      if (hasSellerId) updateQuery += ' AND seller_id IS NULL';
+      if (hasPromoterId) updateQuery += ' AND promoter_id IS NULL';
+      if (hasStewardId) updateQuery += ' AND steward_id IS NULL';
+      
+      await queryInterface.sequelize.query(updateQuery);
+      console.log('    ✓ Fixed GUEST users with invalid onboarding_status');
+
+      // Add updated constraint without fraternity_member_id requirements
+      // Note: GUEST users can have any onboarding_status now (removed the restriction)
+      let constraintCheck = '';
+      if (hasSellerId && hasPromoterId && hasStewardId) {
+        constraintCheck = `
+          (role = 'GUEST' AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
+          (role = 'SELLER' AND seller_id IS NOT NULL AND promoter_id IS NULL AND steward_id IS NULL) OR
+          (role = 'PROMOTER' AND promoter_id IS NOT NULL AND seller_id IS NULL AND steward_id IS NULL) OR
+          (role = 'STEWARD' AND steward_id IS NOT NULL AND (
+            (seller_id IS NULL AND promoter_id IS NULL) OR
+            (seller_id IS NOT NULL AND promoter_id IS NULL) OR
+            (seller_id IS NULL AND promoter_id IS NOT NULL) OR
+            (seller_id IS NOT NULL AND promoter_id IS NOT NULL)
+          )) OR
+          (role = 'ADMIN' AND seller_id IS NULL AND promoter_id IS NULL AND steward_id IS NULL)
+        `;
+      } else {
+        // For fresh databases without these columns, just check valid role values
+        constraintCheck = `role IN ('ADMIN', 'SELLER', 'PROMOTER', 'GUEST', 'STEWARD')`;
+      }
+      
+      await queryInterface.sequelize.query(`
+        ALTER TABLE users ADD CONSTRAINT check_role_foreign_key CHECK (${constraintCheck})
+      `);
+      console.log('    ✓ Added updated check_role_foreign_key constraint');
+    } else {
+      // Fresh database - just add simple constraint
+      await queryInterface.sequelize.query(`
+        ALTER TABLE users ADD CONSTRAINT check_role_foreign_key CHECK (
+          role IN ('ADMIN', 'SELLER', 'PROMOTER', 'GUEST', 'STEWARD')
+        )
+      `);
+      console.log('    ✓ Added check_role_foreign_key constraint (fresh database - no role columns)');
+    }
 
     // Step 4: Drop columns
     console.log('  Step 4: Dropping columns...');
