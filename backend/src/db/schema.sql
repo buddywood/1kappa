@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS roles (
 INSERT INTO roles (name, description, display_order) VALUES
   ('ADMIN', 'System administrator with full access', 1),
   ('SELLER', 'User who can sell products on the platform', 2),
+  ('MEMBER', 'Verified fraternity member', 2.5),
   ('PROMOTER', 'User who can promote events', 3),
   ('GUEST', 'Regular user who can browse and purchase', 4),
   ('STEWARD', 'User who can manage steward listings', 5)
@@ -57,14 +58,14 @@ CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   cognito_sub VARCHAR(255) NOT NULL UNIQUE,
   email VARCHAR(255) NOT NULL UNIQUE,
-  role VARCHAR(20) NOT NULL CHECK (role IN ('ADMIN', 'SELLER', 'PROMOTER', 'GUEST', 'STEWARD')),
+  role VARCHAR(20) NOT NULL CHECK (role IN ('ADMIN', 'SELLER', 'PROMOTER', 'GUEST', 'STEWARD', 'MEMBER')),
   onboarding_status VARCHAR(50) DEFAULT 'PRE_COGNITO' CHECK (onboarding_status IN ('PRE_COGNITO', 'COGNITO_CONFIRMED', 'ONBOARDING_STARTED', 'ONBOARDING_FINISHED')),
   features JSONB DEFAULT '{}',
   last_login TIMESTAMP,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT check_role_foreign_key CHECK (
-    role IN ('ADMIN', 'SELLER', 'PROMOTER', 'GUEST', 'STEWARD')
+    role IN ('ADMIN', 'SELLER', 'PROMOTER', 'GUEST', 'STEWARD', 'MEMBER')
   )
 );
 

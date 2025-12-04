@@ -1238,20 +1238,27 @@ router.post('/register', upload.single('headshot'), async (req: Request, res: Re
     let existingSeller: { id: number; fraternity_member_id: number | null } | null = null;
     
     // Check if user is already a seller (sellers can register as members)
+    // Note: fraternity_member_id column was removed - linking is now via email matching
     const sellerCheck = await pool.query(
-      'SELECT id, fraternity_member_id FROM sellers WHERE email = $1',
+      'SELECT id FROM sellers WHERE email = $1',
       [body.email]
     );
     
     if (sellerCheck.rows.length > 0) {
-      existingSeller = sellerCheck.rows[0];
-      // If seller already has a member profile, block registration
-      if (existingSeller && existingSeller.fraternity_member_id) {
+      existingSeller = { id: sellerCheck.rows[0].id, fraternity_member_id: null };
+      
+      // Check if seller already has a member profile linked (via email matching)
+      const memberCheck = await pool.query(
+        'SELECT id FROM fraternity_members WHERE email = $1 AND registration_status != $2',
+        [body.email, 'DRAFT']
+      );
+      
+      if (memberCheck.rows.length > 0) {
         return res.status(400).json({ 
           error: 'You already have a member profile linked to your seller account' 
         });
       }
-      // Otherwise, allow registration and we'll link it after creation
+      // Otherwise, allow registration and we'll link it after creation (via email matching)
     }
     
     if (body.cognito_sub) {
@@ -1262,12 +1269,12 @@ router.post('/register', upload.single('headshot'), async (req: Request, res: Re
       existingMemberQuery = `SELECT id FROM promoters WHERE email = $1 
        UNION 
        SELECT s.id FROM sellers s 
-       INNER JOIN fraternity_members m ON s.fraternity_member_id = m.id 
-       WHERE m.membership_number = $2
+       INNER JOIN fraternity_members m ON s.email = m.email 
+       WHERE m.membership_number = $2 AND m.registration_status != 'DRAFT'
        UNION
        SELECT p.id FROM promoters p 
-       INNER JOIN fraternity_members m ON p.fraternity_member_id = m.id 
-       WHERE m.membership_number = $2
+       INNER JOIN fraternity_members m ON p.email = m.email 
+       WHERE m.membership_number = $2 AND m.registration_status != 'DRAFT'
        UNION 
        SELECT id FROM fraternity_members 
        WHERE (email = $1 OR membership_number = $2) 
@@ -1280,12 +1287,12 @@ router.post('/register', upload.single('headshot'), async (req: Request, res: Re
       existingMemberQuery = `SELECT id FROM promoters WHERE email = $1 
        UNION 
        SELECT s.id FROM sellers s 
-       INNER JOIN fraternity_members m ON s.fraternity_member_id = m.id 
-       WHERE m.membership_number = $2
+       INNER JOIN fraternity_members m ON s.email = m.email 
+       WHERE m.membership_number = $2 AND m.registration_status != 'DRAFT'
        UNION
        SELECT p.id FROM promoters p 
-       INNER JOIN fraternity_members m ON p.fraternity_member_id = m.id 
-       WHERE m.membership_number = $2
+       INNER JOIN fraternity_members m ON p.email = m.email 
+       WHERE m.membership_number = $2 AND m.registration_status != 'DRAFT'
        UNION 
        SELECT id FROM fraternity_members 
        WHERE (email = $1 OR membership_number = $2) 
@@ -1410,18 +1417,10 @@ router.post('/register', upload.single('headshot'), async (req: Request, res: Re
 
     const member = result.rows[0];
 
-    // If user is a seller, link the seller account to the member profile
-    if (existingSeller && !existingSeller.fraternity_member_id) {
-      try {
-        await pool.query(
-          'UPDATE sellers SET fraternity_member_id = $1 WHERE id = $2',
-          [member.id, existingSeller.id]
-        );
-        console.log(`Linked seller ${existingSeller.id} to member ${member.id}`);
-      } catch (sellerLinkError: any) {
-        console.error('Error linking seller to member:', sellerLinkError);
-        // Don't fail registration - seller can be linked later
-      }
+    // If user is a seller, the seller account is already linked via email matching
+    // No need to update a column - the relationship is maintained through email
+    if (existingSeller) {
+      console.log(`Seller ${existingSeller.id} is linked to member ${member.id} via email matching (${body.email})`);
     }
 
     // Create or update user record and link to member
@@ -1497,13 +1496,72 @@ router.post('/register', upload.single('headshot'), async (req: Request, res: Re
     }
 
     res.status(201).json(member);
-  } catch (error) {
+  } catch (error: any) {
     if (error instanceof z.ZodError) {
       res.status(400).json({ error: 'Validation error', details: error.errors });
       return;
     }
-    console.error('Error creating member registration:', error);
-    res.status(500).json({ error: 'Failed to create member registration' });
+
+    // Log technical details to console for debugging
+    console.error('Error creating member registration:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      constraint: error.constraint,
+      stack: error.stack,
+    });
+
+    // Provide user-friendly error messages based on error type
+    let userMessage = 'We encountered an issue completing your registration. Please try again, or contact support if the problem persists.';
+    let statusCode = 500;
+
+    // Database constraint violations
+    if (error.code === '23505') {
+      // Unique constraint violation
+      if (error.constraint?.includes('email')) {
+        userMessage = 'This email is already registered. Please use a different email or contact support if you believe this is an error.';
+      } else if (error.constraint?.includes('membership_number')) {
+        userMessage = 'This membership number is already in use. Please verify your membership number or contact support.';
+      } else {
+        userMessage = 'This information is already registered. Please check your details and try again.';
+      }
+      statusCode = 409;
+    } else if (error.code === '23503') {
+      // Foreign key constraint violation
+      if (error.constraint?.includes('chapter') || error.detail?.includes('chapter')) {
+        userMessage = 'The selected chapter is invalid. Please select a valid chapter and try again.';
+      } else if (error.constraint?.includes('profession') || error.detail?.includes('profession')) {
+        userMessage = 'The selected profession is invalid. Please select a valid profession and try again.';
+      } else {
+        userMessage = 'Some of the information provided is invalid. Please review your entries and try again.';
+      }
+      statusCode = 400;
+    } else if (error.code === '23502') {
+      // Not null constraint violation
+      userMessage = 'Some required information is missing. Please fill in all required fields and try again.';
+      statusCode = 400;
+    } else if (error.code === '42P18') {
+      // Could not determine data type
+      userMessage = 'There was an issue processing your information. Please refresh the page and try again.';
+      statusCode = 400;
+    } else if (error.message?.includes('duplicate key') || error.message?.includes('already exists')) {
+      userMessage = 'This information is already registered. Please check your details and try again.';
+      statusCode = 409;
+    } else if (error.message?.includes('constraint')) {
+      userMessage = 'Some of the information provided is invalid. Please review your entries and try again.';
+      statusCode = 400;
+    } else if (error.message?.includes('S3') || error.message?.includes('upload')) {
+      userMessage = 'There was an issue uploading your headshot image. Please try uploading a different image or continue without a headshot.';
+      statusCode = 500;
+    } else if (error.message?.includes('network') || error.message?.includes('timeout')) {
+      userMessage = 'The request timed out. Please check your internet connection and try again.';
+      statusCode = 408;
+    }
+
+    res.status(statusCode).json({ 
+      error: userMessage,
+      code: error.code || 'REGISTRATION_ERROR'
+    });
   }
 });
 
@@ -1541,9 +1599,9 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
       FROM fraternity_members m
       LEFT JOIN chapters c ON m.initiated_chapter_id = c.id
       LEFT JOIN professions p ON m.profession_id = p.id
-      LEFT JOIN sellers s ON m.id = s.fraternity_member_id AND s.status = 'APPROVED'
-      LEFT JOIN promoters pr ON m.id = pr.fraternity_member_id AND pr.status = 'APPROVED'
-      LEFT JOIN stewards st ON m.id = st.fraternity_member_id AND st.status = 'APPROVED'
+      LEFT JOIN sellers s ON m.email = s.email AND s.status = 'APPROVED'
+      LEFT JOIN promoters pr ON m.email = pr.email AND pr.status = 'APPROVED'
+      LEFT JOIN stewards st ON st.user_id IN (SELECT u.id FROM users u WHERE u.email = m.email OR u.cognito_sub = m.cognito_sub) AND st.status = 'APPROVED'
       WHERE m.verification_status = 'VERIFIED'
     `;
     
@@ -1926,7 +1984,7 @@ router.get('/me/metrics', authenticate, async (req: Request, res: Response) => {
        JOIN products p ON o.product_id = p.id
        JOIN sellers s ON s.id = p.seller_id
        JOIN users u ON o.user_id = u.id
-       WHERE s.fraternity_member_id = $1 OR u.id = $2`,
+       WHERE s.email = (SELECT email FROM fraternity_members WHERE id = $1) OR u.id = $2`,
       [fraternityMemberId, req.user.id]
     );
 

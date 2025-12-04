@@ -35,10 +35,10 @@ export class User extends BaseModel {
   email!: string;
 
   @Column({
-    type: DataType.ENUM('ADMIN', 'SELLER', 'PROMOTER', 'GUEST', 'STEWARD'),
+    type: DataType.ENUM('ADMIN', 'SELLER', 'PROMOTER', 'GUEST', 'STEWARD', 'MEMBER'),
     allowNull: false
   })
-  role!: 'ADMIN' | 'SELLER' | 'PROMOTER' | 'GUEST' | 'STEWARD';
+  role!: 'ADMIN' | 'SELLER' | 'PROMOTER' | 'GUEST' | 'STEWARD' | 'MEMBER';
 
   @Column({
     type: DataType.ENUM('PRE_COGNITO', 'COGNITO_CONFIRMED', 'ONBOARDING_STARTED', 'ONBOARDING_FINISHED'),

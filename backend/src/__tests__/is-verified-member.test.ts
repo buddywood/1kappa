@@ -7,6 +7,7 @@ import pool from "../db/connection";
 jest.mock("../db/queries-sequelize", () => ({
   getUserById: jest.fn(),
   getUserByCognitoSub: jest.fn(),
+  updateUserRole: jest.fn().mockResolvedValue(undefined),
 }));
 
 // Mock the auth middleware

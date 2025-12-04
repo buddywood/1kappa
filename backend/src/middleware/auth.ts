@@ -13,7 +13,7 @@ declare global {
           id: number;
           cognitoSub: string;
           email: string;
-          role: 'ADMIN' | 'SELLER' | 'PROMOTER' | 'GUEST' | 'STEWARD';
+          role: 'ADMIN' | 'SELLER' | 'PROMOTER' | 'GUEST' | 'STEWARD' | 'MEMBER';
           sellerId: number | null;
           promoterId: number | null;
           stewardId: number | null;
@@ -99,7 +99,7 @@ export async function authenticate(
 /**
  * Middleware to check if user has required role
  */
-export function requireRole(...allowedRoles: Array<'ADMIN' | 'SELLER' | 'PROMOTER' | 'GUEST' | 'STEWARD'>) {
+export function requireRole(...allowedRoles: Array<'ADMIN' | 'SELLER' | 'PROMOTER' | 'GUEST' | 'STEWARD' | 'MEMBER'>) {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {
       res.status(401).json({ error: 'Authentication required' });

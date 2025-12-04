@@ -210,7 +210,7 @@ export interface User {
   id: number;
   cognito_sub: string;
   email: string;
-  role: 'ADMIN' | 'SELLER' | 'PROMOTER' | 'GUEST' | 'STEWARD';
+  role: 'ADMIN' | 'SELLER' | 'PROMOTER' | 'GUEST' | 'STEWARD' | 'MEMBER';
   onboarding_status: 'PRE_COGNITO' | 'COGNITO_CONFIRMED' | 'ONBOARDING_STARTED' | 'ONBOARDING_FINISHED';
   // fraternity_member relationship accessed via email/cognito_sub matching or through role-specific tables
   // Role-specific tables (sellers, promoters, stewards) now reference users via user_id

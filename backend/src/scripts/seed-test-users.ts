@@ -443,7 +443,7 @@ async function seedTestUsers(): Promise<void> {
           const newUser = await createUser({
             cognito_sub: finalCognitoSub,
             email: testUser.email,
-            role: userRole as 'ADMIN' | 'SELLER' | 'PROMOTER' | 'GUEST' | 'STEWARD',
+            role: userRole as 'ADMIN' | 'SELLER' | 'PROMOTER' | 'GUEST' | 'STEWARD' | 'MEMBER',
             onboarding_status: 'ONBOARDING_FINISHED',
           });
           

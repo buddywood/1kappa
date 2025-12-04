@@ -19,9 +19,17 @@ function EventsPageContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<FilterType>('upcoming');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [selectedEventType, setSelectedEventType] = useState<number | 'all'>('all');
   const [locationFilter, setLocationFilter] = useState('');
+
+  // Sync searchQuery with URL parameter
+  useEffect(() => {
+    const urlSearch = searchParams.get('search');
+    if (urlSearch !== null && urlSearch !== searchQuery) {
+      setSearchQuery(urlSearch);
+    }
+  }, [searchParams, searchQuery]);
 
   useEffect(() => {
     Promise.all([

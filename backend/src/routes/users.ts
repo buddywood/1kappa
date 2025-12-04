@@ -170,6 +170,25 @@ router.get("/me", authenticate, async (req: Request, res: Response) => {
         // Only set is_fraternity_member to true if member is verified
         is_fraternity_member =
           memberResult.rows[0]?.verification_status === "VERIFIED";
+        
+        // Auto-upgrade GUEST to MEMBER if they have verified fraternity membership
+        if (is_fraternity_member && user.role === "GUEST") {
+          const { updateUserRole } = await import('../db/queries-sequelize');
+          await updateUserRole(user.id, "MEMBER");
+          user.role = "MEMBER";
+        }
+      }
+    } else if (user.role === "MEMBER") {
+      // For MEMBER, match by email/cognito_sub with fraternity_members table
+      const memberResult = await pool.query(
+        "SELECT id, name, verification_status FROM fraternity_members WHERE email = $1 OR cognito_sub = $2",
+        [user.email, user.cognito_sub]
+      );
+      if (memberResult.rows.length > 0) {
+        fraternity_member_id = memberResult.rows[0]?.id || null;
+        name = memberResult.rows[0]?.name || null;
+        // MEMBER role implies verified fraternity membership
+        is_fraternity_member = memberResult.rows[0]?.verification_status === "VERIFIED";
       }
     }
 
@@ -366,6 +385,25 @@ router.post("/upsert-on-login", async (req: Request, res: Response) => {
         // Only set is_fraternity_member to true if member is verified
         is_fraternity_member =
           memberResult.rows[0]?.verification_status === "VERIFIED";
+        
+        // Auto-upgrade GUEST to MEMBER if they have verified fraternity membership
+        if (is_fraternity_member && user.role === "GUEST") {
+          const { updateUserRole } = await import('../db/queries-sequelize');
+          await updateUserRole(user.id, "MEMBER");
+          user.role = "MEMBER";
+        }
+      }
+    } else if (user.role === "MEMBER") {
+      // For MEMBER, match by email/cognito_sub with fraternity_members table
+      const memberResult = await pool.query(
+        "SELECT id, name, verification_status FROM fraternity_members WHERE email = $1 OR cognito_sub = $2",
+        [user.email, user.cognito_sub]
+      );
+      if (memberResult.rows.length > 0) {
+        fraternity_member_id = memberResult.rows[0]?.id || null;
+        name = memberResult.rows[0]?.name || null;
+        // MEMBER role implies verified fraternity membership
+        is_fraternity_member = memberResult.rows[0]?.verification_status === "VERIFIED";
       }
     }
 

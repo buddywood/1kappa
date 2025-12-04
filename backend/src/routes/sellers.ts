@@ -93,19 +93,23 @@ const optionalAuthenticate = async (req: Request, res: Response, next: any) => {
       if (user) {
         // Attach user to request
         // Look up role-specific IDs from role tables
-        const { Seller, Promoter, Steward } = await import('../db/models');
+        const { Seller, Promoter, Steward } = await import("../db/models");
         let sellerId: number | null = null;
         let promoterId: number | null = null;
         let stewardId: number | null = null;
 
-        if (user.role === 'SELLER') {
+        if (user.role === "SELLER") {
           const seller = await Seller.findOne({ where: { user_id: user.id } });
           sellerId = seller?.id || null;
-        } else if (user.role === 'PROMOTER') {
-          const promoter = await Promoter.findOne({ where: { user_id: user.id } });
+        } else if (user.role === "PROMOTER") {
+          const promoter = await Promoter.findOne({
+            where: { user_id: user.id },
+          });
           promoterId = promoter?.id || null;
-        } else if (user.role === 'STEWARD') {
-          const steward = await Steward.findOne({ where: { user_id: user.id } });
+        } else if (user.role === "STEWARD") {
+          const steward = await Steward.findOne({
+            where: { user_id: user.id },
+          });
           stewardId = steward?.id || null;
         }
 
@@ -443,11 +447,11 @@ router.get("/collections", async (req: Request, res: Response) => {
       FROM sellers s
       LEFT JOIN products p ON s.id = p.seller_id
       LEFT JOIN fraternity_members m ON s.email = m.email
-      LEFT JOIN users u_st ON u_st.email = m.email OR u_st.cognito_sub = m.cognito_sub
-      LEFT JOIN stewards st ON u_st.steward_id = st.id AND st.status = 'APPROVED'
+      LEFT JOIN users u_st ON (u_st.email = m.email OR u_st.cognito_sub = m.cognito_sub)
+      LEFT JOIN stewards st ON st.user_id = u_st.id AND st.status = 'APPROVED'
       LEFT JOIN promoters pr ON s.email = pr.email AND pr.status = 'APPROVED'
       WHERE s.status = 'APPROVED'
-      GROUP BY s.id, s.name, s.business_name, s.headshot_url, s.sponsoring_chapter_id, s.fraternity_member_id, s.social_links, s.email, st.id, pr.id
+      GROUP BY s.id, s.name, s.business_name, s.headshot_url, s.sponsoring_chapter_id, m.id, s.social_links, s.email, st.id, pr.id
       HAVING COUNT(p.id) > 0
       ORDER BY s.name ASC`
     );
@@ -516,8 +520,9 @@ router.get("/featured", async (req: Request, res: Response) => {
       FROM sellers s
       LEFT JOIN products p ON s.id = p.seller_id
       LEFT JOIN chapters c ON s.sponsoring_chapter_id = c.id
+      LEFT JOIN fraternity_members m ON s.email = m.email
       WHERE s.status = 'APPROVED'
-        AND s.fraternity_member_id IS NOT NULL
+        AND m.id IS NOT NULL
       GROUP BY s.id, s.name, s.business_name, s.headshot_url, s.sponsoring_chapter_id, s.social_links, s.website, c.name
       HAVING COUNT(p.id) > 0
       ORDER BY product_count DESC, s.name ASC
@@ -567,13 +572,16 @@ router.get("/:id/products", async (req: Request, res: Response) => {
     const sellerResult = await pool.query(
       `SELECT 
         s.*,
-        CASE WHEN s.fraternity_member_id IS NOT NULL THEN true ELSE false END as is_fraternity_member,
+        m.id as fraternity_member_id,
+        CASE WHEN m.id IS NOT NULL THEN true ELSE false END as is_fraternity_member,
         CASE WHEN s.status = 'APPROVED' THEN true ELSE false END as is_seller,
         CASE WHEN st.id IS NOT NULL THEN true ELSE false END as is_steward,
         CASE WHEN pr.id IS NOT NULL THEN true ELSE false END as is_promoter
       FROM sellers s
-      LEFT JOIN stewards st ON s.fraternity_member_id = st.fraternity_member_id AND st.status = 'APPROVED'
-      LEFT JOIN promoters pr ON (s.fraternity_member_id = pr.fraternity_member_id OR s.email = pr.email) AND pr.status = 'APPROVED'
+      LEFT JOIN fraternity_members m ON s.email = m.email
+      LEFT JOIN users u_st ON (u_st.email = m.email OR u_st.cognito_sub = m.cognito_sub)
+      LEFT JOIN stewards st ON st.user_id = u_st.id AND st.status = 'APPROVED'
+      LEFT JOIN promoters pr ON s.email = pr.email AND pr.status = 'APPROVED'
       WHERE s.id = $1`,
       [sellerId]
     );
