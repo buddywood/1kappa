@@ -76,6 +76,19 @@ jest.mock("../services/stripe", () => ({
     id: "cs_test_123",
     url: "https://checkout.stripe.com/cs_test_123",
   }),
+  stripe: {
+    accounts: {
+      retrieve: jest.fn().mockResolvedValue({
+        id: "acct_test_123",
+        capabilities: {
+          transfers: { status: "active" },
+        },
+        charges_enabled: true,
+        payouts_enabled: true,
+        details_submitted: true,
+      }),
+    },
+  },
 }));
 
 const app = express();

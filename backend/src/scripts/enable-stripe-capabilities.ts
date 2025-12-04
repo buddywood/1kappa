@@ -34,7 +34,8 @@ async function enableCapabilities() {
       
       // Check current account status
       const account = await stripe.accounts.retrieve(seller.stripe_account_id);
-      const transfersStatus = account.capabilities?.transfers?.status;
+      const transfersCapability = account.capabilities?.transfers as any;
+      const transfersStatus = transfersCapability?.status;
       
       if (transfersStatus === 'active') {
         console.log(`  ✅ Transfers capability already active`);

@@ -64,7 +64,8 @@ export async function enableTransfersCapability(accountId: string): Promise<void
     
     // Also update the capability directly
     const account = await stripe.accounts.retrieve(accountId);
-    if (account.capabilities?.transfers?.status !== 'active') {
+    const transfersCapability = account.capabilities?.transfers as any;
+    if (transfersCapability?.status !== 'active') {
       await stripe.accounts.updateCapability(accountId, 'transfers', { requested: true });
     }
   } catch (error: any) {

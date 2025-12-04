@@ -1168,7 +1168,7 @@ export async function updateEventStatus(
 export async function createUser(user: {
   cognito_sub: string;
   email: string;
-  role: "ADMIN" | "SELLER" | "PROMOTER" | "GUEST" | "STEWARD";
+  role: "ADMIN" | "SELLER" | "PROMOTER" | "GUEST" | "STEWARD" | "MEMBER";
   onboarding_status?:
     | "PRE_COGNITO"
     | "COGNITO_CONFIRMED"

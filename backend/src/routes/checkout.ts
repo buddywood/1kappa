@@ -388,7 +388,7 @@ router.post('/:productId', authenticateOptional, async (req: Request, res: Respo
       const account = await stripe.accounts.retrieve(seller.stripe_account_id);
       
       // Check if transfers capability is active (required for Connect transfers)
-      const transfersCapability = account.capabilities?.transfers;
+      const transfersCapability = account.capabilities?.transfers as any;
       const transfersActive = transfersCapability?.status === 'active';
       
       // Check if charges are enabled (account can accept payments)
