@@ -914,8 +914,24 @@ export default function RegisterPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to register');
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (parseError) {
+          // If response isn't JSON, create a generic error
+          errorData = { 
+            error: response.status === 500 
+              ? 'We encountered an issue completing your registration. Please try again, or contact support if the problem persists.'
+              : 'Unable to complete registration. Please check your information and try again.'
+          };
+        }
+        
+        // Set error code if provided
+        if (errorData.code) {
+          setErrorCode(errorData.code);
+        }
+        
+        throw new Error(errorData.error || 'Unable to complete registration. Please try again.');
       }
 
       // Clear localStorage draft on success
@@ -939,7 +955,19 @@ export default function RegisterPage() {
         router.push('/');
       }, 2000); // Give user time to see success message
     } catch (err: any) {
-      setError(err.message || 'Failed to submit registration');
+      console.error('Registration error:', err);
+      
+      // Provide user-friendly error messages
+      let errorMessage = err.message || 'We encountered an issue completing your registration.';
+      
+      // Handle network errors
+      if (err.message?.includes('fetch') || err.message?.includes('network') || err.message?.includes('Failed to fetch')) {
+        errorMessage = 'Unable to connect to the server. Please check your internet connection and try again.';
+      } else if (err.message?.includes('timeout')) {
+        errorMessage = 'The request took too long. Please check your internet connection and try again.';
+      }
+      
+      setError(errorMessage);
       setSubmitting(false);
     }
   };

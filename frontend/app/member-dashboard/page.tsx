@@ -331,49 +331,100 @@ export default function MemberDashboardPage() {
         )}
 
         {/* Profile Completion */}
-        {profile && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Profile Completion</CardTitle>
-              <CardDescription>Complete your profile to connect with more brothers</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {[
-                  { label: 'Name', value: profile.name, required: true },
-                  { label: 'Chapter', value: profile.chapter_name, required: true },
-                  { label: 'Initiation Year', value: profile.initiated_year, required: true },
-                  { label: 'Member Number', value: profile.membership_number, required: true },
-                  { label: 'Headshot', value: profile.headshot_url, required: true },
-                  { label: 'Industry', value: profile.industry, required: true },
-                  { label: 'Profession', value: profile.profession_id, required: false },
-                  { label: 'Social Links', value: Object.keys(profile.social_links || {}).length > 0, required: true },
-                ].map((field) => (
-                  <div key={field.label} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {field.value ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      ) : (
-                        <AlertCircle className="h-4 w-4 text-yellow-600" />
-                      )}
-                      <span className="text-sm">
-                        {field.label}
-                        {field.required && <span className="text-red-500 ml-1">*</span>}
-                      </span>
-                    </div>
-                    {!field.value && (
-                      <Link href="/profile">
-                        <Button variant="outline" size="sm">
-                          Complete
-                        </Button>
-                      </Link>
-                    )}
+        {profile && (() => {
+          // Helper to check if a value is truthy and not empty
+          const hasValue = (val: any): boolean => {
+            if (val === null || val === undefined) return false;
+            if (typeof val === 'string') return val.trim().length > 0;
+            if (typeof val === 'number') return val > 0;
+            if (typeof val === 'boolean') return val === true;
+            if (Array.isArray(val)) return val.length > 0;
+            if (typeof val === 'object') {
+              // For objects, check if any values are non-empty
+              return Object.values(val).some(v => {
+                if (typeof v === 'string') return v.trim().length > 0;
+                return v !== null && v !== undefined;
+              });
+            }
+            return !!val;
+          };
+
+          const fields = [
+            { label: 'Name', actualValue: profile.name, isComplete: hasValue(profile.name), required: true },
+            { label: 'Chapter', actualValue: profile.chapter_name, isComplete: hasValue(profile.chapter_name), required: true },
+            { label: 'Initiation Year', actualValue: profile.initiated_year, isComplete: hasValue(profile.initiated_year), required: true },
+            { label: 'Member Number', actualValue: profile.membership_number, isComplete: hasValue(profile.membership_number), required: true },
+            { label: 'Headshot', actualValue: profile.headshot_url, isComplete: hasValue(profile.headshot_url), required: true },
+            { label: 'Industry', actualValue: profile.industry, isComplete: hasValue(profile.industry), required: true },
+            { label: 'Profession', actualValue: profile.profession_name || profile.profession_id, isComplete: hasValue(profile.profession_id) || hasValue(profile.profession_name), required: false },
+            { label: 'Social Links', actualValue: profile.social_links, isComplete: hasValue(profile.social_links), required: true },
+          ];
+          
+          const requiredFields = fields.filter(f => f.required);
+          const completedRequired = requiredFields.filter(f => f.isComplete).length;
+          const totalRequired = requiredFields.length;
+          const isComplete = completedRequired === totalRequired;
+          const completionPercentage = Math.round((completedRequired / totalRequired) * 100);
+          
+          return (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Profile Completion</CardTitle>
+                    <CardDescription>Complete your profile to connect with more brothers</CardDescription>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                  {isComplete && (
+                    <Badge className="bg-green-600 text-white">
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                      Complete
+                    </Badge>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {!isComplete && (
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-midnight-navy">Progress</span>
+                      <span className="text-sm text-midnight-navy/70">{completionPercentage}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-crimson h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${completionPercentage}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+                <div className="space-y-2">
+                  {fields.map((field) => (
+                    <div key={field.label} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {field.isComplete ? (
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <AlertCircle className="h-4 w-4 text-yellow-600" />
+                        )}
+                        <span className="text-sm">
+                          {field.label}
+                          {field.required && <span className="text-red-500 ml-1">*</span>}
+                        </span>
+                      </div>
+                      {!field.isComplete && (
+                        <Link href="/profile">
+                          <Button variant="outline" size="sm">
+                            Complete
+                          </Button>
+                        </Link>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })()}
       </div>
     </div>
   );

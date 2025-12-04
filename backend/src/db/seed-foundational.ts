@@ -13,13 +13,13 @@ dotenv.config({ path: path.join(__dirname, '../../.env.local') });
  * All seed functions are idempotent and will skip existing data.
  * 
  * Includes:
- * - Industries (50 total)
- * - Chapters (Collegiate + Alumni)
- * - Provinces (updated based on state)
- * - Professions (32 total)
+ * - Roles (6 total: ADMIN, SELLER, MEMBER, PROMOTER, GUEST, STEWARD)
  * - Event Types (9 total)
  * - Event Audience Types (3 total)
- * - Roles (5 total)
+ * - Industries (50 total) - FOUNDATIONAL
+ * - Professions (32 total) - FOUNDATIONAL
+ * - Chapters (Collegiate + Alumni)
+ * - Provinces (updated based on state)
  */
 
 async function runScript(scriptPath: string, args: string[] = []): Promise<void> {
@@ -136,6 +136,7 @@ async function seedRoles(): Promise<void> {
   const roles = [
     { name: 'ADMIN', description: 'System administrator with full access', display_order: 1 },
     { name: 'SELLER', description: 'User who can sell products on the platform', display_order: 2 },
+    { name: 'MEMBER', description: 'Verified fraternity member', display_order: 2.5 },
     { name: 'PROMOTER', description: 'User who can promote events', display_order: 3 },
     { name: 'GUEST', description: 'Regular user who can browse and purchase', display_order: 4 },
     { name: 'STEWARD', description: 'User who can manage steward listings', display_order: 5 },
@@ -172,12 +173,13 @@ async function seedRoles(): Promise<void> {
   console.log(`  Inserted: ${inserted}, Skipped: ${skipped}\n`);
 }
 
+/**
+ * Seed industries - FOUNDATIONAL DATA
+ * This is essential reference data that should exist in all environments.
+ * Called as part of foundational seeding.
+ */
 async function seedIndustriesData(): Promise<void> {
   console.log('🏭 Seeding industries...\n');
-  
-  // Import and run the industries seed function
-  // Since it uses pool.end() and process.exit(), we need to call it differently
-  // We'll extract the logic here instead
   const PROFESSIONAL_INDUSTRIES = [
     'Accounting',
     'Advertising',
@@ -268,6 +270,11 @@ async function seedIndustriesData(): Promise<void> {
   console.log(`  Inserted: ${inserted}, Skipped: ${skipped}\n`);
 }
 
+/**
+ * Seed professions - FOUNDATIONAL DATA
+ * This is essential reference data that should exist in all environments.
+ * Called as part of foundational seeding.
+ */
 async function seedProfessionsData(): Promise<void> {
   console.log('💼 Seeding professions...\n');
 
@@ -368,11 +375,12 @@ async function main() {
     console.log('This will seed all foundational reference data (idempotent - skips existing data)\n');
 
     // Seed reference tables first (no dependencies)
+    // These are all foundational data required for the application to function
     await seedEventTypes();
     await seedEventAudienceTypes();
     await seedRoles();
-    await seedIndustriesData();
-    await seedProfessionsData();
+    await seedIndustriesData(); // FOUNDATIONAL - Required for member profiles
+    await seedProfessionsData(); // FOUNDATIONAL - Required for member profiles
 
     // Seed chapters (collegiate + alumni)
     await seedChapters();

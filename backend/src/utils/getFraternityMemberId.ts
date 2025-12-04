@@ -39,8 +39,8 @@ export async function getFraternityMemberId(user: User): Promise<number | null> 
       [user.email, user.cognito_sub]
     );
     return memberResult.rows[0]?.id || null;
-  } else if (user.role === 'GUEST') {
-    // For GUEST, match by email/cognito_sub with fraternity_members table
+  } else if (user.role === 'GUEST' || user.role === 'MEMBER') {
+    // For GUEST and MEMBER, match by email/cognito_sub with fraternity_members table
     const memberResult = await pool.query(
       'SELECT id FROM fraternity_members WHERE email = $1 OR cognito_sub = $2',
       [user.email, user.cognito_sub]

@@ -501,7 +501,6 @@ function LoginPageContent() {
               onChange={(e) => setEmail(e.target.value)}
               required
               placeholder="Enter your email"
-              error={error && !password ? error : undefined}
             />
             <PasswordField
               label="Password"
@@ -509,7 +508,7 @@ function LoginPageContent() {
               onChange={(e) => setPassword(e.target.value)}
               required
               placeholder="Enter your password"
-              error={error && password ? error : undefined}
+              error={error || undefined}
             />
             <div className="flex items-center justify-between">
               <Checkbox
@@ -525,7 +524,6 @@ function LoginPageContent() {
                 Forgot Password?
               </Link>
             </div>
-            {error && <div className="text-red-600 text-sm">{error}</div>}
             <PrimaryButton
               type="submit"
               disabled={loading}
@@ -552,8 +550,8 @@ function LoginPageContent() {
               required
               minLength={8}
               placeholder="Confirm your new password"
+              error={error || undefined}
             />
-            {error && <div className="text-red-600 text-sm">{error}</div>}
             <PrimaryButton
               type="submit"
               disabled={loading}

@@ -382,6 +382,102 @@ router.post('/:productId', authenticateOptional, async (req: Request, res: Respo
       });
     }
 
+    // Validate that the Stripe account exists and is properly set up
+    try {
+      const { stripe } = await import('../services/stripe');
+      const account = await stripe.accounts.retrieve(seller.stripe_account_id);
+      
+      // Check if transfers capability is active (required for Connect transfers)
+      const transfersCapability = account.capabilities?.transfers;
+      const transfersActive = transfersCapability?.status === 'active';
+      
+      // Check if charges are enabled (account can accept payments)
+      const chargesEnabled = account.charges_enabled === true;
+      
+      // For test accounts, we may allow purchases even if details aren't fully submitted
+      // But we require transfers capability and charges to be enabled
+      if (!transfersActive) {
+        console.warn(`Seller ${seller.id} Stripe account missing active transfers capability. Status: ${transfersCapability?.status || 'not requested'}`);
+        
+        // Notify seller about missing capability
+        const { createNotification } = await import('../db/queries-notifications-sequelize');
+        createNotification({
+          user_email: seller.email,
+          type: 'PURCHASE_BLOCKED',
+          title: 'Stripe Setup Incomplete - Transfers Required',
+          message: `Your Stripe account needs the transfers capability enabled to receive payments. Please complete your Stripe setup.`,
+          related_product_id: product.id,
+        }).catch(err => {
+          console.error('Failed to create seller notification:', err);
+        });
+
+        return res.status(400).json({ 
+          error: 'STRIPE_NOT_READY',
+          message: 'The seller is finalizing their payout setup. This item will be available soon.',
+          sellerName: seller.name,
+          productName: product.name,
+          details: 'Stripe account transfers capability not enabled'
+        });
+      }
+      
+      if (!chargesEnabled) {
+        console.warn(`Seller ${seller.id} Stripe account charges not enabled`);
+        
+        // Notify seller
+        const { createNotification } = await import('../db/queries-notifications-sequelize');
+        createNotification({
+          user_email: seller.email,
+          type: 'PURCHASE_BLOCKED',
+          title: 'Stripe Setup Incomplete - Charges Not Enabled',
+          message: `Your Stripe account needs to be activated to accept payments. Please complete your Stripe onboarding.`,
+          related_product_id: product.id,
+        }).catch(err => {
+          console.error('Failed to create seller notification:', err);
+        });
+
+        return res.status(400).json({ 
+          error: 'STRIPE_NOT_READY',
+          message: 'The seller is finalizing their payout setup. This item will be available soon.',
+          sellerName: seller.name,
+          productName: product.name,
+          details: 'Stripe account charges not enabled'
+        });
+      }
+    } catch (error: any) {
+      // If account doesn't exist, clear it from database and return error
+      if (error?.code === 'resource_missing' || error?.statusCode === 404 || error?.type === 'StripeInvalidRequestError') {
+        console.warn(`Invalid Stripe account ID for seller ${seller.id}: ${seller.stripe_account_id}. Clearing from database.`);
+        
+        // Clear invalid account ID from database
+        const pool = (await import('../db/connection')).default;
+        await pool.query(
+          'UPDATE sellers SET stripe_account_id = NULL WHERE id = $1',
+          [seller.id]
+        );
+
+        // Notify seller about invalid account
+        const { createNotification } = await import('../db/queries-notifications-sequelize');
+        createNotification({
+          user_email: seller.email,
+          type: 'PURCHASE_BLOCKED',
+          title: 'Stripe Account Issue - Setup Required',
+          message: `Your Stripe account connection is invalid. Please reconnect your Stripe account to continue receiving payments.`,
+          related_product_id: product.id,
+        }).catch(err => {
+          console.error('Failed to create seller notification:', err);
+        });
+
+        return res.status(400).json({ 
+          error: 'STRIPE_NOT_CONNECTED',
+          message: 'The seller is finalizing their payout setup. This item will be available soon.',
+          sellerName: seller.name,
+          productName: product.name
+        });
+      }
+      // Re-throw other errors (network issues, etc.)
+      throw error;
+    }
+
     // Use seller's sponsoring_chapter_id instead of product's sponsored_chapter_id
     const chapterId = (product as any).seller_sponsoring_chapter_id || seller.sponsoring_chapter_id || undefined;
 

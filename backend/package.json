@@ -15,6 +15,7 @@
     "verify:env": "tsx src/scripts/verify-env-vars.ts",
     "verify:roles": "tsx src/scripts/verify-roles.ts",
     "seed": "tsx src/db/seed-foundational.ts",
+    "seed:foundational": "tsx src/db/seed-foundational.ts",
     "seed:test": "tsx src/db/seed-test.ts",
     "seed:test-users": "tsx src/scripts/seed-test-users.ts",
     "update:test-images": "tsx src/scripts/update-test-images.ts",

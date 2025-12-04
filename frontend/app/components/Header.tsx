@@ -25,6 +25,8 @@ function HeaderContent() {
   const [cartMenuOpen, setCartMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
+  const [searchType, setSearchType] = useState<'shop' | 'events'>('shop');
+  const [searchDropdownOpen, setSearchDropdownOpen] = useState(false);
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [notificationCount, setNotificationCount] = useState(0);
   const [sponsoringChapterName, setSponsoringChapterName] = useState<string | null>(null);
@@ -76,6 +78,7 @@ function HeaderContent() {
   const is_seller = (session?.user as any)?.is_seller ?? (nextAuthSession?.user as any)?.is_seller ?? false;
   const is_promoter = (session?.user as any)?.is_promoter ?? (nextAuthSession?.user as any)?.is_promoter ?? false;
   const is_steward = (session?.user as any)?.is_steward ?? (nextAuthSession?.user as any)?.is_steward ?? false;
+  
   const { theme, setTheme } = useTheme();
   
   const toggleTheme = () => {
@@ -185,6 +188,9 @@ function HeaderContent() {
       if (!target.closest('.user-menu') && !target.closest('.user-menu-button')) {
         setUserMenuOpen(false);
       }
+      if (!target.closest('.search-dropdown')) {
+        setSearchDropdownOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -264,8 +270,13 @@ function HeaderContent() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      // Navigate to shop with search query
-      window.location.href = `/shop?search=${encodeURIComponent(searchQuery.trim())}`;
+      // Navigate to the selected page with search query
+      const encodedQuery = encodeURIComponent(searchQuery.trim());
+      if (searchType === 'events') {
+        window.location.href = `/events?search=${encodedQuery}`;
+      } else {
+        window.location.href = `/shop?search=${encodedQuery}`;
+      }
     }
   };
 
@@ -331,20 +342,64 @@ function HeaderContent() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => setSearchFocused(true)}
-                  onBlur={() => setSearchFocused(false)}
-                  placeholder="Search"
+                  onBlur={() => {
+                    // Delay to allow dropdown click
+                    setTimeout(() => setSearchFocused(false), 200);
+                  }}
+                  placeholder={searchType === 'events' ? 'Search events...' : 'Search shop...'}
                   className="py-2 px-2 pr-3 text-sm text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500 bg-transparent border-0 focus:outline-none focus:ring-0 w-48"
                 />
                 <div className="h-6 w-px bg-gray-300 dark:bg-gray-800 mx-1"></div>
-                <button
-                  type="button"
-                  className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 flex items-center gap-1"
-                >
-                  <span>All</span>
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
+                <div className="relative search-dropdown">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setSearchDropdownOpen(!searchDropdownOpen);
+                    }}
+                    className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 flex items-center gap-1"
+                  >
+                    <span className="capitalize">{searchType === 'events' ? 'Events' : 'Shop'}</span>
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {searchDropdownOpen && (
+                    <div className="absolute right-0 mt-1 w-32 bg-white dark:bg-black rounded-lg shadow-lg border border-gray-200 dark:border-gray-800 py-1 z-50">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setSearchType('shop');
+                          setSearchDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors ${
+                          searchType === 'shop' 
+                            ? 'text-crimson dark:text-crimson font-medium' 
+                            : 'text-gray-700 dark:text-gray-300'
+                        }`}
+                      >
+                        Shop
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setSearchType('events');
+                          setSearchDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors ${
+                          searchType === 'events' 
+                            ? 'text-crimson dark:text-crimson font-medium' 
+                            : 'text-gray-700 dark:text-gray-300'
+                        }`}
+                      >
+                        Events
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </form>
 
@@ -543,10 +598,11 @@ function HeaderContent() {
                           {userRole !== 'GUEST' && (
                             <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                               {userRole === 'ADMIN' ? 'Administrator' : 
+                               userRole === 'MEMBER' ? 'Member' :
                                is_steward ? 'Steward' :
                                is_seller ? 'Seller' :
                                is_promoter ? 'Promoter' : 
-                               is_fraternity_member ? 'Member' : 'Member'}
+                               'Member'}
                             </p>
                           )}
                         </div>
@@ -560,7 +616,7 @@ function HeaderContent() {
 
                     {/* Dashboard Section */}
                     <div className="py-2">
-                      {/* Order History for GUEST users */}
+                      {/* Order History for GUEST users (non-members) */}
                       {userRole === 'GUEST' && (
                         <Link 
                           href="/orders" 

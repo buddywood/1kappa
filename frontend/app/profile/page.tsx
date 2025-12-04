@@ -53,6 +53,7 @@ function ProfilePageContent() {
   const [sellerStatus, setSellerStatus] = useState<string | null>(null);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [hasVerifiedSession, setHasVerifiedSession] = useState(false);
+  const [detectingLocation, setDetectingLocation] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -438,6 +439,76 @@ function ProfilePageContent() {
         img.src = reader.result as string;
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDetectLocation = async () => {
+    setDetectingLocation(true);
+    setError('');
+
+    try {
+      // Request browser geolocation
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        if (!navigator.geolocation) {
+          reject(new Error('Geolocation is not supported by your browser'));
+          return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          resolve,
+          reject,
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0,
+          }
+        );
+      });
+
+      const { latitude, longitude } = position.coords;
+
+      // Call backend to reverse geocode
+      const response = await fetch(`${API_URL}/api/location/reverse-geocode`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          latitude,
+          longitude,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to get location information');
+      }
+
+      const locationData = await response.json();
+
+      // Auto-fill location and address fields
+      setFormData(prev => ({
+        ...prev,
+        location: locationData.location || '',
+        address: locationData.address || '',
+      }));
+
+      setError('');
+    } catch (err: any) {
+      console.error('Error detecting location:', err);
+      
+      let errorMessage = 'Failed to detect your location.';
+      if (err.message?.includes('denied') || err.message?.includes('permission')) {
+        errorMessage = 'Location access denied. Please enable location permissions in your browser settings.';
+      } else if (err.message?.includes('timeout')) {
+        errorMessage = 'Location detection timed out. Please try again.';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
+    } finally {
+      setDetectingLocation(false);
     }
   };
 
@@ -1084,18 +1155,50 @@ function ProfilePageContent() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-2 text-midnight-navy">
-                  Location
+                  Current Location
                 </label>
                 {isEditing ? (
-                  <input
-                    type="text"
-                    value={formData.location}
-                    onChange={(e) =>
-                      setFormData({ ...formData, location: e.target.value })
-                    }
-                    className="w-full px-4 py-2 border border-frost-gray rounded-lg focus:ring-2 focus:ring-crimson focus:border-transparent text-midnight-navy"
-                    placeholder="City, State"
-                  />
+                  <div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={formData.location}
+                        onChange={(e) =>
+                          setFormData({ ...formData, location: e.target.value })
+                        }
+                        className="flex-1 px-4 py-2 border border-frost-gray rounded-lg focus:ring-2 focus:ring-crimson focus:border-transparent text-midnight-navy"
+                        placeholder="City, State or general location"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleDetectLocation}
+                        disabled={detectingLocation}
+                        className="px-4 py-2 bg-midnight-navy text-white rounded-lg hover:bg-midnight-navy/90 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
+                        title="Detect your current location"
+                      >
+                        {detectingLocation ? (
+                          <>
+                            <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span className="hidden sm:inline">Detecting...</span>
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            <span className="hidden sm:inline">Detect</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <p className="text-xs text-midnight-navy/60 mt-1">
+                      Click &quot;Detect&quot; to automatically fill your location using your device&apos;s GPS
+                    </p>
+                  </div>
                 ) : (
                   <p className="px-4 py-2 text-midnight-navy">
                     {profile.location || "Not set"}

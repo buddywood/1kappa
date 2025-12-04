@@ -28,7 +28,49 @@ export async function createConnectAccount(email: string, country: string = 'US'
     },
   });
 
+  // For test accounts, enable capabilities immediately (in test mode only)
+  // In production, capabilities are enabled through the onboarding flow
+  if (process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_')) {
+    try {
+      await stripe.accounts.update(account.id, {
+        capabilities: {
+          card_payments: { requested: true },
+          transfers: { requested: true },
+        },
+      });
+      // Enable transfers capability for test accounts
+      await stripe.accounts.updateCapability(account.id, 'transfers', { requested: true });
+    } catch (error) {
+      // If capability update fails, that's okay - it will be enabled during onboarding
+      console.warn(`Could not enable capabilities for test account ${account.id}:`, error);
+    }
+  }
+
   return account;
+}
+
+/**
+ * Enable transfers capability on an existing Stripe Connect account
+ * Useful for test accounts or accounts that need capabilities enabled programmatically
+ */
+export async function enableTransfersCapability(accountId: string): Promise<void> {
+  try {
+    // Update the account to request transfers capability
+    await stripe.accounts.update(accountId, {
+      capabilities: {
+        transfers: { requested: true },
+      },
+    });
+    
+    // Also update the capability directly
+    const account = await stripe.accounts.retrieve(accountId);
+    if (account.capabilities?.transfers?.status !== 'active') {
+      await stripe.accounts.updateCapability(accountId, 'transfers', { requested: true });
+    }
+  } catch (error: any) {
+    console.error(`Failed to enable transfers capability for account ${accountId}:`, error.message);
+    throw error;
+  }
 }
 
 /**

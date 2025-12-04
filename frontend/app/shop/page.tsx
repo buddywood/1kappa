@@ -64,7 +64,7 @@ function ShopPageContent() {
   const [categories, setCategories] = useState<ProductCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [selectedChapter, setSelectedChapter] = useState<number | null>(null);
   const [selectedSeller, setSelectedSeller] = useState<number | null>(null);
   const [selectedSteward, setSelectedSteward] = useState<number | null>(null);
@@ -72,6 +72,14 @@ function ShopPageContent() {
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
   const [isHowItWorksModalOpen, setIsHowItWorksModalOpen] = useState(false);
+
+  // Sync searchQuery with URL parameter
+  useEffect(() => {
+    const urlSearch = searchParams.get('search');
+    if (urlSearch !== null && urlSearch !== searchQuery) {
+      setSearchQuery(urlSearch);
+    }
+  }, [searchParams, searchQuery]);
 
   useEffect(() => {
     const fetchPromises: Promise<any>[] = [

@@ -468,12 +468,6 @@ export async function getProductById(id: number): Promise<ProductType | null> {
       {
         model: Seller,
         as: "seller",
-        include: [
-          {
-            model: FraternityMember,
-            as: "fraternityMember",
-          },
-        ],
       },
       {
         model: ProductCategory,
@@ -490,11 +484,29 @@ export async function getProductById(id: number): Promise<ProductType | null> {
 
   const productData = product.toJSON() as any;
 
-  // Check if seller is also a steward or promoter (via email matching with fraternity_members)
+  // Get fraternity member info via email matching (fraternity_member_id column was removed)
   const sellerEmail = productData.seller?.email;
-  const memberId = productData.seller?.fraternityMember?.id;
+  let memberId: number | null = null;
+  let memberData: any = null;
 
-  const stewardCheck = await sequelize.query(
+  if (sellerEmail) {
+    const memberResult = await sequelize.query(
+      `SELECT id, initiated_chapter_id, initiated_season, initiated_year 
+       FROM fraternity_members 
+       WHERE email = :email`,
+      {
+        replacements: { email: sellerEmail },
+        type: QueryTypes.SELECT,
+      }
+    );
+    if ((memberResult as any[]).length > 0) {
+      memberData = memberResult[0];
+      memberId = (memberData as any).id;
+    }
+  }
+
+  // Check if seller is also a steward or promoter (via email matching with fraternity_members)
+  const stewardCheck = memberId ? await sequelize.query(
     `SELECT st.id FROM stewards st
      JOIN users u ON st.user_id = u.id
      JOIN fraternity_members m ON (u.email = m.email OR u.cognito_sub = m.cognito_sub)
@@ -503,15 +515,15 @@ export async function getProductById(id: number): Promise<ProductType | null> {
       replacements: { memberId },
       type: QueryTypes.SELECT,
     }
-  );
+  ) : [];
 
-  const promoterCheck = await sequelize.query(
+  const promoterCheck = sellerEmail ? await sequelize.query(
     `SELECT id FROM promoters WHERE email = :email AND status = 'APPROVED'`,
     {
       replacements: { email: sellerEmail },
       type: QueryTypes.SELECT,
     }
-  );
+  ) : [];
 
   // Transform to match existing return format
   return {
@@ -520,17 +532,14 @@ export async function getProductById(id: number): Promise<ProductType | null> {
     seller_business_name: productData.seller?.business_name,
     seller_status: productData.seller?.status,
     seller_stripe_account_id: productData.seller?.stripe_account_id,
-    seller_fraternity_member_id:
-      productData.seller?.fraternityMember?.id || null,
-    seller_initiated_chapter_id:
-      productData.seller?.fraternityMember?.initiated_chapter_id,
-    seller_initiated_season:
-      productData.seller?.fraternityMember?.initiated_season,
-    seller_initiated_year: productData.seller?.fraternityMember?.initiated_year,
+    seller_fraternity_member_id: memberId,
+    seller_initiated_chapter_id: memberData?.initiated_chapter_id || null,
+    seller_initiated_season: memberData?.initiated_season || null,
+    seller_initiated_year: memberData?.initiated_year || null,
     seller_sponsoring_chapter_id: productData.seller?.sponsoring_chapter_id,
-    seller_email: productData.seller?.email,
+    seller_email: sellerEmail,
     category_name: productData.category?.name,
-    is_fraternity_member: !!productData.seller?.fraternityMember?.id,
+    is_fraternity_member: !!memberId,
     is_seller: productData.seller?.status === "APPROVED",
     is_steward: (stewardCheck as any[]).length > 0,
     is_promoter: (promoterCheck as any[]).length > 0,
@@ -1200,7 +1209,7 @@ export async function getUserById(id: number): Promise<UserType | null> {
 
 export async function updateUserRole(
   id: number,
-  role: "ADMIN" | "SELLER" | "PROMOTER" | "GUEST" | "STEWARD"
+  role: "ADMIN" | "SELLER" | "PROMOTER" | "GUEST" | "STEWARD" | "MEMBER"
 ): Promise<UserType> {
   const user = await User.findByPk(id);
   if (!user) throw new Error("User not found");
