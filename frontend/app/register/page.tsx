@@ -179,12 +179,18 @@ export default function RegisterPage() {
         userRole,
       });
       
-      // GUEST users with 'COGNITO_CONFIRMED' status don't need member onboarding
-      // They can access the site directly without being redirected
+      // GUEST users with 'COGNITO_CONFIRMED' status should be allowed to register as members
+      // Only redirect if they already have a memberId (edge case - shouldn't happen if roles are properly updated)
       if (userRole === 'GUEST' && onboardingStatus === 'COGNITO_CONFIRMED') {
-        console.log('[Register] User is GUEST with COGNITO_CONFIRMED status, redirecting to home');
-        router.push('/');
-        return;
+        if (userMemberId) {
+          // This shouldn't happen - GUEST users with memberId should have role MEMBER
+          // But handle it as a safety check
+          console.log('[Register] GUEST user with memberId detected (should be MEMBER), redirecting to home');
+          router.push('/');
+          return;
+        }
+        // Allow GUEST users without memberId to continue registration
+        console.log('[Register] GUEST user without memberId, allowing member registration');
       }
       
       // Only redirect if user has completed onboarding AND has a member profile
@@ -199,6 +205,13 @@ export default function RegisterPage() {
       if (userRole === 'SELLER' && !userMemberId) {
         console.log('[Register] User is a seller without member profile, allowing member registration');
         // Continue with registration flow - don't redirect
+      }
+      
+      // MEMBER users with completed onboarding should be redirected
+      if (userRole === 'MEMBER' && onboardingStatus === 'ONBOARDING_FINISHED') {
+        console.log('[Register] User is MEMBER with completed onboarding, redirecting to home');
+        router.push('/');
+        return;
       }
       
       // If user has cognitoSub (Cognito is verified), skip step 1 and go to step 2

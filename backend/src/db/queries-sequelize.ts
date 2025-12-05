@@ -1237,7 +1237,11 @@ export async function linkUserToMember(
   ) {
     throw new Error("User email/cognito_sub does not match fraternity member");
   }
-  user.role = "GUEST";
+  // Upgrade GUEST users to MEMBER when they link to a member profile
+  if (user.role === "GUEST") {
+    user.role = "MEMBER";
+  }
+  // Don't change role for other users (e.g., SELLER, PROMOTER, etc.)
   await user.save();
   return user.toJSON() as UserType;
 }

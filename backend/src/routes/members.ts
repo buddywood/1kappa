@@ -1433,8 +1433,8 @@ router.post('/register', upload.single('headshot'), async (req: Request, res: Re
         let user = await getUserByCognitoSub(body.cognito_sub);
         if (!user) {
           // Create new user record
-          // If user is a seller, create with SELLER role, otherwise GUEST
-          const userRole = existingSeller ? 'SELLER' : 'GUEST';
+          // If user is a seller, create with SELLER role, otherwise MEMBER
+          const userRole = existingSeller ? 'SELLER' : 'MEMBER';
           user = await createUser({
             cognito_sub: body.cognito_sub,
             email: body.email,
