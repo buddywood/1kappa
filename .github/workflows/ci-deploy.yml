@@ -256,7 +256,25 @@ jobs:
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL || 'http://localhost:3001' }}
           NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL || 'http://localhost:3000' }}
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'development-secret-key' }}
-        run: vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
+        id: vercel-deploy
+        run: |
+          DEPLOY_OUTPUT=$(vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --yes 2>&1)
+          echo "$DEPLOY_OUTPUT"
+          DEPLOYMENT_URL=$(echo "$DEPLOY_OUTPUT" | grep -oE 'https://[a-zA-Z0-9-]+\.vercel\.app' | head -1)
+          if [ -z "$DEPLOYMENT_URL" ]; then
+            # Fallback: get the latest production deployment
+            DEPLOYMENT_URL=$(vercel ls --prod --token=${{ secrets.VERCEL_TOKEN }} 2>&1 | grep "Ready" | head -1 | awk '{print $3}')
+          fi
+          echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+          echo "✅ Deployed to: $DEPLOYMENT_URL"
+
+      - name: Assign production domain to latest deployment
+        if: steps.vercel-deploy.outcome == 'success' && steps.vercel-deploy.outputs.DEPLOYMENT_URL != ''
+        env:
+          DEPLOYMENT_URL: ${{ steps.vercel-deploy.outputs.DEPLOYMENT_URL }}
+        run: |
+          vercel alias set "$DEPLOYMENT_URL" one-kappa.com --token=${{ secrets.VERCEL_TOKEN }} --yes
+          echo "✅ Assigned one-kappa.com to $DEPLOYMENT_URL"
 
   # ============================================================
   # PRODUCTION BACKEND DEPLOYMENT (Heroku)
