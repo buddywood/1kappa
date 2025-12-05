@@ -267,14 +267,7 @@ jobs:
           fi
           echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
           echo "✅ Deployed to: $DEPLOYMENT_URL"
-
-      - name: Assign production domain to latest deployment
-        if: steps.vercel-deploy.outcome == 'success' && steps.vercel-deploy.outputs.DEPLOYMENT_URL != ''
-        env:
-          DEPLOYMENT_URL: ${{ steps.vercel-deploy.outputs.DEPLOYMENT_URL }}
-        run: |
-          vercel alias set "$DEPLOYMENT_URL" one-kappa.com --token=${{ secrets.VERCEL_TOKEN }} --yes
-          echo "✅ Assigned one-kappa.com to $DEPLOYMENT_URL"
+          echo "ℹ️  Domain alias (one-kappa.com) is configured in Vercel project settings"
 
   # ============================================================
   # PRODUCTION BACKEND DEPLOYMENT (Heroku)
