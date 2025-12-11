@@ -33,6 +33,8 @@
     "approve-member": "tsx src/scripts/approve-member.ts",
     "update-cognito-emails": "AWS_PROFILE=1kappa_user tsx src/scripts/update-cognito-email-templates.ts",
     "check-cognito-user": "tsx src/scripts/check-cognito-user-status.ts",
+    "check-cognito-email-config": "tsx src/scripts/check-cognito-email-config.ts",
+    "enable-cognito-auto-verification": "tsx src/scripts/enable-cognito-auto-verification.ts",
     "fix:orphaned-member": "tsx src/scripts/fix-orphaned-member.ts",
     "delete:seller": "tsx src/scripts/delete-seller.ts",
     "delete:promoter": "tsx src/scripts/delete-promoter.ts",
