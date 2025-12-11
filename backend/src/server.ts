@@ -37,13 +37,19 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware - CORS configuration
 // Allow production frontend, Vercel preview deployments, and localhost
+const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
 const allowedOrigins = [
-  process.env.FRONTEND_URL || 'http://localhost:3000',
+  frontendUrl,
   'http://localhost:3000',
+  // Allow both www and non-www versions of production domain
+  frontendUrl.replace('www.', ''),
+  frontendUrl.includes('www.') ? frontendUrl.replace('www.', '') : frontendUrl.replace('https://', 'https://www.'),
   // Allow all Vercel preview deployments (pattern: *.vercel.app)
   /^https:\/\/.*\.vercel\.app$/,
   // Allow Vercel production if different from FRONTEND_URL
   process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
+  // Allow one-kappa.com domains (with and without www)
+  /^https:\/\/(www\.)?one-kappa\.com$/,
 ].filter(Boolean) as (string | RegExp)[];
 
 app.use(cors({
