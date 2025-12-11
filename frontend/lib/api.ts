@@ -1,4 +1,24 @@
+// Get API URL from environment variable (must be set at build time in Vercel)
+// Note: In Next.js, NEXT_PUBLIC_* variables are replaced at BUILD TIME, not runtime
+// If the variable isn't set during build, it will use the fallback
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+// Log API URL to help debug (this will show what was embedded at build time)
+if (typeof window !== 'undefined') {
+  console.log('[API] API_URL configured as:', API_URL);
+  console.log('[API] Current hostname:', window.location.hostname);
+  
+  // Warn if using localhost in production
+  if (API_URL.includes('localhost') && window.location.hostname !== 'localhost') {
+    console.error('[API] ❌ CRITICAL: Using localhost API URL in production!', {
+      apiUrl: API_URL,
+      hostname: window.location.hostname,
+      message: 'NEXT_PUBLIC_API_URL was not set during build. Redeploy after setting environment variable in Vercel.',
+    });
+  } else if (!API_URL.includes('localhost')) {
+    console.log('[API] ✅ Using production API URL:', API_URL);
+  }
+}
 
 export interface Chapter {
   id: number;
@@ -252,27 +272,75 @@ export interface Profession {
 }
 
 export async function fetchChapters(): Promise<Chapter[]> {
-  const res = await fetch(`${API_URL}/api/chapters`);
-  if (!res.ok) throw new Error('Failed to fetch chapters');
-  return res.json();
+  try {
+    const res = await fetch(`${API_URL}/api/chapters`);
+    if (!res.ok) {
+      console.error('[API] Failed to fetch chapters:', {
+        status: res.status,
+        statusText: res.statusText,
+        apiUrl: API_URL,
+      });
+      throw new Error(`Failed to fetch chapters: ${res.status} ${res.statusText}`);
+    }
+    return res.json();
+  } catch (error: any) {
+    console.error('[API] Error fetching chapters:', {
+      error: error.message,
+      apiUrl: API_URL,
+      isNetworkError: error.message.includes('fetch'),
+    });
+    throw error;
+  }
 }
 
 export async function fetchIndustries(includeInactive: boolean = false): Promise<Industry[]> {
-  const url = includeInactive 
-    ? `${API_URL}/api/industries?includeInactive=true`
-    : `${API_URL}/api/industries`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('Failed to fetch industries');
-  return res.json();
+  try {
+    const url = includeInactive 
+      ? `${API_URL}/api/industries?includeInactive=true`
+      : `${API_URL}/api/industries`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.error('[API] Failed to fetch industries:', {
+        status: res.status,
+        statusText: res.statusText,
+        apiUrl: API_URL,
+      });
+      throw new Error(`Failed to fetch industries: ${res.status} ${res.statusText}`);
+    }
+    return res.json();
+  } catch (error: any) {
+    console.error('[API] Error fetching industries:', {
+      error: error.message,
+      apiUrl: API_URL,
+      isNetworkError: error.message.includes('fetch'),
+    });
+    throw error;
+  }
 }
 
 export async function fetchProfessions(includeInactive: boolean = false): Promise<Profession[]> {
-  const url = includeInactive 
-    ? `${API_URL}/api/professions?includeInactive=true`
-    : `${API_URL}/api/professions`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('Failed to fetch professions');
-  return res.json();
+  try {
+    const url = includeInactive 
+      ? `${API_URL}/api/professions?includeInactive=true`
+      : `${API_URL}/api/professions`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.error('[API] Failed to fetch professions:', {
+        status: res.status,
+        statusText: res.statusText,
+        apiUrl: API_URL,
+      });
+      throw new Error(`Failed to fetch professions: ${res.status} ${res.statusText}`);
+    }
+    return res.json();
+  } catch (error: any) {
+    console.error('[API] Error fetching professions:', {
+      error: error.message,
+      apiUrl: API_URL,
+      isNetworkError: error.message.includes('fetch'),
+    });
+    throw error;
+  }
 }
 
 export async function fetchActiveCollegiateChapters(): Promise<Chapter[]> {
