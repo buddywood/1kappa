@@ -1,10 +1,22 @@
 // Get API URL from environment variable (must be set at build time in Vercel)
 // Note: In Next.js, NEXT_PUBLIC_* variables are replaced at BUILD TIME, not runtime
 // If the variable isn't set during build, it will use the fallback
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+// Trim whitespace to handle cases where environment variables have leading/trailing spaces
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001').trim();
 
 // Log API URL to help debug (this will show what was embedded at build time)
 if (typeof window !== 'undefined') {
+  const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  
+  // Warn if there was whitespace in the original value
+  if (rawApiUrl !== rawApiUrl.trim()) {
+    console.warn('[API] ⚠️ WARNING: NEXT_PUBLIC_API_URL had leading/trailing whitespace!', {
+      original: JSON.stringify(rawApiUrl),
+      trimmed: JSON.stringify(API_URL),
+      message: 'Please fix the environment variable in Vercel to remove spaces.',
+    });
+  }
+  
   console.log('[API] API_URL configured as:', API_URL);
   console.log('[API] Current hostname:', window.location.hostname);
   
