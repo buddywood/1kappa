@@ -259,36 +259,37 @@ async function checkCognitoEmailConfig(): Promise<DiagnosticResult[]> {
 
   try {
     if (FROM_EMAIL) {
+      // Check both the email address and the domain
+      const emailDomain = FROM_EMAIL.split("@")[1];
       const getIdentityCommand = new GetIdentityVerificationAttributesCommand({
-        Identities: [FROM_EMAIL],
+        Identities: [FROM_EMAIL, emailDomain],
       });
 
       const sesResponse = await sesClient.send(getIdentityCommand);
-      const verificationAttributes =
+      const emailVerification =
         sesResponse.VerificationAttributes?.[FROM_EMAIL];
+      const domainVerification =
+        sesResponse.VerificationAttributes?.[emailDomain];
 
-      if (verificationAttributes) {
-        const verificationStatus = verificationAttributes.VerificationStatus;
-        if (verificationStatus === "Success") {
-          results.push({
-            category: "SES Verification",
-            status: "✅",
-            message: `FROM_EMAIL (${FROM_EMAIL}) is verified in SES`,
-          });
-        } else {
-          results.push({
-            category: "SES Verification",
-            status: "❌",
-            message: `FROM_EMAIL (${FROM_EMAIL}) verification status: ${verificationStatus}`,
-            fix: `Verify ${FROM_EMAIL} in SES Console → Verified identities`,
-          });
-        }
+      // Domain verification is sufficient - it allows any email from that domain
+      if (domainVerification?.VerificationStatus === "Success") {
+        results.push({
+          category: "SES Verification",
+          status: "✅",
+          message: `Domain (${emailDomain}) is verified in SES - allows sending from ${FROM_EMAIL}`,
+        });
+      } else if (emailVerification?.VerificationStatus === "Success") {
+        results.push({
+          category: "SES Verification",
+          status: "✅",
+          message: `FROM_EMAIL (${FROM_EMAIL}) is verified in SES`,
+        });
       } else {
         results.push({
           category: "SES Verification",
           status: "❌",
-          message: `FROM_EMAIL (${FROM_EMAIL}) is not verified in SES`,
-          fix: `Verify ${FROM_EMAIL} in SES Console → Verified identities`,
+          message: `Neither ${FROM_EMAIL} nor domain ${emailDomain} is verified in SES`,
+          fix: `Verify ${emailDomain} (domain) or ${FROM_EMAIL} (email) in SES Console → Verified identities`,
         });
       }
     }

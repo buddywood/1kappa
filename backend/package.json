@@ -35,6 +35,7 @@
     "check-cognito-user": "tsx src/scripts/check-cognito-user-status.ts",
     "check-cognito-email-config": "tsx src/scripts/check-cognito-email-config.ts",
     "enable-cognito-auto-verification": "tsx src/scripts/enable-cognito-auto-verification.ts",
+    "configure-cognito-ses-email": "tsx src/scripts/configure-cognito-ses-email.ts",
     "fix:orphaned-member": "tsx src/scripts/fix-orphaned-member.ts",
     "delete:seller": "tsx src/scripts/delete-seller.ts",
     "delete:promoter": "tsx src/scripts/delete-promoter.ts",
