@@ -34,7 +34,7 @@ cat <<EOF
 </head>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
   <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-    <div style="background-color: #1a1a2e; padding: 30px; text-align: center;">
+    <div style="background-color: #F7F4E9; padding: 30px; text-align: center;">
       <img src="${FRONTEND_URL}/horizon-logo.png" alt="1Kappa Logo" style="max-width: 300px; height: auto; margin-bottom: 20px;" />
     </div>
     
@@ -61,8 +61,8 @@ cat <<EOF
       </p>
     </div>
     
-    <div style="background-color: #1a1a2e; padding: 20px; text-align: center;">
-      <p style="color: #fff; font-size: 12px; margin: 0;">
+    <div style="background-color: #F7F4E9; padding: 20px; text-align: center;">
+      <p style="color: #333; font-size: 12px; margin: 0;">
         © $(date +%Y) 1Kappa. All rights reserved.
       </p>
     </div>

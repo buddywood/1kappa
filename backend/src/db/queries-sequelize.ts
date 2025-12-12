@@ -506,24 +506,28 @@ export async function getProductById(id: number): Promise<ProductType | null> {
   }
 
   // Check if seller is also a steward or promoter (via email matching with fraternity_members)
-  const stewardCheck = memberId ? await sequelize.query(
-    `SELECT st.id FROM stewards st
+  const stewardCheck = memberId
+    ? await sequelize.query(
+        `SELECT st.id FROM stewards st
      JOIN users u ON st.user_id = u.id
      JOIN fraternity_members m ON (u.email = m.email OR u.cognito_sub = m.cognito_sub)
      WHERE m.id = :memberId AND st.status = 'APPROVED'`,
-    {
-      replacements: { memberId },
-      type: QueryTypes.SELECT,
-    }
-  ) : [];
+        {
+          replacements: { memberId },
+          type: QueryTypes.SELECT,
+        }
+      )
+    : [];
 
-  const promoterCheck = sellerEmail ? await sequelize.query(
-    `SELECT id FROM promoters WHERE email = :email AND status = 'APPROVED'`,
-    {
-      replacements: { email: sellerEmail },
-      type: QueryTypes.SELECT,
-    }
-  ) : [];
+  const promoterCheck = sellerEmail
+    ? await sequelize.query(
+        `SELECT id FROM promoters WHERE email = :email AND status = 'APPROVED'`,
+        {
+          replacements: { email: sellerEmail },
+          type: QueryTypes.SELECT,
+        }
+      )
+    : [];
 
   // Transform to match existing return format
   return {
@@ -1212,6 +1216,19 @@ export async function updateUserRole(
   role: "ADMIN" | "SELLER" | "PROMOTER" | "GUEST" | "STEWARD" | "MEMBER"
 ): Promise<UserType> {
   const user = await User.findByPk(id);
+  if (!user) throw new Error("User not found");
+  user.role = role;
+  await user.save();
+  return user.toJSON() as UserType;
+}
+
+export async function updateUserRoleByCognitoSub(
+  cognito_sub: string,
+  role: "ADMIN" | "SELLER" | "PROMOTER" | "GUEST" | "STEWARD" | "MEMBER"
+): Promise<UserType> {
+  const user = await User.findOne({
+    where: { cognito_sub },
+  });
   if (!user) throw new Error("User not found");
   user.role = role;
   await user.save();

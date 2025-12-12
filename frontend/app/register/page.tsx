@@ -24,6 +24,7 @@ interface FormData {
   confirmPassword: string;
   verificationCode: string;
   cognitoSub: string | null; // Cognito user ID after registration
+  selectedRole: string | null; // Selected role after PIN confirmation
 
   // Step 2: Basic Information
   name: string;
@@ -72,7 +73,9 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [cognitoStep, setCognitoStep] = useState<"signup" | "verify">("signup");
+  const [cognitoStep, setCognitoStep] = useState<
+    "signup" | "verify" | "role-selection"
+  >("signup");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [resendTimer, setResendTimer] = useState(0); // Timer in seconds
@@ -85,6 +88,7 @@ export default function RegisterPage() {
     confirmPassword: "",
     verificationCode: "",
     cognitoSub: null,
+    selectedRole: null,
     name: "",
     membership_number: "",
     headshot: null,
@@ -229,6 +233,7 @@ export default function RegisterPage() {
 
       // If user has cognitoSub (Cognito is verified), skip step 1 and go to step 2
       // This applies to both new users and sellers registering as members
+      // Note: Role selection happens immediately after PIN verification, not for returning users
       if (
         cognitoSub &&
         (!userMemberId || onboardingStatus !== "ONBOARDING_FINISHED")
@@ -243,6 +248,7 @@ export default function RegisterPage() {
           cognitoSub: cognitoSub,
           email: userEmail || prev.email,
           name: prev.name || userName, // Prepopulate name if not already set and available from session
+          selectedRole: userRole || "MEMBER", // Set selected role from session
         }));
 
         // Skip to step 2 (Basic Information)
@@ -505,98 +511,155 @@ export default function RegisterPage() {
         throw new Error(errorData.error || "Invalid verification code");
       }
 
-      // After verification, create initial draft on backend
-      try {
-        const draftResponse = await fetch(`${API_URL}/api/members/draft`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            cognito_sub: formData.cognitoSub,
-            email: formData.email,
-          }),
-        });
-
-        if (draftResponse.ok) {
-          const draftData = await draftResponse.json();
-          // Load any existing draft data
-          if (draftData.name)
-            setFormData((prev) => ({ ...prev, name: draftData.name }));
-          if (draftData.membership_number)
-            setFormData((prev) => ({
-              ...prev,
-              membership_number: draftData.membership_number,
-            }));
-        }
-      } catch (err) {
-        console.error("Error creating draft:", err);
-        // Continue anyway - draft creation is not critical
-      }
-
-      // Save to localStorage (exclude large files and previews)
-      try {
-        const {
-          headshot,
-          headshotPreview,
-          password,
-          confirmPassword,
-          verificationCode,
-          ...draftData
-        } = formData;
-        localStorage.setItem(
-          "memberRegistrationDraft",
-          JSON.stringify({
-            ...draftData,
-            password: "", // Don't save password
-            confirmPassword: "",
-            verificationCode: "",
-          })
-        );
-      } catch (err: any) {
-        if (err.name === "QuotaExceededError") {
-          console.warn("localStorage quota exceeded. Clearing old drafts...");
-          try {
-            localStorage.removeItem("memberRegistrationDraft");
-            const {
-              headshot,
-              headshotPreview,
-              password,
-              confirmPassword,
-              verificationCode,
-              ...draftData
-            } = formData;
-            localStorage.setItem(
-              "memberRegistrationDraft",
-              JSON.stringify({
-                ...draftData,
-                password: "",
-                confirmPassword: "",
-                verificationCode: "",
-              })
-            );
-          } catch (retryErr) {
-            console.error("Failed to save draft after cleanup:", retryErr);
-          }
-        } else {
-          console.error("Error saving draft:", err);
-        }
-      }
-
-      // Upload headshot if one was selected before verification
-      if (formData.headshot && formData.cognitoSub) {
-        const headshotUrl = await uploadHeadshot(formData.headshot);
-        if (headshotUrl) {
-          setFormData((prev) => ({ ...prev, headshotPreview: headshotUrl }));
-        }
-      }
-
-      // After verification, proceed to next step
-      setCurrentStep(2);
+      // After verification, show role selection step
+      setCognitoStep("role-selection");
       setError("");
     } catch (err: any) {
       setError(err.message || "Invalid verification code. Please try again.");
     } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleRoleSelection = async (role: string) => {
+    setError("");
+    setSubmitting(true);
+
+    try {
+      // Update user role in backend
+      const response = await fetch(`${API_URL}/api/members/cognito/set-role`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          cognito_sub: formData.cognitoSub,
+          email: formData.email,
+          role: role,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to set role");
+      }
+
+      // Set selected role in form data
+      setFormData((prev) => ({ ...prev, selectedRole: role }));
+
+      // Route to appropriate registration based on role
+      if (role === "GUEST") {
+        // Guest registration is complete, authenticate the user and redirect to home
+        try {
+          const { signIn } = await import("next-auth/react");
+          const result = await signIn("credentials", {
+            email: formData.email,
+            password: formData.password,
+            redirect: false,
+          });
+
+          if (result?.error) {
+            // If sign-in fails, still redirect but log the error
+            console.error("Failed to authenticate guest user:", result.error);
+            // User is still created, they can log in manually
+          }
+
+          // Clear localStorage draft on success
+          localStorage.removeItem("memberRegistrationDraft");
+
+          // Redirect to home page
+          setSubmitting(false);
+          router.push("/");
+          return;
+        } catch (authError: any) {
+          console.error("Error authenticating guest user:", authError);
+          // Still redirect even if auth fails - user can log in manually
+          localStorage.removeItem("memberRegistrationDraft");
+          setSubmitting(false);
+          router.push("/");
+          return;
+        }
+      } else if (role === "MEMBER") {
+        // Continue with member registration
+        // Create initial draft on backend
+        try {
+          const draftResponse = await fetch(`${API_URL}/api/members/draft`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              cognito_sub: formData.cognitoSub,
+              email: formData.email,
+            }),
+          });
+
+          if (draftResponse.ok) {
+            const draftData = await draftResponse.json();
+            // Load any existing draft data
+            if (draftData.name)
+              setFormData((prev) => ({ ...prev, name: draftData.name }));
+            if (draftData.membership_number)
+              setFormData((prev) => ({
+                ...prev,
+                membership_number: draftData.membership_number,
+              }));
+          }
+        } catch (err) {
+          console.error("Error creating draft:", err);
+          // Continue anyway - draft creation is not critical
+        }
+
+        // Save to localStorage
+        try {
+          const {
+            headshot,
+            headshotPreview,
+            password,
+            confirmPassword,
+            verificationCode,
+            ...draftData
+          } = formData;
+          localStorage.setItem(
+            "memberRegistrationDraft",
+            JSON.stringify({
+              ...draftData,
+              password: "",
+              confirmPassword: "",
+              verificationCode: "",
+            })
+          );
+        } catch (err: any) {
+          console.error("Error saving draft:", err);
+        }
+
+        // Upload headshot if one was selected before verification
+        if (formData.headshot && formData.cognitoSub) {
+          const headshotUrl = await uploadHeadshot(formData.headshot);
+          if (headshotUrl) {
+            setFormData((prev) => ({ ...prev, headshotPreview: headshotUrl }));
+          }
+        }
+
+        // Proceed to member registration step 2
+        setCurrentStep(2);
+        setCognitoStep("verify");
+        setSubmitting(false);
+      } else if (role === "SELLER") {
+        // Redirect to seller setup (may need to be adjusted)
+        setSubmitting(false);
+        router.push("/seller-setup");
+      } else if (role === "PROMOTER") {
+        // Redirect to promoter application
+        setSubmitting(false);
+        router.push("/promote");
+      } else if (role === "STEWARD") {
+        // Redirect to steward setup
+        setSubmitting(false);
+        router.push("/steward-setup");
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to set role. Please try again.");
       setSubmitting(false);
     }
   };
@@ -1279,16 +1342,20 @@ export default function RegisterPage() {
             <p className="text-sm text-midnight-navy/70 text-center mb-6">
               {cognitoStep === "signup"
                 ? "Sign in to continue the Bond"
-                : "Please check your email for a verification code and enter it below."}
+                : cognitoStep === "verify"
+                ? "Please check your email for a verification code and enter it below."
+                : "Select the type of account you want to create"}
             </p>
 
             <form
               onSubmit={(e) => {
+                e.preventDefault();
                 if (cognitoStep === "signup") {
                   handleCognitoSignUp(e);
-                } else {
+                } else if (cognitoStep === "verify") {
                   handleCognitoVerify(e);
                 }
+                // Role selection is handled by button onClick
               }}
               className="space-y-6"
             >
@@ -1532,7 +1599,7 @@ export default function RegisterPage() {
                       )}
                   </div>
                 </>
-              ) : (
+              ) : cognitoStep === "verify" ? (
                 <>
                   <div>
                     <label className="block text-sm font-medium mb-2 text-midnight-navy">
@@ -1603,6 +1670,78 @@ export default function RegisterPage() {
                     </button>
                   </div>
                 </>
+              ) : (
+                <>
+                  <div>
+                    <h2 className="text-xl font-display font-semibold text-midnight-navy mb-2">
+                      Select Your Role
+                    </h2>
+                    <p className="text-sm text-midnight-navy/70 mb-6">
+                      Choose the type of account you want to create
+                    </p>
+                  </div>
+                  <div className="space-y-3">
+                    {[
+                      {
+                        value: "GUEST",
+                        label: "Guest",
+                        description: "Browse and purchase items",
+                      },
+                      {
+                        value: "MEMBER",
+                        label: "Member",
+                        description:
+                          "Verified fraternity member with full profile",
+                      },
+                      {
+                        value: "SELLER",
+                        label: "Seller",
+                        description: "Sell products on the platform",
+                      },
+                      {
+                        value: "PROMOTER",
+                        label: "Event Promoter",
+                        description: "Promote and manage events",
+                      },
+                      {
+                        value: "STEWARD",
+                        label: "Steward",
+                        description: "List legacy fraternity paraphernalia",
+                      },
+                    ].map((role) => (
+                      <label
+                        key={role.value}
+                        className={`flex items-start p-4 border-2 rounded-lg cursor-pointer transition ${
+                          formData.selectedRole === role.value
+                            ? "border-crimson bg-crimson/5"
+                            : "border-frost-gray hover:border-crimson/50"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="role"
+                          value={role.value}
+                          checked={formData.selectedRole === role.value}
+                          onChange={() =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              selectedRole: role.value,
+                            }))
+                          }
+                          className="mt-1 mr-3 w-4 h-4 text-crimson focus:ring-crimson"
+                        />
+                        <div className="flex-1">
+                          <div className="font-semibold text-midnight-navy">
+                            {role.label}
+                          </div>
+                          <div className="text-sm text-midnight-navy/60">
+                            {role.description}
+                          </div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </>
               )}
 
               {error && (
@@ -1611,17 +1750,30 @@ export default function RegisterPage() {
                 </div>
               )}
 
-              <button
-                type="submit"
-                disabled={submitting || loading}
-                className="w-full bg-crimson text-white py-3 rounded-lg font-semibold hover:bg-crimson/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {submitting
-                  ? "Processing..."
-                  : cognitoStep === "signup"
-                  ? "Create Account"
-                  : "Verify Email"}
-              </button>
+              {cognitoStep === "role-selection" ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleRoleSelection(formData.selectedRole || "")
+                  }
+                  disabled={!formData.selectedRole || submitting}
+                  className="w-full bg-crimson text-white py-3 rounded-lg font-semibold hover:bg-crimson/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submitting ? "Processing..." : "Continue"}
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={submitting || loading}
+                  className="w-full bg-crimson text-white py-3 rounded-lg font-semibold hover:bg-crimson/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submitting
+                    ? "Processing..."
+                    : cognitoStep === "signup"
+                    ? "Create Account"
+                    : "Verify Email"}
+                </button>
+              )}
             </form>
           </div>
         </div>

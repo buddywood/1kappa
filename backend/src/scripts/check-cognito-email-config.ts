@@ -213,6 +213,39 @@ async function checkCognitoEmailConfig(): Promise<DiagnosticResult[]> {
           status: "✅",
           message: "Verification email template is configured",
         });
+
+        // Check if template contains cream color
+        const emailMessage = verificationMessageTemplate.EmailMessage || "";
+        if (
+          emailMessage.includes("#F7F4E9") ||
+          emailMessage.includes("F7F4E9")
+        ) {
+          results.push({
+            category: "Email Templates",
+            status: "✅",
+            message: "Template uses cream color (#F7F4E9) for banner/footer",
+          });
+        } else if (
+          emailMessage.includes("#1a1a2e") ||
+          emailMessage.includes("1a1a2e")
+        ) {
+          results.push({
+            category: "Email Templates",
+            status: "⚠️",
+            message:
+              "Template still uses old blue color (#1a1a2e) - needs update",
+            fix: "Run: npm run update-cognito-emails",
+          });
+        }
+
+        // Show template preview
+        if (verificationMessageTemplate.EmailSubject) {
+          results.push({
+            category: "Email Templates",
+            status: "✅",
+            message: `Email subject: "${verificationMessageTemplate.EmailSubject}"`,
+          });
+        }
       } else {
         results.push({
           category: "Email Templates",

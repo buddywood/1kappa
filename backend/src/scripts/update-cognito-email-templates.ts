@@ -30,7 +30,8 @@ const FRONTEND_URL =
 // Remove trailing slash
 const cleanFrontendUrl = FRONTEND_URL.replace(/\/$/, "");
 
-// Verification email template
+// Verification email template (used for both sign-up and password reset)
+// Note: Cognito uses the same template for both, so we use a generic message
 const verificationEmailSubject = "Your 1Kappa Verification Code";
 const verificationEmailMessage = `<!DOCTYPE html>
 <html>
@@ -39,7 +40,7 @@ const verificationEmailMessage = `<!DOCTYPE html>
 </head>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
   <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-    <div style="background-color: #1a1a2e; padding: 30px; text-align: center;">
+    <div style="background-color: #F7F4E9; padding: 30px; text-align: center;">
       <img src="${cleanFrontendUrl}/horizon-logo.png" alt="1Kappa Logo" style="max-width: 300px; height: auto; margin-bottom: 20px;" />
     </div>
     
@@ -47,7 +48,7 @@ const verificationEmailMessage = `<!DOCTYPE html>
       <p style="font-size: 16px;">Hello,</p>
       
       <p style="font-size: 16px;">
-        Thank you for registering with 1Kappa! Please use the verification code below to complete your registration:
+        Please use the verification code below to complete your request:
       </p>
       
       <div style="background-color: #fff; border: 2px solid #dc143c; border-radius: 5px; padding: 20px; text-align: center; margin: 20px 0;">
@@ -66,8 +67,8 @@ const verificationEmailMessage = `<!DOCTYPE html>
       </p>
     </div>
     
-    <div style="background-color: #1a1a2e; padding: 20px; text-align: center;">
-      <p style="color: #fff; font-size: 12px; margin: 0;">
+    <div style="background-color: #F7F4E9; padding: 20px; text-align: center;">
+      <p style="color: #333; font-size: 12px; margin: 0;">
         © ${new Date().getFullYear()} 1Kappa. All rights reserved.
       </p>
     </div>
@@ -84,7 +85,7 @@ const passwordResetEmailMessage = `<!DOCTYPE html>
 </head>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
   <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-    <div style="background-color: #1a1a2e; padding: 30px; text-align: center;">
+    <div style="background-color: #F7F4E9; padding: 30px; text-align: center;">
       <img src="${cleanFrontendUrl}/horizon-logo.png" alt="1Kappa Logo" style="max-width: 300px; height: auto; margin-bottom: 20px;" />
     </div>
     
@@ -111,8 +112,8 @@ const passwordResetEmailMessage = `<!DOCTYPE html>
       </p>
     </div>
     
-    <div style="background-color: #1a1a2e; padding: 20px; text-align: center;">
-      <p style="color: #fff; font-size: 12px; margin: 0;">
+    <div style="background-color: #F7F4E9; padding: 20px; text-align: center;">
+      <p style="color: #333; font-size: 12px; margin: 0;">
         © ${new Date().getFullYear()} 1Kappa. All rights reserved.
       </p>
     </div>
@@ -181,11 +182,19 @@ async function updateCognitoEmailTemplates() {
     await client.send(updateCommand);
 
     console.log("✅ Email template updated successfully!");
-    console.log("\n💡 Note: This template is used for both:");
+    console.log("\n⚠️  IMPORTANT: Cognito uses the same template for both:");
     console.log("   - Sign-up verification codes");
     console.log("   - Password reset codes");
     console.log(
-      "   Cognito automatically uses the same template for both scenarios.\n"
+      "   The API only supports updating the VerificationMessageTemplate, which is used for both.\n"
+    );
+    console.log("📝 To customize password reset emails separately:");
+    console.log("   1. Go to AWS Cognito Console → Messaging → Email");
+    console.log("   2. Scroll to 'Forgot password' section");
+    console.log("   3. Click 'Edit' and update the message template manually");
+    console.log("   4. Use subject: 'Reset Your 1Kappa Password'");
+    console.log(
+      "   5. Use the password reset template from the script source code\n"
     );
 
     console.log("🔗 AWS Console Link:");

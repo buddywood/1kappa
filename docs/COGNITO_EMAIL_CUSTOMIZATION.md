@@ -50,7 +50,7 @@ Your 1Kappa Verification Code
   <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
     <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
       <div
-        style="background-color: #1a1a2e; padding: 30px; text-align: center;"
+        style="background-color: #F7F4E9; padding: 30px; text-align: center;"
       >
         <img
           src="https://yourdomain.com/horizon-logo.png"
@@ -89,9 +89,9 @@ Your 1Kappa Verification Code
       </div>
 
       <div
-        style="background-color: #1a1a2e; padding: 20px; text-align: center;"
+        style="background-color: #F7F4E9; padding: 20px; text-align: center;"
       >
-        <p style="color: #fff; font-size: 12px; margin: 0;">
+        <p style="color: #333; font-size: 12px; margin: 0;">
           © 2024 1Kappa. All rights reserved.
         </p>
       </div>
@@ -191,7 +191,7 @@ exports.handler = async (event) => {
       </head>
       <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
         <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background-color: #1a1a2e; padding: 30px; text-align: center;">
+          <div style="background-color: #F7F4E9; padding: 30px; text-align: center;">
             <img src="${frontendUrl}/horizon-logo.png" alt="1Kappa Logo" style="max-width: 300px; height: auto; margin-bottom: 20px;" />
           </div>
           
@@ -217,6 +217,12 @@ exports.handler = async (event) => {
               The 1Kappa Team
             </p>
           </div>
+          
+          <div style="background-color: #F7F4E9; padding: 20px; text-align: center;">
+            <p style="color: #333; font-size: 12px; margin: 0;">
+              © ${new Date().getFullYear()} 1Kappa. All rights reserved.
+            </p>
+          </div>
         </div>
       </body>
       </html>
@@ -233,7 +239,7 @@ exports.handler = async (event) => {
       </head>
       <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
         <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background-color: #1a1a2e; padding: 30px; text-align: center;">
+          <div style="background-color: #F7F4E9; padding: 30px; text-align: center;">
             <img src="${frontendUrl}/horizon-logo.png" alt="1Kappa Logo" style="max-width: 300px; height: auto; margin-bottom: 20px;" />
           </div>
           
@@ -257,6 +263,12 @@ exports.handler = async (event) => {
             <p style="font-size: 14px; color: #666; margin-top: 30px;">
               Best regards,<br>
               The 1Kappa Team
+            </p>
+          </div>
+          
+          <div style="background-color: #F7F4E9; padding: 20px; text-align: center;">
+            <p style="color: #333; font-size: 12px; margin: 0;">
+              © ${new Date().getFullYear()} 1Kappa. All rights reserved.
             </p>
           </div>
         </div>
