@@ -262,11 +262,14 @@ router.get(
       }
 
       // Get member and chapter info via users table
-      const userResult = await pool.query(
-        "SELECT email, cognito_sub FROM users WHERE steward_id = $1",
-        [steward.id]
-      );
-      const user = userResult.rows[0];
+      let user = null;
+      if (steward.user_id) {
+        const userResult = await pool.query(
+          "SELECT email, cognito_sub FROM users WHERE id = $1",
+          [steward.user_id]
+        );
+        user = userResult.rows[0];
+      }
       let member = null;
       if (user) {
         const memberResult = await pool.query(
@@ -513,10 +516,10 @@ router.get("/listings/:id/public", async (req: Request, res: Response) => {
     // Get steward and chapter info via users table
     const steward = await getStewardById(listing.steward_id);
     let member = null;
-    if (steward) {
+    if (steward && steward.user_id) {
       const userResult = await pool.query(
-        "SELECT email, cognito_sub FROM users WHERE steward_id = $1",
-        [listing.steward_id]
+        "SELECT email, cognito_sub FROM users WHERE id = $1",
+        [steward.user_id]
       );
       const user = userResult.rows[0];
       if (user) {
@@ -566,10 +569,10 @@ router.get(
       // Get steward and chapter info via users table
       const steward = await getStewardById(listing.steward_id);
       let member = null;
-      if (steward) {
+      if (steward && steward.user_id) {
         const userResult = await pool.query(
-          "SELECT email, cognito_sub FROM users WHERE steward_id = $1",
-          [listing.steward_id]
+          "SELECT email, cognito_sub FROM users WHERE id = $1",
+          [steward.user_id]
         );
         const user = userResult.rows[0];
         if (user) {
@@ -705,10 +708,10 @@ router.get("/marketplace/public", async (req: Request, res: Response) => {
         try {
           const steward = await getStewardById(listing.steward_id);
           let member = null;
-          if (steward) {
+          if (steward && steward.user_id) {
             const userResult = await pool.query(
-              "SELECT email, cognito_sub FROM users WHERE steward_id = $1",
-              [listing.steward_id]
+              "SELECT email, cognito_sub FROM users WHERE id = $1",
+              [steward.user_id]
             );
             const user = userResult.rows[0];
             if (user) {
@@ -776,10 +779,10 @@ router.get(
         listings.map(async (listing) => {
           const steward = await getStewardById(listing.steward_id);
           let member = null;
-          if (steward) {
+          if (steward && steward.user_id) {
             const userResult = await pool.query(
-              "SELECT email, cognito_sub FROM users WHERE steward_id = $1",
-              [listing.steward_id]
+              "SELECT email, cognito_sub FROM users WHERE id = $1",
+              [steward.user_id]
             );
             const user = userResult.rows[0];
             if (user) {
@@ -851,11 +854,9 @@ router.post(
       );
 
       if (!claimedListing) {
-        return res
-          .status(400)
-          .json({
-            error: "Failed to claim listing. It may have already been claimed.",
-          });
+        return res.status(400).json({
+          error: "Failed to claim listing. It may have already been claimed.",
+        });
       }
 
       res.json({ success: true, listing: claimedListing });

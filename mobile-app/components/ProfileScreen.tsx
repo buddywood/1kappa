@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Image,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { COLORS } from "../lib/constants";
@@ -188,16 +189,24 @@ export default function ProfileScreen({
           <View style={styles.profileSection}>
             <View style={styles.avatarContainer}>
               <View style={styles.avatar}>
-                <Text style={styles.avatarText}>
-                  {user.name
-                    ? user.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")
-                        .toUpperCase()
-                        .slice(0, 2)
-                    : user.email?.[0].toUpperCase() || "U"}
-                </Text>
+                {user.headshot_url ? (
+                  <Image
+                    source={{ uri: user.headshot_url }}
+                    style={styles.avatarImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <Text style={styles.avatarText}>
+                    {user.name
+                      ? user.name
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")
+                          .toUpperCase()
+                          .slice(0, 2)
+                      : user.email?.[0].toUpperCase() || "U"}
+                  </Text>
+                )}
               </View>
             </View>
             <Text style={styles.userName}>{user.name || user.email}</Text>
@@ -460,6 +469,11 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.crimson,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
+  },
+  avatarImage: {
+    width: "100%",
+    height: "100%",
   },
   avatarText: {
     color: COLORS.white,

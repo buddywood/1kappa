@@ -130,6 +130,7 @@ describe("Guest Access to Steward Endpoints", () => {
 
       const mockSteward = {
         id: 1,
+        user_id: 1,
         fraternity_member_id: 1,
         sponsoring_chapter_id: 1,
         status: "APPROVED",
@@ -145,10 +146,17 @@ describe("Guest Access to Steward Endpoints", () => {
       getStewardById.mockResolvedValue(mockSteward);
       getMemberById.mockResolvedValue(mockMember);
 
-      // Mock pool.query for chapter lookup
-      (jest.spyOn(pool, "query") as jest.Mock).mockResolvedValue({
-        rows: [{ id: 1, name: "Test Chapter" }],
-      });
+      // Mock pool.query for user and chapter lookups
+      (jest.spyOn(pool, "query") as jest.Mock)
+        .mockResolvedValueOnce({
+          rows: [{ email: "test@example.com", cognito_sub: "test-sub" }],
+        }) // User query
+        .mockResolvedValueOnce({
+          rows: [{ id: 1, name: "Test Member", email: "test@example.com" }],
+        }) // Member query
+        .mockResolvedValue({
+          rows: [{ id: 1, name: "Test Chapter" }],
+        }); // Chapter query
 
       const response = await request(app)
         .get("/api/stewards/marketplace/public")
@@ -205,6 +213,7 @@ describe("Guest Access to Steward Endpoints", () => {
 
       const mockSteward = {
         id: 1,
+        user_id: 1,
         fraternity_member_id: 1,
         sponsoring_chapter_id: 1,
         status: "APPROVED",
@@ -221,9 +230,17 @@ describe("Guest Access to Steward Endpoints", () => {
       getMemberById.mockResolvedValue(mockMember);
       getStewardListingImages.mockResolvedValue([]);
 
-      (jest.spyOn(pool, "query") as jest.Mock).mockResolvedValue({
-        rows: [{ id: 1, name: "Test Chapter" }],
-      });
+      // Mock pool.query for user and chapter lookups
+      (jest.spyOn(pool, "query") as jest.Mock)
+        .mockResolvedValueOnce({
+          rows: [{ email: "test@example.com", cognito_sub: "test-sub" }],
+        }) // User query
+        .mockResolvedValueOnce({
+          rows: [{ id: 1, name: "Test Member", email: "test@example.com" }],
+        }) // Member query
+        .mockResolvedValue({
+          rows: [{ id: 1, name: "Test Chapter" }],
+        }); // Chapter query
 
       const response = await request(app)
         .get("/api/stewards/listings/1/public")
@@ -264,7 +281,10 @@ describe("Guest Access to Steward Endpoints", () => {
   describe("Guest Access to Product Checkout", () => {
     describe("Kappa Branded Products", () => {
       it("should reject guest checkout for Kappa branded products", async () => {
-        const { getProductById, getSellerById } = require("../db/queries-sequelize");
+        const {
+          getProductById,
+          getSellerById,
+        } = require("../db/queries-sequelize");
 
         const mockKappaProduct = {
           id: 1,

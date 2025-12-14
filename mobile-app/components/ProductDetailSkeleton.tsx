@@ -1,8 +1,6 @@
 import React from "react";
-import { View, StyleSheet, Modal, Dimensions } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { View, StyleSheet, Dimensions } from "react-native";
 import { COLORS } from "../lib/constants";
-import ScreenHeader from "./ScreenHeader";
 
 const { width } = Dimensions.get("window");
 
@@ -13,36 +11,29 @@ interface ProductDetailSkeletonProps {
 export default function ProductDetailSkeleton({
   onClose,
 }: ProductDetailSkeletonProps) {
-  const insets = useSafeAreaInsets();
-
   return (
-    <Modal visible={true} animationType="slide" onRequestClose={onClose}>
-      <View style={[styles.container, { paddingTop: insets.top }]}>
-        <ScreenHeader title="Product" onBack={onClose} showUser={false} />
-        <View style={styles.contentContainer}>
-          {/* Image Skeleton */}
-          <View style={styles.imageSkeleton} />
+    <View style={styles.contentContainer}>
+      {/* Image Skeleton */}
+      <View style={styles.imageSkeleton} />
 
-          {/* Product Info Skeleton */}
-          <View style={styles.infoContainer}>
-            <View style={styles.titleSkeleton} />
-            <View style={styles.priceSkeleton} />
-            <View style={styles.descriptionSkeleton} />
-            <View style={styles.descriptionSkeletonShort} />
-            <View style={styles.descriptionSkeletonShort} />
+      {/* Product Info Skeleton */}
+      <View style={styles.infoContainer}>
+        <View style={styles.titleSkeleton} />
+        <View style={styles.priceSkeleton} />
+        <View style={styles.descriptionSkeleton} />
+        <View style={styles.descriptionSkeletonShort} />
+        <View style={styles.descriptionSkeletonShort} />
 
-            {/* Seller Section Skeleton */}
-            <View style={styles.sellerSectionSkeleton}>
-              <View style={styles.sellerLabelSkeleton} />
-              <View style={styles.sellerNameSkeleton} />
-            </View>
-
-            {/* Add to Cart Button Skeleton */}
-            <View style={styles.buttonSkeleton} />
-          </View>
+        {/* Seller Section Skeleton */}
+        <View style={styles.sellerSectionSkeleton}>
+          <View style={styles.sellerLabelSkeleton} />
+          <View style={styles.sellerNameSkeleton} />
         </View>
+
+        {/* Add to Cart Button Skeleton */}
+        <View style={styles.buttonSkeleton} />
       </View>
-    </Modal>
+    </View>
   );
 }
 
@@ -127,4 +118,3 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
 });
-

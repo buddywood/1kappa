@@ -9,8 +9,10 @@ import {
   ActivityIndicator,
   Modal,
   Dimensions,
+  BackHandler,
+  Platform,
 } from "react-native";
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as WebBrowser from "expo-web-browser";
 import {
@@ -86,6 +88,21 @@ export default function ProductDetail({
 
     loadProduct();
   }, [productId]);
+
+  // Handle Android back button
+  useEffect(() => {
+    if (Platform.OS === "android") {
+      const backHandler = BackHandler.addEventListener(
+        "hardwareBackPress",
+        () => {
+          onClose();
+          return true; // Prevent default back behavior
+        }
+      );
+
+      return () => backHandler.remove();
+    }
+  }, [onClose]);
 
   const getChapterName = (chapterId: number | null) => {
     if (!chapterId) return null;
@@ -179,238 +196,286 @@ export default function ProductDetail({
     : product.seller_business_name || product.seller_name;
 
   return (
-    <Modal visible={true} animationType="slide" onRequestClose={onClose}>
+    <Modal
+      visible={true}
+      animationType="slide"
+      onRequestClose={() => {
+        // Only close if not loading to prevent accidental closes during load
+        if (!loading) {
+          onClose();
+        }
+      }}
+      presentationStyle="pageSheet"
+      statusBarTranslucent={false}
+    >
       <View style={[styles.container, { paddingTop: insets.top }]}>
         {/* Header */}
         <ScreenHeader
-          title={product.name}
+          title={loading ? "Product" : product?.name || "Product"}
           onBack={onClose}
           showUser={false}
           rightAction={{
             icon: "mail-outline",
             onPress: () => {
               // TODO: Implement contact seller functionality
-              console.log("Contact seller:", product.seller_id);
+              console.log("Contact seller:", product?.seller_id);
             },
           }}
         />
 
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Product Image */}
-          <View style={styles.imageContainer}>
-            {product.image_url ? (
-              <Image
-                source={{ uri: product.image_url }}
-                style={styles.image}
-                resizeMode="cover"
-              />
-            ) : (
-              <View style={styles.placeholder}>
-                <Text style={styles.placeholderText}>No Image</Text>
-              </View>
-            )}
+        {loading ? (
+          <ProductDetailSkeleton onClose={onClose} />
+        ) : error || !product ? (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error || "Product not found"}</Text>
+            <TouchableOpacity onPress={onClose} style={styles.errorButton}>
+              <Text style={styles.errorButtonText}>Close</Text>
+            </TouchableOpacity>
           </View>
-
-          {/* Product Info */}
-          <View style={styles.infoContainer}>
-            <Text style={styles.productName}>{product.name}</Text>
-
-            {/* Seller Info */}
-            {sellerName && (
-              <TouchableOpacity
-                onPress={() => {
-                  if (onSellerPress && product.seller_id) {
-                    onSellerPress(product.seller_id);
-                    onClose();
-                  }
-                }}
-                style={styles.sellerContainer}
-                disabled={!onSellerPress || !product.seller_id}
-                activeOpacity={onSellerPress && product.seller_id ? 0.7 : 1}
-              >
-                <View style={styles.sellerNameRow}>
-                  <Text style={styles.sellerLabel}>Sold by</Text>
-                  <Text style={styles.sellerName}>{sellerName}</Text>
-                  <UserRoleBadges
-                    is_member={product.is_fraternity_member}
-                    is_seller={product.is_seller}
-                    is_promoter={product.is_promoter}
-                    is_steward={product.is_steward}
-                    size="sm"
-                  />
+        ) : (
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Product Image */}
+            <View style={styles.imageContainer}>
+              {product.image_url ? (
+                <Image
+                  source={{ uri: product.image_url }}
+                  style={styles.image}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={styles.placeholder}>
+                  <Text style={styles.placeholderText}>No Image</Text>
                 </View>
-                
-                {/* Verification Badges */}
-                {product.seller_fraternity_member_id && (
-                  <View style={styles.badgesContainer}>
-                    <View style={styles.verificationBadge}>
-                      <View style={[styles.diamondIcon, { backgroundColor: COLORS.auroraGold }]} />
-                      <Text style={styles.verificationBadgeText}>Verified</Text>
-                    </View>
-                    {product.seller_initiated_chapter_id && getChapterName(product.seller_initiated_chapter_id) && (
-                      <View style={styles.initiatedBadge}>
-                        <View style={[styles.diamondIcon, { backgroundColor: COLORS.crimson }]} />
-                        <Text style={styles.initiatedBadgeText}>
-                          Initiated at <Text style={styles.chapterNameBold}>{getChapterName(product.seller_initiated_chapter_id)}</Text> chapter
-                          {product.seller_initiated_season && product.seller_initiated_year && (
-                            <> - {product.seller_initiated_season} {product.seller_initiated_year}</>
-                          )}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                )}
-                
-                {onSellerPress && product.seller_id && (
-                  <Text style={styles.viewCollectionText}>
-                    View Collection →
-                  </Text>
-                )}
-              </TouchableOpacity>
-            )}
-
-            {/* Price */}
-            <View style={styles.priceContainer}>
-              <Text style={styles.priceLabel}>Price</Text>
-              <Text style={styles.price}>${price}</Text>
+              )}
             </View>
 
-            {/* Category */}
-            {product.category_name && (
-              <View style={styles.categoryContainer}>
-                <Text style={styles.categoryLabel}>Category</Text>
-                <Text style={styles.categoryName}>{product.category_name}</Text>
-              </View>
-            )}
+            {/* Product Info */}
+            <View style={styles.infoContainer}>
+              <Text style={styles.productName}>{product.name}</Text>
 
-            {/* Description */}
-            {product.description && (
-              <View style={styles.descriptionContainer}>
-                <Text style={styles.descriptionLabel}>Description</Text>
-                <Text style={styles.description}>{product.description}</Text>
-              </View>
-            )}
-
-            {/* Product Attributes */}
-            {(() => {
-              if (!product.attributes || product.attributes.length === 0)
-                return null;
-
-              // Debug: log attributes to see what we're getting
-              console.log("Product attributes:", product.attributes);
-              console.log("Attribute definitions:", attributeDefinitions);
-
-              const processedAttributes = product.attributes
-                .map((attr) => {
-                  // Try to get attribute name from the attribute itself first, then from definitions
-                  let attributeName = attr.attribute_name;
-                  let attributeType = attr.attribute_type;
-                  let displayOrder = attr.display_order || 0;
-
-                  // Fallback: look up in definitions if attribute_name not present
-                  if (!attributeName && attributeDefinitions.length > 0) {
-                    const definition = attributeDefinitions.find(
-                      (def) => def.id === attr.attribute_definition_id
-                    );
-                    if (definition) {
-                      attributeName = definition.attribute_name;
-                      attributeType = definition.attribute_type;
-                      displayOrder = definition.display_order || 0;
+              {/* Seller Info */}
+              {sellerName && (
+                <TouchableOpacity
+                  onPress={() => {
+                    if (onSellerPress && product.seller_id) {
+                      onSellerPress(product.seller_id);
+                      onClose();
                     }
-                  }
+                  }}
+                  style={styles.sellerContainer}
+                  disabled={!onSellerPress || !product.seller_id}
+                  activeOpacity={onSellerPress && product.seller_id ? 0.7 : 1}
+                >
+                  <View style={styles.sellerNameRow}>
+                    <Text style={styles.sellerLabel}>Sold by</Text>
+                    <Text style={styles.sellerName}>{sellerName}</Text>
+                    <UserRoleBadges
+                      is_member={product.is_fraternity_member}
+                      is_seller={product.is_seller}
+                      is_promoter={product.is_promoter}
+                      is_steward={product.is_steward}
+                      size="sm"
+                    />
+                  </View>
 
-                  if (!attributeName) return null;
-
-                  // Get display value based on attribute type
-                  let displayValue = "";
-                  if (attributeType === "BOOLEAN") {
-                    displayValue = attr.value_boolean ? "Yes" : "No";
-                  } else if (attributeType === "NUMBER") {
-                    displayValue = attr.value_number?.toString() || "";
-                  } else {
-                    displayValue = attr.value_text || "";
-                  }
-
-                  if (!displayValue) return null;
-
-                  return { attributeName, displayValue, displayOrder };
-                })
-                .filter(
-                  (
-                    item
-                  ): item is {
-                    attributeName: string;
-                    displayValue: string;
-                    displayOrder: number;
-                  } => item !== null
-                )
-                .sort((a, b) => a.displayOrder - b.displayOrder);
-
-              console.log("Processed attributes:", processedAttributes);
-
-              if (processedAttributes.length === 0) return null;
-
-              return (
-                <View style={styles.attributesContainer}>
-                  <Text style={styles.attributesTitle}>Product Details</Text>
-                  {processedAttributes.map(
-                    ({ attributeName, displayValue }, index) => (
-                      <View key={index} style={styles.attributeItem}>
-                        <Text style={styles.attributeLabel}>
-                          {attributeName}
-                        </Text>
-                        <Text style={styles.attributeValue}>
-                          {displayValue}
+                  {/* Verification Badges */}
+                  {product.seller_fraternity_member_id && (
+                    <View style={styles.badgesContainer}>
+                      <View style={styles.verificationBadge}>
+                        <View
+                          style={[
+                            styles.diamondIcon,
+                            { backgroundColor: COLORS.auroraGold },
+                          ]}
+                        />
+                        <Text style={styles.verificationBadgeText}>
+                          Verified
                         </Text>
                       </View>
-                    )
+                      {product.seller_initiated_chapter_id &&
+                        getChapterName(product.seller_initiated_chapter_id) && (
+                          <View style={styles.initiatedBadge}>
+                            <View
+                              style={[
+                                styles.diamondIcon,
+                                { backgroundColor: COLORS.crimson },
+                              ]}
+                            />
+                            <Text style={styles.initiatedBadgeText}>
+                              Initiated at{" "}
+                              <Text style={styles.chapterNameBold}>
+                                {getChapterName(
+                                  product.seller_initiated_chapter_id
+                                )}
+                              </Text>{" "}
+                              chapter
+                              {product.seller_initiated_season &&
+                                product.seller_initiated_year && (
+                                  <>
+                                    {" "}
+                                    - {product.seller_initiated_season}{" "}
+                                    {product.seller_initiated_year}
+                                  </>
+                                )}
+                            </Text>
+                          </View>
+                        )}
+                    </View>
                   )}
+
+                  {onSellerPress && product.seller_id && (
+                    <Text style={styles.viewCollectionText}>
+                      View Collection →
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              )}
+
+              {/* Price */}
+              <View style={styles.priceContainer}>
+                <Text style={styles.priceLabel}>Price</Text>
+                <Text style={styles.price}>${price}</Text>
+              </View>
+
+              {/* Category */}
+              {product.category_name && (
+                <View style={styles.categoryContainer}>
+                  <Text style={styles.categoryLabel}>Category</Text>
+                  <Text style={styles.categoryName}>
+                    {product.category_name}
+                  </Text>
                 </View>
-              );
-            })()}
+              )}
 
-            {/* Guest Message - only show for Kappa branded products */}
-            {isGuest && product.is_kappa_branded && (
-              <View style={styles.guestMessageContainer}>
-                <Text style={styles.guestMessageText}>
-                  Kappa Alpha Psi branded merchandise can only be purchased by
-                  verified members. Please sign in to continue.
-                </Text>
-              </View>
-            )}
+              {/* Description */}
+              {product.description && (
+                <View style={styles.descriptionContainer}>
+                  <Text style={styles.descriptionLabel}>Description</Text>
+                  <Text style={styles.description}>{product.description}</Text>
+                </View>
+              )}
 
-            {/* Guest Message for non-kappa branded - still need sign in for now */}
-            {isGuest && !product.is_kappa_branded && (
-              <View style={styles.guestMessageContainer}>
-                <Text style={styles.guestMessageText}>
-                  Sign in to purchase this item
-                </Text>
-              </View>
-            )}
+              {/* Product Attributes */}
+              {(() => {
+                if (!product.attributes || product.attributes.length === 0)
+                  return null;
 
-            {/* Purchase Button - show for authenticated users, or for non-kappa branded (though still need email) */}
-            {user?.email && (
-              <PrimaryButton
-                title="Buy Now"
-                onPress={handleCheckout}
-                loading={checkingOut}
-                disabled={checkingOut}
-                style={styles.purchaseButton}
-              />
-            )}
+                // Debug: log attributes to see what we're getting
+                console.log("Product attributes:", product.attributes);
+                console.log("Attribute definitions:", attributeDefinitions);
 
-            {/* Error Message */}
-            {error && !checkingOut && (
-              <View style={styles.errorMessageContainer}>
-                <Text style={styles.errorMessageText}>{error}</Text>
-              </View>
-            )}
-          </View>
-        </ScrollView>
+                const processedAttributes = product.attributes
+                  .map((attr) => {
+                    // Try to get attribute name from the attribute itself first, then from definitions
+                    let attributeName = attr.attribute_name;
+                    let attributeType = attr.attribute_type;
+                    let displayOrder = attr.display_order || 0;
+
+                    // Fallback: look up in definitions if attribute_name not present
+                    if (!attributeName && attributeDefinitions.length > 0) {
+                      const definition = attributeDefinitions.find(
+                        (def) => def.id === attr.attribute_definition_id
+                      );
+                      if (definition) {
+                        attributeName = definition.attribute_name;
+                        attributeType = definition.attribute_type;
+                        displayOrder = definition.display_order || 0;
+                      }
+                    }
+
+                    if (!attributeName) return null;
+
+                    // Get display value based on attribute type
+                    let displayValue = "";
+                    if (attributeType === "BOOLEAN") {
+                      displayValue = attr.value_boolean ? "Yes" : "No";
+                    } else if (attributeType === "NUMBER") {
+                      displayValue = attr.value_number?.toString() || "";
+                    } else {
+                      displayValue = attr.value_text || "";
+                    }
+
+                    if (!displayValue) return null;
+
+                    return { attributeName, displayValue, displayOrder };
+                  })
+                  .filter(
+                    (
+                      item
+                    ): item is {
+                      attributeName: string;
+                      displayValue: string;
+                      displayOrder: number;
+                    } => item !== null
+                  )
+                  .sort((a, b) => a.displayOrder - b.displayOrder);
+
+                console.log("Processed attributes:", processedAttributes);
+
+                if (processedAttributes.length === 0) return null;
+
+                return (
+                  <View style={styles.attributesContainer}>
+                    <Text style={styles.attributesTitle}>Product Details</Text>
+                    {processedAttributes.map(
+                      ({ attributeName, displayValue }, index) => (
+                        <View key={index} style={styles.attributeItem}>
+                          <Text style={styles.attributeLabel}>
+                            {attributeName}
+                          </Text>
+                          <Text style={styles.attributeValue}>
+                            {displayValue}
+                          </Text>
+                        </View>
+                      )
+                    )}
+                  </View>
+                );
+              })()}
+
+              {/* Guest Message - only show for Kappa branded products */}
+              {isGuest && product.is_kappa_branded && (
+                <View style={styles.guestMessageContainer}>
+                  <Text style={styles.guestMessageText}>
+                    Kappa Alpha Psi branded merchandise can only be purchased by
+                    verified members. Please sign in to continue.
+                  </Text>
+                </View>
+              )}
+
+              {/* Guest Message for non-kappa branded - still need sign in for now */}
+              {isGuest && !product.is_kappa_branded && (
+                <View style={styles.guestMessageContainer}>
+                  <Text style={styles.guestMessageText}>
+                    Sign in to purchase this item
+                  </Text>
+                </View>
+              )}
+
+              {/* Purchase Button - show for authenticated users, or for non-kappa branded (though still need email) */}
+              {user?.email && (
+                <PrimaryButton
+                  title="Buy Now"
+                  onPress={handleCheckout}
+                  loading={checkingOut}
+                  disabled={checkingOut}
+                  style={styles.purchaseButton}
+                />
+              )}
+
+              {/* Error Message */}
+              {error && !checkingOut && (
+                <View style={styles.errorMessageContainer}>
+                  <Text style={styles.errorMessageText}>{error}</Text>
+                </View>
+              )}
+            </View>
+          </ScrollView>
+        )}
       </View>
     </Modal>
   );
@@ -469,10 +534,10 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.frostGray,
   },
   sellerNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
     marginBottom: 4,
   },
   sellerLabel: {
@@ -492,51 +557,51 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   badgesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
     marginTop: 8,
   },
   verificationBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
-    backgroundColor: COLORS.auroraGold + '33',
+    backgroundColor: COLORS.auroraGold + "33",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: COLORS.auroraGold + '4D',
+    borderColor: COLORS.auroraGold + "4D",
   },
   diamondIcon: {
     width: 12,
     height: 12,
-    transform: [{ rotate: '45deg' }],
+    transform: [{ rotate: "45deg" }],
   },
   verificationBadgeText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     color: COLORS.auroraGold,
   },
   chapterBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
-    backgroundColor: COLORS.crimson + '26',
+    backgroundColor: COLORS.crimson + "26",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: COLORS.crimson + '40',
+    borderColor: COLORS.crimson + "40",
   },
   chapterBadgeText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     color: COLORS.crimson,
   },
   initiatedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     backgroundColor: COLORS.white,
     paddingHorizontal: 10,
@@ -547,11 +612,11 @@ const styles = StyleSheet.create({
   },
   initiatedBadgeText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     color: COLORS.crimson,
   },
   chapterNameBold: {
-    fontWeight: '700',
+    fontWeight: "700",
   },
   priceContainer: {
     marginBottom: 20,

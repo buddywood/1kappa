@@ -187,7 +187,9 @@ export default function ProductCard({
                   isInCart && styles.addButtonInCart,
                   pressed && styles.addButtonPressed,
                 ]}
-                onPress={onAddToCart}
+                onPress={() => {
+                  onAddToCart?.();
+                }}
                 hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                 accessibilityRole="button"
                 accessibilityLabel={
