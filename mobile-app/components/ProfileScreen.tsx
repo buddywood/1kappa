@@ -19,6 +19,7 @@ import FormCard from "./ui/FormCard";
 import SectionHeader from "./ui/SectionHeader";
 import Checkbox from "./ui/Checkbox";
 import MenuItem from "./ui/MenuItem";
+import { getOrderCount, getSavedItemsCount } from "../lib/api";
 
 const REMEMBERED_EMAIL_KEY = "@1kappa:remembered_email";
 const REMEMBER_ME_KEY = "@1kappa:remember_me";
@@ -27,14 +28,18 @@ interface ProfileScreenProps {
   onBack: () => void;
   initialMode?: "login" | "register";
   onMyEventsPress?: () => void;
+  onEditProfilePress?: () => void;
+  onSettingsPress?: () => void;
 }
 
 export default function ProfileScreen({
   onBack,
   initialMode = "login",
   onMyEventsPress,
+  onEditProfilePress,
+  onSettingsPress,
 }: ProfileScreenProps) {
-  const { isGuest, user, login, logout } = useAuth();
+  const { isGuest, user, login, logout, token } = useAuth();
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [isLogin, setIsLogin] = React.useState(initialMode === "login");
@@ -51,6 +56,8 @@ export default function ProfileScreen({
   const [forgotPasswordMessage, setForgotPasswordMessage] = React.useState<
     string | null
   >(null);
+  const [orderCount, setOrderCount] = React.useState(0);
+  const [savedItemsCount, setSavedItemsCount] = React.useState(0);
 
   // Load remembered email on mount
   React.useEffect(() => {
@@ -74,6 +81,27 @@ export default function ProfileScreen({
 
     loadRememberedEmail();
   }, []);
+
+  // Load order and saved items counts
+  React.useEffect(() => {
+    const loadCounts = async () => {
+      if (!isGuest && user && token && user.email) {
+        try {
+          const [orders, savedItems] = await Promise.all([
+            getOrderCount(token),
+            getSavedItemsCount(token, user.email),
+          ]);
+          setOrderCount(orders);
+          setSavedItemsCount(savedItems);
+        } catch (error) {
+          console.error("Error loading counts:", error);
+          // Silently fail - counts will remain 0
+        }
+      }
+    };
+
+    loadCounts();
+  }, [isGuest, user, token]);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -214,12 +242,21 @@ export default function ProfileScreen({
           </View>
 
           <View style={styles.menuSection}>
+            {onEditProfilePress && (
+              <MenuItem label="Edit Profile" onPress={onEditProfilePress} />
+            )}
             {user?.is_promoter && onMyEventsPress && (
               <MenuItem label="My Events" onPress={onMyEventsPress} />
             )}
-            <MenuItem label="My Orders" onPress={() => {}} />
-            <MenuItem label="Saved Items" onPress={() => {}} />
-            <MenuItem label="Settings" onPress={() => {}} />
+            {orderCount > 1 && (
+              <MenuItem label="My Orders" onPress={() => {}} />
+            )}
+            {savedItemsCount > 1 && (
+              <MenuItem label="Saved Items" onPress={() => {}} />
+            )}
+            {onSettingsPress && (
+              <MenuItem label="Settings" onPress={onSettingsPress} />
+            )}
             <MenuItem label="Log Out" onPress={logout} variant="logout" />
           </View>
         </ScrollView>

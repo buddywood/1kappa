@@ -707,3 +707,222 @@ export async function fetchFeaturedBrothers(): Promise<FeaturedBrother[]> {
     return [];
   }
 }
+
+export interface Industry {
+  id: number;
+  name: string;
+  display_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Profession {
+  id: number;
+  name: string;
+  display_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MemberProfile {
+  id: number;
+  email: string;
+  name: string | null;
+  membership_number: string | null;
+  initiated_chapter_id: number | null;
+  chapter_name: string | null;
+  initiated_season: string | null;
+  initiated_year: number | null;
+  ship_name: string | null;
+  line_name: string | null;
+  location: string | null;
+  address: string | null;
+  address_is_private: boolean;
+  phone_number: string | null;
+  phone_is_private: boolean;
+  industry: string | null;
+  profession_id: number | null;
+  profession_name: string | null;
+  job_title: string | null;
+  bio: string | null;
+  headshot_url: string | null;
+  social_links: Record<string, string>;
+  verification_status?: "PENDING" | "VERIFIED" | "FAILED" | "MANUAL_REVIEW";
+  created_at: string;
+  updated_at: string;
+  is_seller?: boolean;
+  is_promoter?: boolean;
+  is_steward?: boolean;
+}
+
+export async function fetchIndustries(): Promise<Industry[]> {
+  try {
+    const res = await fetch(`${API_URL}/api/industries`);
+    if (!res.ok) {
+      console.error("Failed to fetch industries:", res.status, res.statusText);
+      throw new Error(
+        `Failed to fetch industries: ${res.status} ${res.statusText}`
+      );
+    }
+    return res.json();
+  } catch (error) {
+    console.error("Error fetching industries:", error);
+    throw error;
+  }
+}
+
+export async function fetchProfessions(): Promise<Profession[]> {
+  try {
+    const res = await fetch(`${API_URL}/api/professions`);
+    if (!res.ok) {
+      console.error("Failed to fetch professions:", res.status, res.statusText);
+      throw new Error(
+        `Failed to fetch professions: ${res.status} ${res.statusText}`
+      );
+    }
+    return res.json();
+  } catch (error) {
+    console.error("Error fetching professions:", error);
+    throw error;
+  }
+}
+
+export async function fetchMemberProfile(
+  token: string
+): Promise<MemberProfile> {
+  try {
+    const res = await authenticatedFetch(`${API_URL}/api/members/profile`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) {
+      if (res.status === 404) {
+        const errorData = await res.json().catch(() => ({}));
+        const error = new Error("Member profile not found");
+        (error as any).requiresRegistration =
+          errorData.requiresRegistration === true;
+        (error as any).code = errorData.code;
+        throw error;
+      }
+      throw new Error("Failed to fetch member profile");
+    }
+
+    return res.json();
+  } catch (error) {
+    console.error("Error fetching member profile:", error);
+    throw error;
+  }
+}
+
+export async function updateMemberProfile(
+  token: string,
+  data: Partial<MemberProfile> & {
+    headshot?: { uri: string; type: string; name: string };
+  }
+): Promise<MemberProfile> {
+  try {
+    const formData = new FormData();
+
+    // Add all fields except headshot
+    Object.keys(data).forEach((key) => {
+      if (key !== "headshot" && data[key as keyof typeof data] !== undefined) {
+        const value = data[key as keyof typeof data];
+        if (key === "social_links" && typeof value === "object") {
+          formData.append(key, JSON.stringify(value));
+        } else if (key === "address_is_private" || key === "phone_is_private") {
+          formData.append(key, String(value));
+        } else if (value !== null && value !== undefined) {
+          formData.append(key, String(value));
+        }
+      }
+    });
+
+    // Add headshot if provided
+    if (data.headshot) {
+      formData.append("headshot", {
+        uri: data.headshot.uri,
+        type: data.headshot.type,
+        name: data.headshot.name,
+      } as any);
+    }
+
+    const res = await authenticatedFetch(`${API_URL}/api/members/profile`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({
+        error: "Failed to update profile",
+      }));
+      throw new Error(errorData.error || "Failed to update member profile");
+    }
+
+    return res.json();
+  } catch (error) {
+    console.error("Error updating member profile:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get order count for the current user
+ */
+export async function getOrderCount(token: string): Promise<number> {
+  try {
+    const res = await authenticatedFetch(`${API_URL}/api/users/me/orders`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) {
+      return 0;
+    }
+
+    const orders = await res.json();
+    return Array.isArray(orders) ? orders.length : 0;
+  } catch (error) {
+    console.error("Error fetching order count:", error);
+    return 0;
+  }
+}
+
+/**
+ * Get saved items (favorites) count for the current user
+ */
+export async function getSavedItemsCount(
+  token: string,
+  userEmail: string
+): Promise<number> {
+  try {
+    const res = await authenticatedFetch(
+      `${API_URL}/api/favorites/${userEmail}/products`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!res.ok) {
+      return 0;
+    }
+
+    const products = await res.json();
+    return Array.isArray(products) ? products.length : 0;
+  } catch (error) {
+    console.error("Error fetching saved items count:", error);
+    return 0;
+  }
+}

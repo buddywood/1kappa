@@ -24,6 +24,8 @@ import SellerStoreScreen from "./components/SellerStoreScreen";
 import StewardMarketplaceScreen from "./components/StewardMarketplaceScreen";
 import SellersScreen from "./components/SellersScreen";
 import ProfileScreen from "./components/ProfileScreen";
+import EditProfileScreen from "./components/EditProfileScreen";
+import SettingsScreen from "./components/SettingsScreen";
 import MemberSetupScreen from "./components/MemberSetupScreen";
 import MemberDashboardScreen from "./components/MemberDashboardScreen";
 import SellerSetupScreen from "./components/SellerSetupScreen";
@@ -44,6 +46,8 @@ type Screen =
   | "seller-store"
   | "steward-marketplace"
   | "profile"
+  | "edit-profile"
+  | "settings"
   | "member-setup"
   | "member-dashboard"
   | "seller-setup";
@@ -55,12 +59,8 @@ export default function App() {
   const [selectedListingId, setSelectedListingId] = useState<number | null>(
     null
   );
-  const [selectedSellerId, setSelectedSellerId] = useState<number | null>(
-    null
-  );
-  const [selectedEventId, setSelectedEventId] = useState<number | null>(
-    null
-  );
+  const [selectedSellerId, setSelectedSellerId] = useState<number | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
   const [editingEventId, setEditingEventId] = useState<number | null>(null);
   const [currentScreen, setCurrentScreen] = useState<Screen>("home");
   const [profileInitialMode, setProfileInitialMode] = useState<
@@ -286,10 +286,25 @@ export default function App() {
         return (
           <ProfileScreen
             onBack={handleBackToHome}
-            initialMode={profileInitialMode === "view" ? undefined : profileInitialMode}
+            initialMode={
+              profileInitialMode === "view" ? undefined : profileInitialMode
+            }
             onMyEventsPress={() => setCurrentScreen("my-events")}
+            onEditProfilePress={() => setCurrentScreen("edit-profile")}
+            onSettingsPress={() => setCurrentScreen("settings")}
           />
         );
+      case "edit-profile":
+        return (
+          <EditProfileScreen
+            onBack={() => setCurrentScreen("profile")}
+            onProfileUpdated={() => {
+              setCurrentScreen("profile");
+            }}
+          />
+        );
+      case "settings":
+        return <SettingsScreen onBack={() => setCurrentScreen("profile")} />;
       case "member-setup":
         return (
           <MemberSetupScreen
@@ -316,13 +331,17 @@ export default function App() {
             onNavigateToPromoterSetup={() => {
               // Navigate to web app for promoter setup
               Linking.openURL(
-                `${process.env.EXPO_PUBLIC_WEB_URL || "http://localhost:3000"}/promoter-setup`
+                `${
+                  process.env.EXPO_PUBLIC_WEB_URL || "http://localhost:3000"
+                }/promoter-setup`
               );
             }}
             onNavigateToStewardSetup={() => {
               // Navigate to web app for steward setup
               Linking.openURL(
-                `${process.env.EXPO_PUBLIC_WEB_URL || "http://localhost:3000"}/steward-setup`
+                `${
+                  process.env.EXPO_PUBLIC_WEB_URL || "http://localhost:3000"
+                }/steward-setup`
               );
             }}
           />
@@ -391,36 +410,36 @@ export default function App() {
   return (
     <AuthProvider>
       <CartProvider>
-      <SafeAreaProvider>
-        <SafeAreaView style={styles.container} edges={["top"]}>
-          <StatusBar style="auto" />
-          <View style={styles.contentWrapper}>{renderScreen()}</View>
+        <SafeAreaProvider>
+          <SafeAreaView style={styles.container} edges={["top"]}>
+            <StatusBar style="auto" />
+            <View style={styles.contentWrapper}>{renderScreen()}</View>
 
-          {/* Bottom Tab Bar */}
-          <BottomTabBar
-            currentScreen={currentScreen}
-            onScreenChange={setCurrentScreen}
-          />
-
-          {/* Product Detail Modal */}
-          {selectedProductId !== null && (
-            <ProductDetail
-              productId={selectedProductId}
-              onClose={() => setSelectedProductId(null)}
-              onSellerPress={handleSellerPress}
+            {/* Bottom Tab Bar */}
+            <BottomTabBar
+              currentScreen={currentScreen}
+              onScreenChange={setCurrentScreen}
             />
-          )}
 
-          {/* Steward Listing Detail Modal */}
-          {selectedListingId !== null && (
-            <StewardListingDetail
-              listingId={selectedListingId}
-              onClose={() => setSelectedListingId(null)}
-              onSellerPress={handleSellerPress}
-            />
-          )}
-        </SafeAreaView>
-      </SafeAreaProvider>
+            {/* Product Detail Modal */}
+            {selectedProductId !== null && (
+              <ProductDetail
+                productId={selectedProductId}
+                onClose={() => setSelectedProductId(null)}
+                onSellerPress={handleSellerPress}
+              />
+            )}
+
+            {/* Steward Listing Detail Modal */}
+            {selectedListingId !== null && (
+              <StewardListingDetail
+                listingId={selectedListingId}
+                onClose={() => setSelectedListingId(null)}
+                onSellerPress={handleSellerPress}
+              />
+            )}
+          </SafeAreaView>
+        </SafeAreaProvider>
       </CartProvider>
     </AuthProvider>
   );

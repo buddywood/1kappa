@@ -18,13 +18,13 @@ const GOOGLE_PLACES_AUTOCOMPLETE_URL =
 const GOOGLE_PLACES_DETAILS_URL =
   "https://maps.googleapis.com/maps/api/place/details/json";
 
-interface AddressAutocompleteProps {
-  location: string;
-  onLocationChange: (location: string) => void;
-  required?: boolean;
+interface AddressFieldAutocompleteProps {
+  value: string;
+  onChangeText: (address: string) => void;
+  label?: string;
+  placeholder?: string;
+  multiline?: boolean;
   disabled?: boolean;
-  rightIcon?: React.ReactNode;
-  onRightIconPress?: () => void;
 }
 
 interface PlacePrediction {
@@ -47,30 +47,23 @@ interface PlaceDetails {
   };
 }
 
-export default function AddressAutocomplete({
-  location,
-  onLocationChange,
-  required = false,
+export default function AddressFieldAutocomplete({
+  value,
+  onChangeText,
+  label,
+  placeholder = "Start typing an address...",
+  multiline = false,
   disabled = false,
-  rightIcon,
-  onRightIconPress,
-}: AddressAutocompleteProps) {
+}: AddressFieldAutocompleteProps) {
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState(location);
+  const [searchQuery, setSearchQuery] = useState(value);
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // Debug: Log API key status on mount
   useEffect(() => {
-    console.log("AddressAutocomplete mounted");
-    console.log("API Key present:", !!GOOGLE_PLACES_API_KEY);
-    console.log("API Key length:", GOOGLE_PLACES_API_KEY?.length || 0);
-  }, []);
-
-  useEffect(() => {
-    setSearchQuery(location);
-  }, [location]);
+    setSearchQuery(value);
+  }, [value]);
 
   const fetchPredictions = async (input: string) => {
     if (!input.trim() || input.length < 3) {
@@ -91,15 +84,12 @@ export default function AddressAutocomplete({
       const url = `${GOOGLE_PLACES_AUTOCOMPLETE_URL}?input=${encodeURIComponent(
         input
       )}&key=${GOOGLE_PLACES_API_KEY}&types=address`;
-      console.log("Fetching predictions for:", input);
       const response = await fetch(url);
       const data = await response.json();
-      console.log("Predictions response:", data);
 
       if (data.status === "OK" && data.predictions) {
         setPredictions(data.predictions);
         setShowSuggestions(true);
-        console.log("Found", data.predictions.length, "predictions");
       } else if (data.status === "ZERO_RESULTS") {
         setPredictions([]);
         setShowSuggestions(false);
@@ -118,9 +108,8 @@ export default function AddressAutocomplete({
   };
 
   const handleTextChange = (text: string) => {
-    console.log("🔍 Text changed:", text, "Length:", text.length);
     setSearchQuery(text);
-    onLocationChange(text);
+    onChangeText(text);
 
     // Debounce API calls
     if (debounceTimer.current) {
@@ -128,7 +117,6 @@ export default function AddressAutocomplete({
     }
 
     debounceTimer.current = setTimeout(() => {
-      console.log("⏰ Debounce triggered, fetching predictions for:", text);
       fetchPredictions(text);
     }, 300);
   };
@@ -144,16 +132,9 @@ export default function AddressAutocomplete({
       const response = await fetch(url);
       const data: PlaceDetails = await response.json();
 
-      if (data.result) {
-        const place = data.result;
-
-        // Just set the location field with the formatted address
-        // Backend will parse city and state when saving
-        if (place.formatted_address) {
-          onLocationChange(place.formatted_address);
-        } else if (data.result.formatted_address) {
-          onLocationChange(data.result.formatted_address);
-        }
+      if (data.result && data.result.formatted_address) {
+        onChangeText(data.result.formatted_address);
+        setSearchQuery(data.result.formatted_address);
       }
     } catch (error) {
       console.error("Error fetching place details:", error);
@@ -171,78 +152,51 @@ export default function AddressAutocomplete({
 
   return (
     <View style={styles.container}>
-      {/* Location Input */}
-      <View style={styles.section}>
-        <Text style={styles.label}>Location {required && "*"}</Text>
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={[styles.input, rightIcon && styles.inputWithIcon]}
-            value={searchQuery}
-            onChangeText={handleTextChange}
-            placeholder="Start typing an address..."
-            placeholderTextColor={COLORS.midnightNavy + "66"}
-            editable={!disabled}
-            onFocus={() => {
-              console.log("Input focused, predictions:", predictions.length);
-              if (predictions.length > 0) {
-                setShowSuggestions(true);
-              }
-            }}
-            onBlur={() => {
-              // Don't hide immediately on blur - let user select
-              // setTimeout(() => setShowSuggestions(false), 300);
-            }}
+      {label && <Text style={styles.label}>{label}</Text>}
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={[styles.input, multiline && styles.inputMultiline]}
+          value={searchQuery}
+          onChangeText={handleTextChange}
+          placeholder={placeholder}
+          placeholderTextColor={COLORS.midnightNavy + "50"}
+          editable={!disabled}
+          multiline={multiline}
+          numberOfLines={multiline ? 3 : 1}
+          onFocus={() => {
+            if (predictions.length > 0) {
+              setShowSuggestions(true);
+            }
+          }}
+        />
+        {loading && (
+          <ActivityIndicator
+            size="small"
+            color={COLORS.crimson}
+            style={styles.loader}
           />
-          {loading && !rightIcon && (
-            <ActivityIndicator
-              size="small"
-              color={COLORS.crimson}
-              style={styles.loader}
-            />
-          )}
-          {rightIcon && (
-            <TouchableOpacity
-              style={styles.rightIconContainer}
-              onPress={onRightIconPress}
-              disabled={!onRightIconPress}
-            >
-              {rightIcon}
-            </TouchableOpacity>
-          )}
-        </View>
+        )}
       </View>
 
-      {/* Suggestions List - Using Modal for better visibility */}
+      {/* Suggestions Modal */}
       <Modal
         visible={showSuggestions && predictions.length > 0}
         transparent={true}
         animationType="fade"
-        onRequestClose={() => {
-          console.log("Modal close requested");
-          setShowSuggestions(false);
-        }}
+        onRequestClose={() => setShowSuggestions(false)}
       >
         <TouchableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
-          onPress={() => {
-            console.log("Overlay pressed, closing suggestions");
-            setShowSuggestions(false);
-          }}
+          onPress={() => setShowSuggestions(false)}
         >
-          <View
-            style={styles.suggestionsContainer}
-            onStartShouldSetResponder={() => true}
-          >
+          <View style={styles.suggestionsContainer}>
             <View style={styles.suggestionsHeader}>
               <Text style={styles.suggestionsHeaderText}>
                 Select an address ({predictions.length})
               </Text>
               <TouchableOpacity
-                onPress={() => {
-                  console.log("Close button pressed");
-                  setShowSuggestions(false);
-                }}
+                onPress={() => setShowSuggestions(false)}
                 style={styles.closeButton}
               >
                 <Ionicons name="close" size={24} color={COLORS.midnightNavy} />
@@ -254,10 +208,7 @@ export default function AddressAutocomplete({
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={styles.suggestionItem}
-                  onPress={() => {
-                    console.log("Place selected:", item.description);
-                    handleSelectPlace(item);
-                  }}
+                  onPress={() => handleSelectPlace(item)}
                   activeOpacity={0.7}
                 >
                   <Ionicons
@@ -292,16 +243,10 @@ export default function AddressAutocomplete({
 const styles = StyleSheet.create({
   container: {
     width: "100%",
-  },
-  section: {
-    marginBottom: 16,
-  },
-  row: {
-    flexDirection: "row",
-    marginBottom: 16,
+    marginBottom: 20,
   },
   label: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "600",
     color: COLORS.midnightNavy,
     marginBottom: 8,
@@ -310,31 +255,22 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   input: {
-    borderWidth: 1,
-    borderColor: COLORS.frostGray,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    backgroundColor: COLORS.white,
+    borderRadius: 14,
+    padding: 16,
     fontSize: 16,
     color: COLORS.midnightNavy,
-    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.frostGray + "AA",
   },
-  inputWithIcon: {
-    paddingRight: 50,
+  inputMultiline: {
+    minHeight: 80,
+    textAlignVertical: "top",
   },
   loader: {
     position: "absolute",
     right: 12,
     top: 12,
-  },
-  rightIconContainer: {
-    position: "absolute",
-    right: 12,
-    top: 12,
-    bottom: 12,
-    justifyContent: "center",
-    alignItems: "center",
-    width: 32,
   },
   modalOverlay: {
     flex: 1,
@@ -372,12 +308,12 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   suggestionsList: {
-    maxHeight: 200,
+    maxHeight: 300,
   },
   suggestionItem: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.frostGray,
