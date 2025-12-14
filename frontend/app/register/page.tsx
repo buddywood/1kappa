@@ -645,18 +645,6 @@ export default function RegisterPage() {
         setCurrentStep(2);
         setCognitoStep("verify");
         setSubmitting(false);
-      } else if (role === "SELLER") {
-        // Redirect to seller setup (may need to be adjusted)
-        setSubmitting(false);
-        router.push("/seller-setup");
-      } else if (role === "PROMOTER") {
-        // Redirect to promoter application
-        setSubmitting(false);
-        router.push("/promote");
-      } else if (role === "STEWARD") {
-        // Redirect to steward setup
-        setSubmitting(false);
-        router.push("/steward-setup");
       }
     } catch (err: any) {
       setError(err.message || "Failed to set role. Please try again.");
@@ -1265,8 +1253,7 @@ export default function RegisterPage() {
           </h1>
           <p className="text-midnight-navy/70 mb-6">
             Welcome to the brotherhood! Your member profile has been created.
-            You can now shop, connect with brothers, and apply to become a
-            seller or promoter.
+            You can now shop and connect with brothers.
           </p>
           <Link
             href="/"
@@ -1692,21 +1679,6 @@ export default function RegisterPage() {
                         label: "Member",
                         description:
                           "Verified fraternity member with full profile",
-                      },
-                      {
-                        value: "SELLER",
-                        label: "Seller",
-                        description: "Sell products on the platform",
-                      },
-                      {
-                        value: "PROMOTER",
-                        label: "Event Promoter",
-                        description: "Promote and manage events",
-                      },
-                      {
-                        value: "STEWARD",
-                        label: "Steward",
-                        description: "List legacy fraternity paraphernalia",
                       },
                     ].map((role) => (
                       <label

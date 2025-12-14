@@ -1,5 +1,5 @@
-import { API_URL } from './constants';
-import { authenticatedFetch } from './api-utils';
+import { API_URL } from "./constants";
+import { authenticatedFetch } from "./api-utils";
 
 export interface Chapter {
   id: number;
@@ -22,7 +22,7 @@ export interface ProductAttributeValue {
   value_boolean: boolean | null;
   created_at: string;
   attribute_name?: string;
-  attribute_type?: 'TEXT' | 'SELECT' | 'NUMBER' | 'BOOLEAN';
+  attribute_type?: "TEXT" | "SELECT" | "NUMBER" | "BOOLEAN";
   display_order?: number;
 }
 
@@ -38,7 +38,7 @@ export interface CategoryAttributeDefinition {
   id: number;
   category_id: number;
   attribute_name: string;
-  attribute_type: 'TEXT' | 'SELECT' | 'NUMBER' | 'BOOLEAN';
+  attribute_type: "TEXT" | "SELECT" | "NUMBER" | "BOOLEAN";
   is_required: boolean;
   display_order: number;
   options: string[] | null;
@@ -63,7 +63,7 @@ export interface Product {
   seller_initiated_chapter_id?: number | null;
   seller_initiated_season?: string | null;
   seller_initiated_year?: number | null;
-  seller_status?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  seller_status?: "PENDING" | "APPROVED" | "REJECTED";
   is_fraternity_member?: boolean;
   is_seller?: boolean;
   is_promoter?: boolean;
@@ -88,12 +88,29 @@ export interface Event {
   duration_minutes: number | null;
   event_link: string | null;
   is_featured: boolean;
-  featured_payment_status: 'UNPAID' | 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED';
+  featured_payment_status:
+    | "UNPAID"
+    | "PENDING"
+    | "PAID"
+    | "FAILED"
+    | "REFUNDED";
   stripe_payment_intent_id: string | null;
   ticket_price_cents: number;
-  dress_codes: ('business' | 'business_casual' | 'formal' | 'semi_formal' | 'kappa_casual' | 'greek_encouraged' | 'greek_required' | 'outdoor' | 'athletic' | 'comfortable' | 'all_white')[];
+  dress_codes: (
+    | "business"
+    | "business_casual"
+    | "formal"
+    | "semi_formal"
+    | "kappa_casual"
+    | "greek_encouraged"
+    | "greek_required"
+    | "outdoor"
+    | "athletic"
+    | "comfortable"
+    | "all_white"
+  )[];
   dress_code_notes: string | null;
-  status: 'ACTIVE' | 'CLOSED' | 'CANCELLED';
+  status: "ACTIVE" | "CLOSED" | "CANCELLED";
   promoter_name?: string;
   promoter_email?: string;
   promoter_fraternity_member_id?: number | null;
@@ -127,11 +144,11 @@ export async function fetchEventTypes(): Promise<EventType[]> {
   try {
     const res = await fetch(`${API_URL}/api/events/types`);
     if (!res.ok) {
-      throw new Error('Failed to fetch event types');
+      throw new Error("Failed to fetch event types");
     }
     return res.json();
   } catch (error) {
-    console.error('Error fetching event types:', error);
+    console.error("Error fetching event types:", error);
     throw error;
   }
 }
@@ -140,11 +157,11 @@ export async function fetchEventAudienceTypes(): Promise<EventAudienceType[]> {
   try {
     const res = await fetch(`${API_URL}/api/events/audience-types`);
     if (!res.ok) {
-      throw new Error('Failed to fetch event audience types');
+      throw new Error("Failed to fetch event audience types");
     }
     return res.json();
   } catch (error) {
-    console.error('Error fetching event audience types:', error);
+    console.error("Error fetching event audience types:", error);
     throw error;
   }
 }
@@ -174,10 +191,10 @@ export interface SellerWithProducts extends Seller {
 export async function fetchChapters(): Promise<Chapter[]> {
   try {
     const res = await fetch(`${API_URL}/api/chapters`);
-    if (!res.ok) throw new Error('Failed to fetch chapters');
+    if (!res.ok) throw new Error("Failed to fetch chapters");
     return res.json();
   } catch (error) {
-    console.error('Error fetching chapters:', error);
+    console.error("Error fetching chapters:", error);
     return [];
   }
 }
@@ -185,10 +202,10 @@ export async function fetchChapters(): Promise<Chapter[]> {
 export async function fetchProducts(): Promise<Product[]> {
   try {
     const res = await fetch(`${API_URL}/api/products`);
-    if (!res.ok) throw new Error('Failed to fetch products');
+    if (!res.ok) throw new Error("Failed to fetch products");
     return res.json();
   } catch (error) {
-    console.error('Error fetching products:', error);
+    console.error("Error fetching products:", error);
     return [];
   }
 }
@@ -196,10 +213,10 @@ export async function fetchProducts(): Promise<Product[]> {
 export async function fetchFeaturedProducts(): Promise<Product[]> {
   try {
     const res = await fetch(`${API_URL}/api/products/featured`);
-    if (!res.ok) throw new Error('Failed to fetch featured products');
+    if (!res.ok) throw new Error("Failed to fetch featured products");
     return res.json();
   } catch (error) {
-    console.error('Error fetching featured products:', error);
+    console.error("Error fetching featured products:", error);
     return [];
   }
 }
@@ -209,13 +226,13 @@ export async function fetchProduct(productId: number): Promise<Product> {
     const res = await fetch(`${API_URL}/api/products/${productId}`);
     if (!res.ok) {
       if (res.status === 404) {
-        throw new Error('Product not found');
+        throw new Error("Product not found");
       }
-      throw new Error('Failed to fetch product');
+      throw new Error("Failed to fetch product");
     }
     return res.json();
   } catch (error) {
-    console.error('Error fetching product:', error);
+    console.error("Error fetching product:", error);
     throw error;
   }
 }
@@ -223,10 +240,10 @@ export async function fetchProduct(productId: number): Promise<Product> {
 export async function fetchEvents(): Promise<Event[]> {
   try {
     const res = await fetch(`${API_URL}/api/events`);
-    if (!res.ok) throw new Error('Failed to fetch events');
+    if (!res.ok) throw new Error("Failed to fetch events");
     return res.json();
   } catch (error) {
-    console.error('Error fetching events:', error);
+    console.error("Error fetching events:", error);
     return [];
   }
 }
@@ -234,10 +251,10 @@ export async function fetchEvents(): Promise<Event[]> {
 export async function fetchUpcomingEvents(): Promise<Event[]> {
   try {
     const res = await fetch(`${API_URL}/api/events/upcoming`);
-    if (!res.ok) throw new Error('Failed to fetch upcoming events');
+    if (!res.ok) throw new Error("Failed to fetch upcoming events");
     return res.json();
   } catch (error) {
-    console.error('Error fetching upcoming events:', error);
+    console.error("Error fetching upcoming events:", error);
     return [];
   }
 }
@@ -245,10 +262,10 @@ export async function fetchUpcomingEvents(): Promise<Event[]> {
 export async function fetchEvent(eventId: number): Promise<Event> {
   try {
     const res = await fetch(`${API_URL}/api/events/${eventId}`);
-    if (!res.ok) throw new Error('Failed to fetch event');
+    if (!res.ok) throw new Error("Failed to fetch event");
     return res.json();
   } catch (error) {
-    console.error('Error fetching event:', error);
+    console.error("Error fetching event:", error);
     throw error;
   }
 }
@@ -257,18 +274,18 @@ export async function getPromoterEvents(token: string): Promise<Event[]> {
   try {
     const res = await authenticatedFetch(`${API_URL}/api/events/promoter/me`, {
       headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
     });
     if (!res.ok) {
       const error = await res.json();
-      throw new Error(error.error || 'Failed to fetch promoter events');
+      throw new Error(error.error || "Failed to fetch promoter events");
     }
     return res.json();
   } catch (error: any) {
-    console.error('Error fetching promoter events:', error);
+    console.error("Error fetching promoter events:", error);
     // Re-throw session expired errors
-    if (error.code === 'SESSION_EXPIRED') {
+    if (error.code === "SESSION_EXPIRED") {
       throw error;
     }
     throw error;
@@ -279,7 +296,7 @@ export interface Promoter {
   id: number;
   fraternity_member_id: number | null;
   sponsoring_chapter_id: number | null;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  status: "PENDING" | "APPROVED" | "REJECTED";
   stripe_account_id: string | null;
   created_at: string;
   updated_at: string;
@@ -295,16 +312,16 @@ export async function getPromoterProfile(token: string): Promise<Promoter> {
   try {
     const res = await fetch(`${API_URL}/api/promoters/me`, {
       headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
     });
     if (!res.ok) {
       const error = await res.json();
-      throw new Error(error.error || 'Failed to fetch promoter profile');
+      throw new Error(error.error || "Failed to fetch promoter profile");
     }
     return res.json();
   } catch (error) {
-    console.error('Error fetching promoter profile:', error);
+    console.error("Error fetching promoter profile:", error);
     throw error;
   }
 }
@@ -312,7 +329,11 @@ export async function getPromoterProfile(token: string): Promise<Promoter> {
 export async function promoteEvent(
   eventId: number,
   token: string
-): Promise<{ checkout_url: string; event_id: number; requires_payment: boolean }> {
+): Promise<{
+  checkout_url: string;
+  event_id: number;
+  requires_payment: boolean;
+}> {
   const response = await fetch(`${API_URL}/api/events/${eventId}/promote`, {
     method: "POST",
     headers: {
@@ -321,48 +342,62 @@ export async function promoteEvent(
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: "Failed to promote event" }));
+    const error = await response
+      .json()
+      .catch(() => ({ error: "Failed to promote event" }));
     throw new Error(error.error || "Failed to promote event");
   }
 
   return response.json();
 }
 
-export async function closeEvent(eventId: number, token: string): Promise<Event> {
+export async function closeEvent(
+  eventId: number,
+  token: string
+): Promise<Event> {
   try {
     const res = await fetch(`${API_URL}/api/events/${eventId}/close`, {
-      method: 'PATCH',
+      method: "PATCH",
       headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
     });
     if (!res.ok) {
       const error = await res.json();
-      throw new Error(error.error || 'Failed to close event');
+      throw new Error(error.error || "Failed to close event");
     }
     return res.json();
   } catch (error) {
-    console.error('Error closing event:', error);
+    console.error("Error closing event:", error);
     throw error;
   }
 }
 
-export async function createEvent(token: string, formData: FormData): Promise<Event & { checkout_url?: string; requires_payment?: boolean; payment_error?: string }> {
+export async function createEvent(
+  token: string,
+  formData: FormData
+): Promise<
+  Event & {
+    checkout_url?: string;
+    requires_payment?: boolean;
+    payment_error?: string;
+  }
+> {
   try {
     const res = await fetch(`${API_URL}/api/events`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
       body: formData,
     });
     if (!res.ok) {
       const error = await res.json();
-      throw new Error(error.error || 'Failed to create event');
+      throw new Error(error.error || "Failed to create event");
     }
     return res.json();
   } catch (error) {
-    console.error('Error creating event:', error);
+    console.error("Error creating event:", error);
     throw error;
   }
 }
@@ -371,22 +406,28 @@ export async function updateEvent(
   token: string,
   eventId: number,
   formData: FormData
-): Promise<Event & { checkout_url?: string; requires_payment?: boolean; payment_error?: string }> {
+): Promise<
+  Event & {
+    checkout_url?: string;
+    requires_payment?: boolean;
+    payment_error?: string;
+  }
+> {
   try {
     const res = await fetch(`${API_URL}/api/events/${eventId}`, {
-      method: 'PUT',
+      method: "PUT",
       headers: {
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
       },
       body: formData,
     });
     if (!res.ok) {
       const error = await res.json();
-      throw new Error(error.error || 'Failed to update event');
+      throw new Error(error.error || "Failed to update event");
     }
     return res.json();
   } catch (error) {
-    console.error('Error updating event:', error);
+    console.error("Error updating event:", error);
     throw error;
   }
 }
@@ -410,22 +451,28 @@ export async function searchPublicItems(query: string): Promise<SearchResults> {
     ]);
 
     const searchLower = query.toLowerCase();
-    
+
     const filteredProducts = products.filter((product) => {
       const nameMatch = product.name?.toLowerCase().includes(searchLower);
-      const descMatch = product.description?.toLowerCase().includes(searchLower);
-      const sellerMatch = product.seller_name?.toLowerCase().includes(searchLower) ||
-                         product.seller_business_name?.toLowerCase().includes(searchLower);
+      const descMatch = product.description
+        ?.toLowerCase()
+        .includes(searchLower);
+      const sellerMatch =
+        product.seller_name?.toLowerCase().includes(searchLower) ||
+        product.seller_business_name?.toLowerCase().includes(searchLower);
       return nameMatch || descMatch || sellerMatch;
     });
 
     const filteredEvents = events.filter((event) => {
       const titleMatch = event.title?.toLowerCase().includes(searchLower);
       const descMatch = event.description?.toLowerCase().includes(searchLower);
-      const locationMatch = event.location?.toLowerCase().includes(searchLower) ||
-                           event.city?.toLowerCase().includes(searchLower) ||
-                           event.state?.toLowerCase().includes(searchLower);
-      const promoterMatch = event.promoter_name?.toLowerCase().includes(searchLower);
+      const locationMatch =
+        event.location?.toLowerCase().includes(searchLower) ||
+        event.city?.toLowerCase().includes(searchLower) ||
+        event.state?.toLowerCase().includes(searchLower);
+      const promoterMatch = event.promoter_name
+        ?.toLowerCase()
+        .includes(searchLower);
       return titleMatch || descMatch || locationMatch || promoterMatch;
     });
 
@@ -434,7 +481,7 @@ export async function searchPublicItems(query: string): Promise<SearchResults> {
       events: filteredEvents,
     };
   } catch (error) {
-    console.error('Error searching public items:', error);
+    console.error("Error searching public items:", error);
     return { products: [], events: [] };
   }
 }
@@ -442,11 +489,11 @@ export async function searchPublicItems(query: string): Promise<SearchResults> {
 export async function fetchTotalDonations(): Promise<number> {
   try {
     const res = await fetch(`${API_URL}/api/donations/total`);
-    if (!res.ok) throw new Error('Failed to fetch total donations');
+    if (!res.ok) throw new Error("Failed to fetch total donations");
     const data = await res.json();
     return data.total_donations_cents || 0;
   } catch (error) {
-    console.error('Error fetching total donations:', error);
+    console.error("Error fetching total donations:", error);
     return 0;
   }
 }
@@ -461,7 +508,7 @@ export interface StewardListing {
   chapter_donation_cents: number;
   sponsoring_chapter_id: number;
   category_id: number | null;
-  status: 'ACTIVE' | 'CLAIMED' | 'REMOVED';
+  status: "ACTIVE" | "CLAIMED" | "REMOVED";
   steward?: {
     id: number;
     fraternity_member_id: number | null;
@@ -482,22 +529,39 @@ export interface StewardListing {
 
 export async function getStewardMarketplacePublic(): Promise<StewardListing[]> {
   try {
-    const res = await fetch(`${API_URL}/api/stewards/marketplace/public`);
-    if (!res.ok) throw new Error('Failed to fetch steward marketplace');
+    const url = `${API_URL}/api/stewards/marketplace/public`;
+    console.log("Fetching steward marketplace from:", url);
+    const res = await fetch(url);
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error(
+        `Failed to fetch steward marketplace: ${res.status} ${res.statusText}`,
+        errorText
+      );
+      throw new Error(
+        `Failed to fetch steward marketplace: ${res.status} ${res.statusText}`
+      );
+    }
     return res.json();
   } catch (error) {
-    console.error('Error fetching steward marketplace:', error);
+    console.error("Error fetching steward marketplace:", error);
+    if (error instanceof Error) {
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+    }
     return [];
   }
 }
 
-export async function getStewardListingPublic(id: number): Promise<StewardListing> {
+export async function getStewardListingPublic(
+  id: number
+): Promise<StewardListing> {
   try {
     const res = await fetch(`${API_URL}/api/stewards/listings/${id}/public`);
-    if (!res.ok) throw new Error('Failed to fetch steward listing');
+    if (!res.ok) throw new Error("Failed to fetch steward listing");
     return res.json();
   } catch (error) {
-    console.error('Error fetching steward listing:', error);
+    console.error("Error fetching steward listing:", error);
     throw error;
   }
 }
@@ -505,40 +569,48 @@ export async function getStewardListingPublic(id: number): Promise<StewardListin
 export async function fetchProductCategories(): Promise<ProductCategory[]> {
   try {
     const res = await fetch(`${API_URL}/api/products/categories`);
-    if (!res.ok) throw new Error('Failed to fetch product categories');
+    if (!res.ok) throw new Error("Failed to fetch product categories");
     return res.json();
   } catch (error) {
-    console.error('Error fetching product categories:', error);
+    console.error("Error fetching product categories:", error);
     return [];
   }
 }
 
-export async function fetchCategoryAttributeDefinitions(categoryId: number): Promise<CategoryAttributeDefinition[]> {
+export async function fetchCategoryAttributeDefinitions(
+  categoryId: number
+): Promise<CategoryAttributeDefinition[]> {
   try {
-    const res = await fetch(`${API_URL}/api/products/categories/${categoryId}/attributes`);
-    if (!res.ok) throw new Error('Failed to fetch category attributes');
+    const res = await fetch(
+      `${API_URL}/api/products/categories/${categoryId}/attributes`
+    );
+    if (!res.ok) throw new Error("Failed to fetch category attributes");
     return res.json();
   } catch (error) {
-    console.error('Error fetching category attributes:', error);
+    console.error("Error fetching category attributes:", error);
     return [];
   }
 }
 
-export async function fetchSellersWithProducts(): Promise<SellerWithProducts[]> {
+export async function fetchSellersWithProducts(): Promise<
+  SellerWithProducts[]
+> {
   try {
     const res = await fetch(`${API_URL}/api/sellers/collections`);
-    if (!res.ok) throw new Error('Failed to fetch sellers');
+    if (!res.ok) throw new Error("Failed to fetch sellers");
     return res.json();
   } catch (error) {
-    console.error('Error fetching sellers with products:', error);
+    console.error("Error fetching sellers with products:", error);
     return [];
   }
 }
 
-export async function fetchSellerWithProducts(sellerId: number): Promise<SellerWithProducts | null> {
+export async function fetchSellerWithProducts(
+  sellerId: number
+): Promise<SellerWithProducts | null> {
   try {
     const res = await fetch(`${API_URL}/api/sellers/${sellerId}/products`);
-    if (!res.ok) throw new Error('Failed to fetch seller with products');
+    if (!res.ok) throw new Error("Failed to fetch seller with products");
     const data = await res.json();
     // The API returns seller data with products array
     return {
@@ -546,7 +618,7 @@ export async function fetchSellerWithProducts(sellerId: number): Promise<SellerW
       products: data.products || [],
     };
   } catch (error) {
-    console.error('Error fetching seller with products:', error);
+    console.error("Error fetching seller with products:", error);
     return null;
   }
 }
@@ -555,7 +627,7 @@ export async function fetchSellerWithProducts(sellerId: number): Promise<SellerW
 export async function getAuthHeaders(): Promise<HeadersInit> {
   // TODO: Get token from auth context when authentication is implemented
   return {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   };
 }
 
@@ -571,27 +643,33 @@ export async function createCheckoutSession(
 ): Promise<CheckoutSession> {
   try {
     const headers: HeadersInit = {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     };
-    
+
     if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+      headers["Authorization"] = `Bearer ${token}`;
     }
 
     const res = await fetch(`${API_URL}/api/checkout/${productId}`, {
-      method: 'POST',
+      method: "POST",
       headers,
       body: JSON.stringify({ buyer_email: buyerEmail }),
     });
 
     if (!res.ok) {
-      const errorData = await res.json().catch(() => ({ error: 'Failed to create checkout session' }));
-      throw new Error(errorData.error || errorData.details || 'Failed to create checkout session');
+      const errorData = await res
+        .json()
+        .catch(() => ({ error: "Failed to create checkout session" }));
+      throw new Error(
+        errorData.error ||
+          errorData.details ||
+          "Failed to create checkout session"
+      );
     }
 
     return res.json();
   } catch (error) {
-    console.error('Error creating checkout session:', error);
+    console.error("Error creating checkout session:", error);
     throw error;
   }
 }
@@ -613,16 +691,19 @@ export async function fetchFeaturedBrothers(): Promise<FeaturedBrother[]> {
     const res = await fetch(`${API_URL}/api/sellers/featured`);
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({}));
-      console.error(`Failed to fetch featured brothers: ${res.status} ${res.statusText}`, errorData);
+      console.error(
+        `Failed to fetch featured brothers: ${res.status} ${res.statusText}`,
+        errorData
+      );
       return [];
     }
     const data = await res.json();
-    console.log(`fetchFeaturedBrothers: Retrieved ${data.length} featured brothers`);
+    console.log(
+      `fetchFeaturedBrothers: Retrieved ${data.length} featured brothers`
+    );
     return data;
   } catch (error) {
-    console.error('Error fetching featured brothers:', error);
+    console.error("Error fetching featured brothers:", error);
     return [];
   }
 }
-
-

@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "1KAPPA",
-    "slug": "1kappa-mobile-app",
+    "slug": "onekappa-mobile-app",
     "version": "25.12.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -35,6 +35,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.onekappa.app",
+      "icon": "./assets/icon-ios.icon",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }

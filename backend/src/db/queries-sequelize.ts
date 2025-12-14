@@ -356,12 +356,23 @@ export async function createSeller(seller: {
   business_name?: string | null;
   business_email?: string | null;
   kappa_vendor_id?: string | null;
-  merchandise_type?: "KAPPA" | "NON_KAPPA" | null;
+  merchandise_type?: "KAPPA" | "NON_KAPPA" | string | null; // Allow string for comma-separated values
   website?: string | null;
   headshot_url?: string;
   store_logo_url?: string;
   social_links?: Record<string, string>;
 }): Promise<SellerType> {
+  // Handle merchandise_type - if it's a comma-separated string, use it directly
+  // Otherwise convert single value to string
+  let merchandiseTypeValue: string | null = null;
+  if (seller.merchandise_type) {
+    if (typeof seller.merchandise_type === "string") {
+      merchandiseTypeValue = seller.merchandise_type;
+    } else {
+      merchandiseTypeValue = seller.merchandise_type;
+    }
+  }
+
   const newSeller = await Seller.create({
     user_id: seller.user_id || null,
     email: seller.email,
@@ -370,7 +381,7 @@ export async function createSeller(seller: {
     business_name: seller.business_name || null,
     business_email: seller.business_email || null,
     kappa_vendor_id: seller.kappa_vendor_id || null,
-    merchandise_type: seller.merchandise_type || null,
+    merchandise_type: merchandiseTypeValue as any, // Cast to any since DB might need ENUM but we're storing string
     website: seller.website || null,
     headshot_url: seller.headshot_url || null,
     store_logo_url: seller.store_logo_url || null,
@@ -1209,6 +1220,13 @@ export async function getUserByEmail(email: string): Promise<UserType | null> {
 export async function getUserById(id: number): Promise<UserType | null> {
   const user = await User.findByPk(id);
   return user ? (user.toJSON() as UserType) : null;
+}
+
+export async function getAllAdminUsers(): Promise<UserType[]> {
+  const admins = await User.findAll({
+    where: { role: "ADMIN" },
+  });
+  return admins.map((admin) => admin.toJSON() as UserType);
 }
 
 export async function updateUserRole(

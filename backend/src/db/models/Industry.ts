@@ -56,3 +56,4 @@ export class Industry extends BaseModel {
 
 
 
+

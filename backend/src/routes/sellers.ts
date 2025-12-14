@@ -31,7 +31,25 @@ const sellerApplicationSchema = z
     business_name: z.string().optional().nullable(),
     business_email: z.string().email().optional().nullable(),
     kappa_vendor_id: z.string().optional().nullable(),
-    merchandise_type: z.enum(["KAPPA", "NON_KAPPA"]),
+    merchandise_type: z
+      .union([
+        z.enum(["KAPPA", "NON_KAPPA"]), // Support single value for backward compatibility
+        z.string().transform((val) => {
+          // Handle comma-separated string from frontend
+          if (val.includes(",")) {
+            return val.split(",").map((v) => v.trim());
+          }
+          return [val];
+        }),
+        z.array(z.enum(["KAPPA", "NON_KAPPA"])), // Support array directly
+      ])
+      .transform((val) => {
+        // Normalize to array
+        if (Array.isArray(val)) {
+          return val;
+        }
+        return [val];
+      }),
     website: z.string().optional().nullable(),
     social_links: z.record(z.string()).optional(),
   })
@@ -55,8 +73,27 @@ const sellerApplicationSchema = z
   )
   .refine(
     (data) => {
-      // Kappa vendor ID is required only for KAPPA merchandise
-      if (data.merchandise_type === "KAPPA") {
+      // At least one merchandise type must be selected
+      if (
+        !Array.isArray(data.merchandise_type) ||
+        data.merchandise_type.length === 0
+      ) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: "At least one merchandise type must be selected",
+      path: ["merchandise_type"],
+    }
+  )
+  .refine(
+    (data) => {
+      // Kappa vendor ID is required if KAPPA merchandise is selected
+      if (
+        Array.isArray(data.merchandise_type) &&
+        data.merchandise_type.includes("KAPPA")
+      ) {
         return data.kappa_vendor_id && data.kappa_vendor_id.trim().length > 0;
       }
       return true;
@@ -149,6 +186,19 @@ router.post(
         return value;
       };
 
+      // Parse merchandise_type - handle comma-separated string or array
+      let merchandiseType = req.body.merchandise_type;
+      if (
+        typeof merchandiseType === "string" &&
+        merchandiseType.includes(",")
+      ) {
+        merchandiseType = merchandiseType
+          .split(",")
+          .map((v: string) => v.trim());
+      } else if (typeof merchandiseType === "string") {
+        merchandiseType = [merchandiseType];
+      }
+
       // Validate request body first
       const body = sellerApplicationSchema.parse({
         ...req.body,
@@ -156,7 +206,7 @@ router.post(
         business_name: toNullIfEmpty(req.body.business_name),
         business_email: toNullIfEmpty(req.body.business_email),
         kappa_vendor_id: toNullIfEmpty(req.body.kappa_vendor_id),
-        merchandise_type: req.body.merchandise_type,
+        merchandise_type: merchandiseType,
         website: toNullIfEmpty(req.body.website),
         social_links: req.body.social_links
           ? JSON.parse(req.body.social_links)
@@ -219,11 +269,18 @@ router.post(
         headshotUrl = req.body.existing_headshot_url;
       }
 
+      // Convert merchandise_type array to comma-separated string for storage
+      // The database currently stores as single value, but we'll store comma-separated for multiple
+      const merchandiseTypeForStorage = Array.isArray(body.merchandise_type)
+        ? body.merchandise_type.join(",")
+        : body.merchandise_type;
+
       // Create seller record (fraternity_member relationship via email matching)
       // Create seller record - user_id will be set when user account is created and linked
       const seller = await createSeller({
         user_id: null, // Will be set when user is linked
         ...body,
+        merchandise_type: merchandiseTypeForStorage as any, // Store as string for now
         headshot_url: headshotUrl,
         store_logo_url: storeLogoUrl,
         social_links: body.social_links || {},
@@ -355,7 +412,7 @@ router.post(
         }
       }
 
-      // Send confirmation email (don't await - send in background)
+      // Send confirmation email to seller (don't await - send in background)
       sendSellerApplicationSubmittedEmail(body.email, body.name).catch(
         (error) => {
           console.error(
@@ -364,6 +421,22 @@ router.post(
           );
         }
       );
+
+      // Notify admins about new pending seller application (don't await - send in background)
+      // Only notify if status is PENDING (not auto-approved)
+      const { sendAdminSellerApplicationNotification } = await import(
+        "../services/email"
+      );
+      sendAdminSellerApplicationNotification(
+        seller.name,
+        seller.email,
+        seller.id
+      ).catch((error) => {
+        console.error(
+          "Failed to send admin notification for seller application:",
+          error
+        );
+      });
 
       // Fetch updated seller to return correct status
       const updatedSeller = await getSellerById(seller.id);

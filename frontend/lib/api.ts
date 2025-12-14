@@ -2,33 +2,43 @@
 // Note: In Next.js, NEXT_PUBLIC_* variables are replaced at BUILD TIME, not runtime
 // If the variable isn't set during build, it will use the fallback
 // Trim whitespace to handle cases where environment variables have leading/trailing spaces
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001').trim();
+const API_URL = (
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
+).trim();
 
 // Log API URL to help debug (this will show what was embedded at build time)
-if (typeof window !== 'undefined') {
-  const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-  
+if (typeof window !== "undefined") {
+  const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
   // Warn if there was whitespace in the original value
   if (rawApiUrl !== rawApiUrl.trim()) {
-    console.warn('[API] ⚠️ WARNING: NEXT_PUBLIC_API_URL had leading/trailing whitespace!', {
-      original: JSON.stringify(rawApiUrl),
-      trimmed: JSON.stringify(API_URL),
-      message: 'Please fix the environment variable in Vercel to remove spaces.',
-    });
+    console.warn(
+      "[API] ⚠️ WARNING: NEXT_PUBLIC_API_URL had leading/trailing whitespace!",
+      {
+        original: JSON.stringify(rawApiUrl),
+        trimmed: JSON.stringify(API_URL),
+        message:
+          "Please fix the environment variable in Vercel to remove spaces.",
+      }
+    );
   }
-  
-  console.log('[API] API_URL configured as:', API_URL);
-  console.log('[API] Current hostname:', window.location.hostname);
-  
+
+  console.log("[API] API_URL configured as:", API_URL);
+  console.log("[API] Current hostname:", window.location.hostname);
+
   // Warn if using localhost in production
-  if (API_URL.includes('localhost') && window.location.hostname !== 'localhost') {
-    console.error('[API] ❌ CRITICAL: Using localhost API URL in production!', {
+  if (
+    API_URL.includes("localhost") &&
+    window.location.hostname !== "localhost"
+  ) {
+    console.error("[API] ❌ CRITICAL: Using localhost API URL in production!", {
       apiUrl: API_URL,
       hostname: window.location.hostname,
-      message: 'NEXT_PUBLIC_API_URL was not set during build. Redeploy after setting environment variable in Vercel.',
+      message:
+        "NEXT_PUBLIC_API_URL was not set during build. Redeploy after setting environment variable in Vercel.",
     });
-  } else if (!API_URL.includes('localhost')) {
-    console.log('[API] ✅ Using production API URL:', API_URL);
+  } else if (!API_URL.includes("localhost")) {
+    console.log("[API] ✅ Using production API URL:", API_URL);
   }
 }
 
@@ -56,7 +66,7 @@ export interface CategoryAttributeDefinition {
   id: number;
   category_id: number;
   attribute_name: string;
-  attribute_type: 'TEXT' | 'SELECT' | 'NUMBER' | 'BOOLEAN';
+  attribute_type: "TEXT" | "SELECT" | "NUMBER" | "BOOLEAN";
   is_required: boolean;
   display_order: number;
   options: string[] | null;
@@ -73,7 +83,7 @@ export interface ProductAttributeValue {
   value_boolean: boolean | null;
   created_at: string;
   attribute_name?: string; // Included when joined with category_attribute_definitions
-  attribute_type?: 'TEXT' | 'SELECT' | 'NUMBER' | 'BOOLEAN'; // Included when joined
+  attribute_type?: "TEXT" | "SELECT" | "NUMBER" | "BOOLEAN"; // Included when joined
   display_order?: number; // Included when joined
 }
 
@@ -103,7 +113,7 @@ export interface Product {
   seller_initiated_chapter_id?: number | null;
   seller_initiated_season?: string | null;
   seller_initiated_year?: number | null;
-  seller_status?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  seller_status?: "PENDING" | "APPROVED" | "REJECTED";
   seller_stripe_account_id?: string | null;
   is_fraternity_member?: boolean;
   is_seller?: boolean;
@@ -123,14 +133,14 @@ export interface Seller {
   business_email: string | null;
   business_phone: string | null;
   kappa_vendor_id: string | null;
-  merchandise_type: 'KAPPA' | 'NON_KAPPA' | null;
+  merchandise_type: string | null; // Can be single value ('KAPPA' or 'NON_KAPPA') or comma-separated ('KAPPA,NON_KAPPA')
   headshot_url: string | null;
   store_logo_url: string;
   social_links: Record<string, string>;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
-  verification_status?: 'PENDING' | 'VERIFIED' | 'FAILED' | 'MANUAL_REVIEW';
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  verification_status?: "PENDING" | "VERIFIED" | "FAILED" | "MANUAL_REVIEW";
   stripe_account_id?: string | null;
-  stripe_account_type?: 'company' | 'individual' | null;
+  stripe_account_type?: "company" | "individual" | null;
   tax_id?: string | null;
   website?: string | null;
   business_address_line1?: string | null;
@@ -157,7 +167,7 @@ export interface Promoter {
   sponsoring_chapter_id: number | null;
   headshot_url: string | null;
   social_links: Record<string, string>;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  status: "PENDING" | "APPROVED" | "REJECTED";
 }
 
 export interface Event {
@@ -177,12 +187,29 @@ export interface Event {
   duration_minutes: number | null;
   event_link: string | null;
   is_featured: boolean;
-  featured_payment_status: 'UNPAID' | 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED';
+  featured_payment_status:
+    | "UNPAID"
+    | "PENDING"
+    | "PAID"
+    | "FAILED"
+    | "REFUNDED";
   stripe_payment_intent_id: string | null;
   ticket_price_cents: number;
-  dress_codes: ('business' | 'business_casual' | 'formal' | 'semi_formal' | 'kappa_casual' | 'greek_encouraged' | 'greek_required' | 'outdoor' | 'athletic' | 'comfortable' | 'all_white')[];
+  dress_codes: (
+    | "business"
+    | "business_casual"
+    | "formal"
+    | "semi_formal"
+    | "kappa_casual"
+    | "greek_encouraged"
+    | "greek_required"
+    | "outdoor"
+    | "athletic"
+    | "comfortable"
+    | "all_white"
+  )[];
   dress_code_notes: string | null;
-  status: 'ACTIVE' | 'CLOSED' | 'CANCELLED';
+  status: "ACTIVE" | "CLOSED" | "CANCELLED";
   promoter_name?: string;
   promoter_email?: string;
   promoter_fraternity_member_id?: number | null;
@@ -217,12 +244,12 @@ export async function fetchEventTypes(): Promise<EventType[]> {
   if (!res.ok) {
     try {
       const error = await parseJsonResponse<{ error?: string }>(res);
-      throw new Error(error.error || 'Failed to fetch event types');
+      throw new Error(error.error || "Failed to fetch event types");
     } catch (err: any) {
-      if (err.message && !err.message.includes('Unexpected token')) {
+      if (err.message && !err.message.includes("Unexpected token")) {
         throw err;
       }
-      throw new Error('Failed to load event types. Please try again.');
+      throw new Error("Failed to load event types. Please try again.");
     }
   }
   return parseJsonResponse<EventType[]>(res);
@@ -233,12 +260,12 @@ export async function fetchEventAudienceTypes(): Promise<EventAudienceType[]> {
   if (!res.ok) {
     try {
       const error = await parseJsonResponse<{ error?: string }>(res);
-      throw new Error(error.error || 'Failed to fetch event audience types');
+      throw new Error(error.error || "Failed to fetch event audience types");
     } catch (err: any) {
-      if (err.message && !err.message.includes('Unexpected token')) {
+      if (err.message && !err.message.includes("Unexpected token")) {
         throw err;
       }
-      throw new Error('Failed to load event audience types. Please try again.');
+      throw new Error("Failed to load event audience types. Please try again.");
     }
   }
   return parseJsonResponse<EventAudienceType[]>(res);
@@ -250,7 +277,7 @@ export interface Order {
   buyer_email?: string; // Deprecated, use user_id
   user_id?: number;
   amount_cents: number;
-  status: 'PENDING' | 'PAID' | 'FAILED';
+  status: "PENDING" | "PAID" | "FAILED";
   stripe_session_id?: string | null;
   created_at?: string;
   updated_at?: string;
@@ -287,69 +314,79 @@ export async function fetchChapters(): Promise<Chapter[]> {
   try {
     const res = await fetch(`${API_URL}/api/chapters`);
     if (!res.ok) {
-      console.error('[API] Failed to fetch chapters:', {
+      console.error("[API] Failed to fetch chapters:", {
         status: res.status,
         statusText: res.statusText,
         apiUrl: API_URL,
       });
-      throw new Error(`Failed to fetch chapters: ${res.status} ${res.statusText}`);
+      throw new Error(
+        `Failed to fetch chapters: ${res.status} ${res.statusText}`
+      );
     }
     return res.json();
   } catch (error: any) {
-    console.error('[API] Error fetching chapters:', {
+    console.error("[API] Error fetching chapters:", {
       error: error.message,
       apiUrl: API_URL,
-      isNetworkError: error.message.includes('fetch'),
+      isNetworkError: error.message.includes("fetch"),
     });
     throw error;
   }
 }
 
-export async function fetchIndustries(includeInactive: boolean = false): Promise<Industry[]> {
+export async function fetchIndustries(
+  includeInactive: boolean = false
+): Promise<Industry[]> {
   try {
-    const url = includeInactive 
+    const url = includeInactive
       ? `${API_URL}/api/industries?includeInactive=true`
       : `${API_URL}/api/industries`;
     const res = await fetch(url);
     if (!res.ok) {
-      console.error('[API] Failed to fetch industries:', {
+      console.error("[API] Failed to fetch industries:", {
         status: res.status,
         statusText: res.statusText,
         apiUrl: API_URL,
       });
-      throw new Error(`Failed to fetch industries: ${res.status} ${res.statusText}`);
+      throw new Error(
+        `Failed to fetch industries: ${res.status} ${res.statusText}`
+      );
     }
     return res.json();
   } catch (error: any) {
-    console.error('[API] Error fetching industries:', {
+    console.error("[API] Error fetching industries:", {
       error: error.message,
       apiUrl: API_URL,
-      isNetworkError: error.message.includes('fetch'),
+      isNetworkError: error.message.includes("fetch"),
     });
     throw error;
   }
 }
 
-export async function fetchProfessions(includeInactive: boolean = false): Promise<Profession[]> {
+export async function fetchProfessions(
+  includeInactive: boolean = false
+): Promise<Profession[]> {
   try {
-    const url = includeInactive 
+    const url = includeInactive
       ? `${API_URL}/api/professions?includeInactive=true`
       : `${API_URL}/api/professions`;
     const res = await fetch(url);
     if (!res.ok) {
-      console.error('[API] Failed to fetch professions:', {
+      console.error("[API] Failed to fetch professions:", {
         status: res.status,
         statusText: res.statusText,
         apiUrl: API_URL,
       });
-      throw new Error(`Failed to fetch professions: ${res.status} ${res.statusText}`);
+      throw new Error(
+        `Failed to fetch professions: ${res.status} ${res.statusText}`
+      );
     }
     return res.json();
   } catch (error: any) {
-    console.error('[API] Error fetching professions:', {
+    console.error("[API] Error fetching professions:", {
       error: error.message,
       apiUrl: API_URL,
-      isNetworkError: error.message.includes('fetch'),
+      isNetworkError: error.message.includes("fetch"),
     });
     throw error;
   }
@@ -357,24 +394,26 @@ export async function fetchProfessions(includeInactive: boolean = false): Promis
 
 export async function fetchActiveCollegiateChapters(): Promise<Chapter[]> {
   const res = await fetch(`${API_URL}/api/chapters/active-collegiate`);
-  if (!res.ok) throw new Error('Failed to fetch active collegiate chapters');
+  if (!res.ok) throw new Error("Failed to fetch active collegiate chapters");
   return res.json();
 }
 
 export async function fetchProducts(): Promise<Product[]> {
   try {
     const res = await fetch(`${API_URL}/api/products`, {
-      cache: 'no-store', // Ensure fresh data on each request
+      cache: "no-store", // Ensure fresh data on each request
     });
     if (!res.ok) {
-      console.error(`Failed to fetch products: ${res.status} ${res.statusText}`);
-      throw new Error('Failed to fetch products');
+      console.error(
+        `Failed to fetch products: ${res.status} ${res.statusText}`
+      );
+      throw new Error("Failed to fetch products");
     }
     const data = await res.json();
     console.log(`fetchProducts: Retrieved ${data.length} products`);
     return data;
   } catch (error) {
-    console.error('Error in fetchProducts:', error);
+    console.error("Error in fetchProducts:", error);
     throw error;
   }
 }
@@ -382,60 +421,69 @@ export async function fetchProducts(): Promise<Product[]> {
 export async function fetchFeaturedProducts(): Promise<Product[]> {
   try {
     const res = await fetch(`${API_URL}/api/products/featured`, {
-      cache: 'no-store', // Ensure fresh data on each request
+      cache: "no-store", // Ensure fresh data on each request
     });
     if (!res.ok) {
-      console.error(`Failed to fetch featured products: ${res.status} ${res.statusText}`);
-      throw new Error('Failed to fetch featured products');
+      console.error(
+        `Failed to fetch featured products: ${res.status} ${res.statusText}`
+      );
+      throw new Error("Failed to fetch featured products");
     }
     const data = await res.json();
-    console.log(`fetchFeaturedProducts: Retrieved ${data.length} featured products`);
+    console.log(
+      `fetchFeaturedProducts: Retrieved ${data.length} featured products`
+    );
     return data;
   } catch (error) {
-    console.error('Error in fetchFeaturedProducts:', error);
+    console.error("Error in fetchFeaturedProducts:", error);
     throw error;
   }
 }
 
 export async function fetchProduct(id: number): Promise<Product> {
   const res = await fetch(`${API_URL}/api/products/${id}`);
-  if (!res.ok) throw new Error('Failed to fetch product');
+  if (!res.ok) throw new Error("Failed to fetch product");
   return res.json();
 }
 
 export async function fetchProductCategories(): Promise<ProductCategory[]> {
   const res = await fetch(`${API_URL}/api/products/categories`);
-  if (!res.ok) throw new Error('Failed to fetch product categories');
+  if (!res.ok) throw new Error("Failed to fetch product categories");
   return res.json();
 }
 
-export async function fetchCategoryAttributeDefinitions(categoryId: number): Promise<CategoryAttributeDefinition[]> {
-  const res = await fetch(`${API_URL}/api/products/categories/${categoryId}/attributes`);
-  if (!res.ok) throw new Error('Failed to fetch category attribute definitions');
+export async function fetchCategoryAttributeDefinitions(
+  categoryId: number
+): Promise<CategoryAttributeDefinition[]> {
+  const res = await fetch(
+    `${API_URL}/api/products/categories/${categoryId}/attributes`
+  );
+  if (!res.ok)
+    throw new Error("Failed to fetch category attribute definitions");
   return res.json();
 }
 
 export async function createProduct(formData: FormData): Promise<Product> {
-  const session = await fetch('/api/auth/session').then(res => res.json());
+  const session = await fetch("/api/auth/session").then((res) => res.json());
   const idToken = (session as any)?.idToken;
-  
+
   if (!idToken) {
-    throw new Error('Not authenticated');
+    throw new Error("Not authenticated");
   }
 
   const res = await fetch(`${API_URL}/api/products`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Authorization': `Bearer ${idToken}`,
+      Authorization: `Bearer ${idToken}`,
     },
     body: formData,
   });
-  
+
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.error || error.message || 'Failed to create product');
+    throw new Error(error.error || error.message || "Failed to create product");
   }
-  
+
   return res.json();
 }
 
@@ -465,7 +513,7 @@ export async function fetchUserAddresses(): Promise<UserAddress[]> {
   const res = await fetch(`${API_URL}/api/addresses`, {
     headers,
   });
-  if (!res.ok) throw new Error('Failed to fetch addresses');
+  if (!res.ok) throw new Error("Failed to fetch addresses");
   const data = await res.json();
   return data.addresses || [];
 }
@@ -477,7 +525,7 @@ export async function fetchDefaultAddress(): Promise<UserAddress | null> {
   });
   if (!res.ok) {
     if (res.status === 404) return null;
-    throw new Error('Failed to fetch default address');
+    throw new Error("Failed to fetch default address");
   }
   const data = await res.json();
   return data.address || null;
@@ -494,13 +542,13 @@ export async function createUserAddress(address: {
 }): Promise<UserAddress> {
   const headers = await getAuthHeaders();
   const res = await fetch(`${API_URL}/api/addresses`, {
-    method: 'POST',
+    method: "POST",
     headers,
     body: JSON.stringify(address),
   });
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.error || 'Failed to create address');
+    throw new Error(error.error || "Failed to create address");
   }
   const data = await res.json();
   return data.address;
@@ -520,13 +568,13 @@ export async function updateUserAddress(
 ): Promise<UserAddress> {
   const headers = await getAuthHeaders();
   const res = await fetch(`${API_URL}/api/addresses/${addressId}`, {
-    method: 'PUT',
+    method: "PUT",
     headers,
     body: JSON.stringify(updates),
   });
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.error || 'Failed to update address');
+    throw new Error(error.error || "Failed to update address");
   }
   const data = await res.json();
   return data.address;
@@ -535,24 +583,26 @@ export async function updateUserAddress(
 export async function deleteUserAddress(addressId: number): Promise<void> {
   const headers = await getAuthHeaders();
   const res = await fetch(`${API_URL}/api/addresses/${addressId}`, {
-    method: 'DELETE',
+    method: "DELETE",
     headers,
   });
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.error || 'Failed to delete address');
+    throw new Error(error.error || "Failed to delete address");
   }
 }
 
-export async function setDefaultAddress(addressId: number): Promise<UserAddress> {
+export async function setDefaultAddress(
+  addressId: number
+): Promise<UserAddress> {
   const headers = await getAuthHeaders();
   const res = await fetch(`${API_URL}/api/addresses/${addressId}/set-default`, {
-    method: 'POST',
+    method: "POST",
     headers,
   });
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.error || 'Failed to set default address');
+    throw new Error(error.error || "Failed to set default address");
   }
   const data = await res.json();
   return data.address;
@@ -569,8 +619,8 @@ export async function calculateShippingRates(
   }
 ): Promise<ShippingRate[]> {
   const res = await fetch(`${API_URL}/api/shipping/rates`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       productId,
       toAddress,
@@ -579,7 +629,7 @@ export async function calculateShippingRates(
 
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.error || 'Failed to calculate shipping rates');
+    throw new Error(errorData.error || "Failed to calculate shipping rates");
   }
 
   const data = await res.json();
@@ -587,8 +637,8 @@ export async function calculateShippingRates(
 }
 
 export async function createCheckoutSession(
-  productId: number, 
-  buyerEmail: string, 
+  productId: number,
+  buyerEmail: string,
   guestData?: { email?: string; password?: string },
   shippingCents?: number,
   shippingAddress?: {
@@ -601,68 +651,75 @@ export async function createCheckoutSession(
   idToken?: string
 ): Promise<{ sessionId: string; url: string }> {
   const body: any = {};
-  
+
   // For authenticated users, just send email
   if (buyerEmail && !guestData) {
     body.buyer_email = buyerEmail;
   }
-  
+
   // For guest checkout, send email and password
   if (guestData?.email && guestData?.password) {
     body.email = guestData.email;
     body.password = guestData.password;
   }
-  
+
   // Add shipping cost if provided
   if (shippingCents !== undefined && shippingCents > 0) {
     body.shippingCents = shippingCents;
   }
-  
+
   // Add shipping address if provided
   if (shippingAddress) {
     body.shippingAddress = shippingAddress;
   }
-  
+
   // Get auth headers if user is authenticated (optional - won't fail if not authenticated)
-  const headers: HeadersInit = { 'Content-Type': 'application/json' };
-  
+  const headers: HeadersInit = { "Content-Type": "application/json" };
+
   // Use provided token if available, otherwise try to get from session
   if (idToken) {
-    headers['Authorization'] = `Bearer ${idToken}`;
+    headers["Authorization"] = `Bearer ${idToken}`;
   } else {
     try {
-      const session = await fetch('/api/auth/session').then(res => res.json());
+      const session = await fetch("/api/auth/session").then((res) =>
+        res.json()
+      );
       const sessionToken = (session as any)?.idToken;
       if (sessionToken) {
-        headers['Authorization'] = `Bearer ${sessionToken}`;
+        headers["Authorization"] = `Bearer ${sessionToken}`;
       }
     } catch (error) {
       // Not authenticated, continue without auth header (for guest checkout)
-      console.warn('Could not get auth token for checkout:', error);
+      console.warn("Could not get auth token for checkout:", error);
     }
   }
-  
+
   const res = await fetch(`${API_URL}/api/checkout/${productId}`, {
-    method: 'POST',
+    method: "POST",
     headers,
     body: JSON.stringify(body),
   });
-  
+
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
     // Include full error data for proper handling
-    const error = new Error(errorData.message || errorData.details || errorData.error || 'Failed to create checkout session');
+    const error = new Error(
+      errorData.message ||
+        errorData.details ||
+        errorData.error ||
+        "Failed to create checkout session"
+    );
     (error as any).errorData = errorData;
     throw error;
   }
-  
+
   return res.json();
 }
 
 export interface OrderDetails {
   order: {
     id: number;
-    status: 'PENDING' | 'PAID' | 'FAILED';
+    status: "PENDING" | "PAID" | "FAILED";
     amount_cents: number;
     buyer_email: string | null;
     user_id: number | null;
@@ -676,63 +733,82 @@ export interface OrderDetails {
   } | null;
 }
 
-export async function getOrderBySessionId(sessionId: string): Promise<OrderDetails> {
+export async function getOrderBySessionId(
+  sessionId: string
+): Promise<OrderDetails> {
   const res = await fetch(`${API_URL}/api/checkout/session/${sessionId}`);
-  
+
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
-    const errorMessage = errorData.error || 'Failed to fetch order details';
+    const errorMessage = errorData.error || "Failed to fetch order details";
     throw new Error(errorMessage);
   }
-  
+
   return res.json();
 }
 
 // Favorites API
-export async function addFavorite(userEmail: string, productId: number): Promise<void> {
-  const res = await fetch(`${API_URL}/api/favorites/${userEmail}/${productId}`, {
-    method: 'POST',
-  });
-  
+export async function addFavorite(
+  userEmail: string,
+  productId: number
+): Promise<void> {
+  const res = await fetch(
+    `${API_URL}/api/favorites/${userEmail}/${productId}`,
+    {
+      method: "POST",
+    }
+  );
+
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
-    const errorMessage = errorData.error || 'Failed to add favorite';
+    const errorMessage = errorData.error || "Failed to add favorite";
     throw new Error(errorMessage);
   }
 }
 
-export async function removeFavorite(userEmail: string, productId: number): Promise<void> {
-  const res = await fetch(`${API_URL}/api/favorites/${userEmail}/${productId}`, {
-    method: 'DELETE',
-  });
-  
+export async function removeFavorite(
+  userEmail: string,
+  productId: number
+): Promise<void> {
+  const res = await fetch(
+    `${API_URL}/api/favorites/${userEmail}/${productId}`,
+    {
+      method: "DELETE",
+    }
+  );
+
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
-    const errorMessage = errorData.error || 'Failed to remove favorite';
+    const errorMessage = errorData.error || "Failed to remove favorite";
     throw new Error(errorMessage);
   }
 }
 
-export async function checkFavorite(userEmail: string, productId: number): Promise<boolean> {
+export async function checkFavorite(
+  userEmail: string,
+  productId: number
+): Promise<boolean> {
   const res = await fetch(`${API_URL}/api/favorites/${userEmail}/${productId}`);
-  
+
   if (!res.ok) {
     return false;
   }
-  
+
   const data = await res.json();
   return data.favorited || false;
 }
 
-export async function getFavoriteProducts(userEmail: string): Promise<Product[]> {
+export async function getFavoriteProducts(
+  userEmail: string
+): Promise<Product[]> {
   const res = await fetch(`${API_URL}/api/favorites/${userEmail}/products`);
-  
+
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
-    const errorMessage = errorData.error || 'Failed to fetch favorite products';
+    const errorMessage = errorData.error || "Failed to fetch favorite products";
     throw new Error(errorMessage);
   }
-  
+
   return res.json();
 }
 
@@ -740,7 +816,11 @@ export async function getFavoriteProducts(userEmail: string): Promise<Product[]>
 export interface Notification {
   id: number;
   user_email: string;
-  type: 'PURCHASE_BLOCKED' | 'ITEM_AVAILABLE' | 'ORDER_CONFIRMED' | 'ORDER_SHIPPED';
+  type:
+    | "PURCHASE_BLOCKED"
+    | "ITEM_AVAILABLE"
+    | "ORDER_CONFIRMED"
+    | "ORDER_SHIPPED";
   title: string;
   message: string;
   related_product_id: number | null;
@@ -750,120 +830,148 @@ export interface Notification {
   read_at: string | null;
 }
 
-export async function getNotifications(userEmail: string, limit?: number): Promise<Notification[]> {
-  const url = limit 
+export async function getNotifications(
+  userEmail: string,
+  limit?: number
+): Promise<Notification[]> {
+  const url = limit
     ? `${API_URL}/api/notifications/${userEmail}?limit=${limit}`
     : `${API_URL}/api/notifications/${userEmail}`;
   const res = await fetch(url);
-  
+
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
-    const errorMessage = errorData.error || 'Failed to fetch notifications';
+    const errorMessage = errorData.error || "Failed to fetch notifications";
     throw new Error(errorMessage);
   }
-  
+
   return res.json();
 }
 
-export async function getUnreadNotificationCount(userEmail: string): Promise<number> {
+export async function getUnreadNotificationCount(
+  userEmail: string
+): Promise<number> {
   const res = await fetch(`${API_URL}/api/notifications/${userEmail}/count`);
-  
+
   if (!res.ok) {
     return 0; // Return 0 on error to avoid breaking the UI
   }
-  
+
   const data = await res.json();
   return data.count || 0;
 }
 
-export async function markNotificationAsRead(notificationId: number, userEmail: string): Promise<void> {
-  const res = await fetch(`${API_URL}/api/notifications/${notificationId}/read`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userEmail }),
-  });
-  
+export async function markNotificationAsRead(
+  notificationId: number,
+  userEmail: string
+): Promise<void> {
+  const res = await fetch(
+    `${API_URL}/api/notifications/${notificationId}/read`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userEmail }),
+    }
+  );
+
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
-    const errorMessage = errorData.error || 'Failed to mark notification as read';
+    const errorMessage =
+      errorData.error || "Failed to mark notification as read";
     throw new Error(errorMessage);
   }
 }
 
-export async function markAllNotificationsAsRead(userEmail: string): Promise<number> {
-  const res = await fetch(`${API_URL}/api/notifications/${userEmail}/read-all`, {
-    method: 'PUT',
-  });
-  
+export async function markAllNotificationsAsRead(
+  userEmail: string
+): Promise<number> {
+  const res = await fetch(
+    `${API_URL}/api/notifications/${userEmail}/read-all`,
+    {
+      method: "PUT",
+    }
+  );
+
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
-    const errorMessage = errorData.error || 'Failed to mark all notifications as read';
+    const errorMessage =
+      errorData.error || "Failed to mark all notifications as read";
     throw new Error(errorMessage);
   }
-  
+
   const data = await res.json();
   return data.count || 0;
 }
 
-export async function deleteNotification(notificationId: number, userEmail: string): Promise<void> {
+export async function deleteNotification(
+  notificationId: number,
+  userEmail: string
+): Promise<void> {
   const res = await fetch(`${API_URL}/api/notifications/${notificationId}`, {
-    method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ userEmail }),
   });
-  
+
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
-    const errorMessage = errorData.error || 'Failed to delete notification';
+    const errorMessage = errorData.error || "Failed to delete notification";
     throw new Error(errorMessage);
   }
 }
 
-export async function submitSellerApplication(formData: FormData): Promise<Seller> {
+export async function submitSellerApplication(
+  formData: FormData
+): Promise<Seller> {
   // Get auth token if available (optional)
   const headers: HeadersInit = {};
   try {
-    const session = await fetch('/api/auth/session').then(res => res.json());
+    const session = await fetch("/api/auth/session").then((res) => res.json());
     const idToken = (session as any)?.idToken;
     if (idToken) {
-      headers['Authorization'] = `Bearer ${idToken}`;
+      headers["Authorization"] = `Bearer ${idToken}`;
     }
   } catch (error) {
     // Not authenticated, continue without auth header
   }
 
   const res = await fetch(`${API_URL}/api/sellers/apply`, {
-    method: 'POST',
+    method: "POST",
     headers,
     body: formData,
   });
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.error || 'Failed to submit application');
+    throw new Error(error.error || "Failed to submit application");
   }
   return res.json();
 }
 
-export async function validateSellerInvitation(token: string): Promise<{ valid: boolean; seller: { email: string; name: string } }> {
+export async function validateSellerInvitation(
+  token: string
+): Promise<{ valid: boolean; seller: { email: string; name: string } }> {
   const res = await fetch(`${API_URL}/api/seller-setup/validate/${token}`);
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.error || 'Invalid invitation token');
+    throw new Error(error.error || "Invalid invitation token");
   }
   return res.json();
 }
 
-export async function completeSellerSetup(token: string, password: string): Promise<void> {
+export async function completeSellerSetup(
+  token: string,
+  password: string
+): Promise<void> {
   const res = await fetch(`${API_URL}/api/seller-setup/complete`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
     body: JSON.stringify({ token, password }),
   });
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.error || 'Failed to complete seller setup');
+    throw new Error(error.error || "Failed to complete seller setup");
   }
 }
 
@@ -871,58 +979,67 @@ export async function completeSellerSetup(token: string, password: string): Prom
  * Safely parse JSON response, handling HTML error pages
  */
 async function parseJsonResponse<T>(response: Response): Promise<T> {
-  const contentType = response.headers.get('content-type') || '';
+  const contentType = response.headers.get("content-type") || "";
   const text = await response.text();
-  
+
   // Check if response is HTML (error page) instead of JSON
-  if (contentType.includes('text/html') || text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+  if (
+    contentType.includes("text/html") ||
+    text.trim().startsWith("<!DOCTYPE") ||
+    text.trim().startsWith("<html")
+  ) {
     // Try to extract error message from HTML if possible
     const titleMatch = text.match(/<title[^>]*>([^<]+)<\/title>/i);
-    const errorMessage = titleMatch ? titleMatch[1] : 'Server error';
-    
+    const errorMessage = titleMatch ? titleMatch[1] : "Server error";
+
     throw new Error(
-      response.status === 500 
-        ? 'A server error occurred. Please try again later or contact support if the problem persists.'
+      response.status === 500
+        ? "A server error occurred. Please try again later or contact support if the problem persists."
         : response.status === 404
-        ? 'The requested resource was not found. Please check your connection and try again.'
+        ? "The requested resource was not found. Please check your connection and try again."
         : response.status === 403
-        ? 'You do not have permission to perform this action.'
+        ? "You do not have permission to perform this action."
         : response.status === 401
-        ? 'Your session has expired. Please log in again.'
+        ? "Your session has expired. Please log in again."
         : `An error occurred (${response.status}). ${errorMessage}`
     );
   }
-  
+
   // Try to parse as JSON
   try {
     return JSON.parse(text) as T;
   } catch (error) {
-    throw new Error('The server returned an invalid response. Please try again.');
+    throw new Error(
+      "The server returned an invalid response. Please try again."
+    );
   }
 }
 
 export async function getAuthHeaders(): Promise<HeadersInit> {
-  const session = await fetch('/api/auth/session').then(res => res.json());
+  const session = await fetch("/api/auth/session").then((res) => res.json());
   const idToken = (session as any)?.idToken;
   const onboardingStatus = (session as any)?.user?.onboarding_status;
   const userRole = (session as any)?.user?.role;
-  
+
   if (!idToken) {
-    throw new Error('Not authenticated');
+    throw new Error("Not authenticated");
   }
-  
+
   // GUEST users with 'COGNITO_CONFIRMED' status are allowed to access basic features like orders
   // Other users need 'ONBOARDING_FINISHED' status
-  const isAllowed = onboardingStatus === 'ONBOARDING_FINISHED' ||
-                     (userRole === 'GUEST' && onboardingStatus === 'COGNITO_CONFIRMED');
-  
+  const isAllowed =
+    onboardingStatus === "ONBOARDING_FINISHED" ||
+    (userRole === "GUEST" && onboardingStatus === "COGNITO_CONFIRMED");
+
   if (!isAllowed) {
-    throw new Error('Registration incomplete. Please complete your registration to access this feature.');
+    throw new Error(
+      "Registration incomplete. Please complete your registration to access this feature."
+    );
   }
-  
+
   return {
-    'Authorization': `Bearer ${idToken}`,
-    'Content-Type': 'application/json',
+    Authorization: `Bearer ${idToken}`,
+    "Content-Type": "application/json",
   };
 }
 
@@ -931,21 +1048,21 @@ export async function fetchPendingSellers(): Promise<Seller[]> {
   const res = await fetch(`${API_URL}/api/admin/sellers/pending`, {
     headers,
   });
-  if (!res.ok) throw new Error('Failed to fetch pending sellers');
+  if (!res.ok) throw new Error("Failed to fetch pending sellers");
   return res.json();
 }
 
 export async function updateSellerStatus(
   sellerId: number,
-  status: 'APPROVED' | 'REJECTED'
+  status: "APPROVED" | "REJECTED"
 ): Promise<Seller> {
   const headers = await getAuthHeaders();
   const res = await fetch(`${API_URL}/api/admin/sellers/${sellerId}`, {
-    method: 'PUT',
+    method: "PUT",
     headers,
     body: JSON.stringify({ status }),
   });
-  if (!res.ok) throw new Error('Failed to update seller status');
+  if (!res.ok) throw new Error("Failed to update seller status");
   return res.json();
 }
 
@@ -954,7 +1071,7 @@ export async function fetchOrders(): Promise<Order[]> {
   const res = await fetch(`${API_URL}/api/admin/orders`, {
     headers,
   });
-  if (!res.ok) throw new Error('Failed to fetch orders');
+  if (!res.ok) throw new Error("Failed to fetch orders");
   return res.json();
 }
 
@@ -963,7 +1080,7 @@ export async function fetchUserOrders(): Promise<Order[]> {
   const res = await fetch(`${API_URL}/api/users/me/orders`, {
     headers,
   });
-  if (!res.ok) throw new Error('Failed to fetch orders');
+  if (!res.ok) throw new Error("Failed to fetch orders");
   return res.json();
 }
 
@@ -972,82 +1089,120 @@ export async function fetchDonations() {
   const res = await fetch(`${API_URL}/api/admin/donations`, {
     headers,
   });
-  if (!res.ok) throw new Error('Failed to fetch donations');
+  if (!res.ok) throw new Error("Failed to fetch donations");
   return res.json();
 }
 
 export async function fetchTotalDonations(): Promise<number> {
   const res = await fetch(`${API_URL}/api/donations/total`, {
-    cache: 'no-store',
+    cache: "no-store",
   });
-  if (!res.ok) throw new Error('Failed to fetch total donations');
+  if (!res.ok) throw new Error("Failed to fetch total donations");
   const data = await res.json();
   return data.total_donations_cents || 0;
 }
 
-export async function submitPromoterApplication(formData: FormData): Promise<Promoter> {
+export async function submitPromoterApplication(
+  formData: FormData
+): Promise<Promoter> {
   const res = await fetch(`${API_URL}/api/promoters/apply`, {
-    method: 'POST',
+    method: "POST",
     body: formData,
   });
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.error || 'Failed to submit application');
+    throw new Error(error.error || "Failed to submit application");
   }
   return res.json();
 }
 
-export async function createEvent(formData: FormData): Promise<Event & { checkout_url?: string; requires_payment?: boolean; payment_error?: string }> {
+export async function createEvent(
+  formData: FormData
+): Promise<
+  Event & {
+    checkout_url?: string;
+    requires_payment?: boolean;
+    payment_error?: string;
+  }
+> {
   const headers = await getAuthHeaders();
   // Remove Content-Type header when sending FormData - browser will set it automatically with boundary
-  const { 'Content-Type': _, ...headersWithoutContentType } = headers as Record<string, string>;
+  const { "Content-Type": _, ...headersWithoutContentType } = headers as Record<
+    string,
+    string
+  >;
   const res = await fetch(`${API_URL}/api/events`, {
-    method: 'POST',
+    method: "POST",
     headers: headersWithoutContentType,
     body: formData,
   });
   if (!res.ok) {
     try {
       const error = await parseJsonResponse<{ error?: string }>(res);
-      throw new Error(error.error || 'Failed to create event');
+      throw new Error(error.error || "Failed to create event");
     } catch (err: any) {
       // If it's already our friendly error, re-throw it
-      if (err.message && !err.message.includes('Unexpected token')) {
+      if (err.message && !err.message.includes("Unexpected token")) {
         throw err;
       }
       // Otherwise provide a friendly message
-      throw new Error('Failed to create event. Please check your connection and try again.');
+      throw new Error(
+        "Failed to create event. Please check your connection and try again."
+      );
     }
   }
-  return parseJsonResponse<Event & { checkout_url?: string; requires_payment?: boolean; payment_error?: string }>(res);
+  return parseJsonResponse<
+    Event & {
+      checkout_url?: string;
+      requires_payment?: boolean;
+      payment_error?: string;
+    }
+  >(res);
 }
 
 export async function updateEvent(
   eventId: number,
   formData: FormData
-): Promise<Event & { checkout_url?: string; requires_payment?: boolean; payment_error?: string }> {
+): Promise<
+  Event & {
+    checkout_url?: string;
+    requires_payment?: boolean;
+    payment_error?: string;
+  }
+> {
   const headers = await getAuthHeaders();
   // Remove Content-Type header when sending FormData - browser will set it automatically with boundary
-  const { 'Content-Type': _, ...headersWithoutContentType } = headers as Record<string, string>;
+  const { "Content-Type": _, ...headersWithoutContentType } = headers as Record<
+    string,
+    string
+  >;
   const res = await fetch(`${API_URL}/api/events/${eventId}`, {
-    method: 'PUT',
+    method: "PUT",
     headers: headersWithoutContentType,
     body: formData,
   });
   if (!res.ok) {
     try {
       const error = await parseJsonResponse<{ error?: string }>(res);
-      throw new Error(error.error || 'Failed to update event');
+      throw new Error(error.error || "Failed to update event");
     } catch (err: any) {
       // If it's already our friendly error, re-throw it
-      if (err.message && !err.message.includes('Unexpected token')) {
+      if (err.message && !err.message.includes("Unexpected token")) {
         throw err;
       }
       // Otherwise provide a friendly message
-      throw new Error('Failed to update event. Please check your connection and try again.');
+      throw new Error(
+        "Failed to update event. Please check your connection and try again."
+      );
     }
   }
-  return parseJsonResponse<Event & { checkout_url?: string; requires_payment?: boolean; payment_error?: string }>(res);
+  return parseJsonResponse<
+    Event & {
+      checkout_url?: string;
+      requires_payment?: boolean;
+      payment_error?: string;
+    }
+  >(res);
 }
 
 export async function fetchPendingPromoters(): Promise<Promoter[]> {
@@ -1055,7 +1210,7 @@ export async function fetchPendingPromoters(): Promise<Promoter[]> {
   const res = await fetch(`${API_URL}/api/admin/promoters/pending`, {
     headers,
   });
-  if (!res.ok) throw new Error('Failed to fetch pending promoters');
+  if (!res.ok) throw new Error("Failed to fetch pending promoters");
   return res.json();
 }
 
@@ -1064,60 +1219,71 @@ export async function fetchPendingMembers(): Promise<MemberProfile[]> {
   const res = await fetch(`${API_URL}/api/admin/members/pending`, {
     headers,
   });
-  if (!res.ok) throw new Error('Failed to fetch pending members');
+  if (!res.ok) throw new Error("Failed to fetch pending members");
   return res.json();
 }
 
 export async function updateMemberVerificationStatus(
   memberId: number,
-  verification_status: 'PENDING' | 'VERIFIED' | 'FAILED' | 'MANUAL_REVIEW',
+  verification_status: "PENDING" | "VERIFIED" | "FAILED" | "MANUAL_REVIEW",
   verification_notes?: string | null
 ): Promise<MemberProfile> {
   const headers = await getAuthHeaders();
-  const res = await fetch(`${API_URL}/api/admin/members/${memberId}/verification`, {
-    method: 'PUT',
-    headers,
-    body: JSON.stringify({ verification_status, verification_notes }),
-  });
-  if (!res.ok) throw new Error('Failed to update member verification');
+  const res = await fetch(
+    `${API_URL}/api/admin/members/${memberId}/verification`,
+    {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({ verification_status, verification_notes }),
+    }
+  );
+  if (!res.ok) throw new Error("Failed to update member verification");
   return res.json();
 }
 
 export async function updatePromoterStatus(
   promoterId: number,
-  status: 'APPROVED' | 'REJECTED'
+  status: "APPROVED" | "REJECTED"
 ): Promise<Promoter> {
   const headers = await getAuthHeaders();
   const res = await fetch(`${API_URL}/api/admin/promoters/${promoterId}`, {
-    method: 'PUT',
+    method: "PUT",
     headers,
     body: JSON.stringify({ status }),
   });
-  if (!res.ok) throw new Error('Failed to update promoter status');
+  if (!res.ok) throw new Error("Failed to update promoter status");
   return res.json();
 }
 
-export async function fetchEvents(includeAll: boolean = true): Promise<Event[]> {
-  const url = includeAll ? `${API_URL}/api/events?all=true` : `${API_URL}/api/events`;
+export async function fetchEvents(
+  includeAll: boolean = true
+): Promise<Event[]> {
+  const url = includeAll
+    ? `${API_URL}/api/events?all=true`
+    : `${API_URL}/api/events`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error('Failed to fetch events');
+  if (!res.ok) throw new Error("Failed to fetch events");
   return res.json();
 }
 
 export async function fetchUpcomingEvents(): Promise<Event[]> {
   try {
     const res = await fetch(`${API_URL}/api/events/upcoming`, {
-      cache: 'no-store', // Ensure fresh data on each request
+      cache: "no-store", // Ensure fresh data on each request
     });
     if (!res.ok) {
-      console.error(`Failed to fetch upcoming events: ${res.status} ${res.statusText}`);
-      throw new Error('Failed to fetch upcoming events');
+      console.error(
+        `Failed to fetch upcoming events: ${res.status} ${res.statusText}`
+      );
+      throw new Error("Failed to fetch upcoming events");
     }
     const data = await res.json();
-    console.log(`fetchUpcomingEvents: Retrieved ${data.length} upcoming events`);
+    console.log(
+      `fetchUpcomingEvents: Retrieved ${data.length} upcoming events`
+    );
     return data;
   } catch (error) {
-    console.error('Error in fetchUpcomingEvents:', error);
+    console.error("Error in fetchUpcomingEvents:", error);
     throw error;
   }
 }
@@ -1137,12 +1303,12 @@ export async function getPromoterEvents(): Promise<Event[]> {
   if (!res.ok) {
     try {
       const error = await parseJsonResponse<{ error?: string }>(res);
-      throw new Error(error.error || 'Failed to fetch promoter events');
+      throw new Error(error.error || "Failed to fetch promoter events");
     } catch (err: any) {
-      if (err.message && !err.message.includes('Unexpected token')) {
+      if (err.message && !err.message.includes("Unexpected token")) {
         throw err;
       }
-      throw new Error('Failed to load your events. Please try again.');
+      throw new Error("Failed to load your events. Please try again.");
     }
   }
   return parseJsonResponse<Event[]>(res);
@@ -1156,12 +1322,12 @@ export async function getPromoterMetrics(): Promise<PromoterMetrics> {
   if (!res.ok) {
     try {
       const error = await parseJsonResponse<{ error?: string }>(res);
-      throw new Error(error.error || 'Failed to fetch promoter metrics');
+      throw new Error(error.error || "Failed to fetch promoter metrics");
     } catch (err: any) {
-      if (err.message && !err.message.includes('Unexpected token')) {
+      if (err.message && !err.message.includes("Unexpected token")) {
         throw err;
       }
-      throw new Error('Failed to load event metrics. Please try again.');
+      throw new Error("Failed to load event metrics. Please try again.");
     }
   }
   return parseJsonResponse<PromoterMetrics>(res);
@@ -1170,18 +1336,18 @@ export async function getPromoterMetrics(): Promise<PromoterMetrics> {
 export async function closeEvent(eventId: number): Promise<Event> {
   const headers = await getAuthHeaders();
   const res = await fetch(`${API_URL}/api/events/${eventId}/close`, {
-    method: 'PATCH',
+    method: "PATCH",
     headers,
   });
   if (!res.ok) {
     try {
       const error = await parseJsonResponse<{ error?: string }>(res);
-      throw new Error(error.error || 'Failed to close event');
+      throw new Error(error.error || "Failed to close event");
     } catch (err: any) {
-      if (err.message && !err.message.includes('Unexpected token')) {
+      if (err.message && !err.message.includes("Unexpected token")) {
         throw err;
       }
-      throw new Error('Failed to close event. Please try again.');
+      throw new Error("Failed to close event. Please try again.");
     }
   }
   return parseJsonResponse<Event>(res);
@@ -1195,12 +1361,12 @@ export async function getPromoterProfile(): Promise<Promoter> {
   if (!res.ok) {
     try {
       const error = await parseJsonResponse<{ error?: string }>(res);
-      throw new Error(error.error || 'Failed to fetch promoter profile');
+      throw new Error(error.error || "Failed to fetch promoter profile");
     } catch (err: any) {
-      if (err.message && !err.message.includes('Unexpected token')) {
+      if (err.message && !err.message.includes("Unexpected token")) {
         throw err;
       }
-      throw new Error('Failed to load your profile. Please try again.');
+      throw new Error("Failed to load your profile. Please try again.");
     }
   }
   return parseJsonResponse<Promoter>(res);
@@ -1211,12 +1377,12 @@ export async function fetchEvent(id: number): Promise<Event> {
   if (!res.ok) {
     try {
       const error = await parseJsonResponse<{ error?: string }>(res);
-      throw new Error(error.error || 'Failed to fetch event');
+      throw new Error(error.error || "Failed to fetch event");
     } catch (err: any) {
-      if (err.message && !err.message.includes('Unexpected token')) {
+      if (err.message && !err.message.includes("Unexpected token")) {
         throw err;
       }
-      throw new Error('Failed to load event. Please try again.');
+      throw new Error("Failed to load event. Please try again.");
     }
   }
   return parseJsonResponse<Event>(res);
@@ -1245,7 +1411,7 @@ export interface MemberProfile {
   bio: string | null;
   headshot_url: string | null;
   social_links: Record<string, string>;
-  verification_status?: 'PENDING' | 'VERIFIED' | 'FAILED' | 'MANUAL_REVIEW';
+  verification_status?: "PENDING" | "VERIFIED" | "FAILED" | "MANUAL_REVIEW";
   created_at: string;
   updated_at: string;
   is_seller?: boolean;
@@ -1259,79 +1425,82 @@ export async function fetchAllMembers(filters?: {
   industry?: string;
   profession_id?: number;
 }): Promise<MemberProfile[]> {
-  const session = await fetch('/api/auth/session').then(res => res.json());
+  const session = await fetch("/api/auth/session").then((res) => res.json());
   const idToken = (session as any)?.idToken;
-  
+
   if (!idToken) {
-    throw new Error('Not authenticated');
+    throw new Error("Not authenticated");
   }
 
   const params = new URLSearchParams();
-  if (filters?.location) params.append('location', filters.location);
-  if (filters?.chapter_id) params.append('chapter_id', filters.chapter_id.toString());
-  if (filters?.industry) params.append('industry', filters.industry);
-  if (filters?.profession_id) params.append('profession_id', filters.profession_id.toString());
+  if (filters?.location) params.append("location", filters.location);
+  if (filters?.chapter_id)
+    params.append("chapter_id", filters.chapter_id.toString());
+  if (filters?.industry) params.append("industry", filters.industry);
+  if (filters?.profession_id)
+    params.append("profession_id", filters.profession_id.toString());
 
   const res = await fetch(`${API_URL}/api/members?${params.toString()}`, {
     headers: {
-      'Authorization': `Bearer ${idToken}`,
+      Authorization: `Bearer ${idToken}`,
     },
   });
-  
+
   if (!res.ok) {
-    throw new Error('Failed to fetch members');
+    throw new Error("Failed to fetch members");
   }
-  
+
   return res.json();
 }
 
 export async function fetchMemberProfile(): Promise<MemberProfile> {
-  const session = await fetch('/api/auth/session').then(res => res.json());
+  const session = await fetch("/api/auth/session").then((res) => res.json());
   const idToken = (session as any)?.idToken;
-  
+
   if (!idToken) {
-    throw new Error('Not authenticated');
+    throw new Error("Not authenticated");
   }
 
   const res = await fetch(`${API_URL}/api/members/profile`, {
     headers: {
-      'Authorization': `Bearer ${idToken}`,
+      Authorization: `Bearer ${idToken}`,
     },
   });
-  
+
   if (!res.ok) {
     if (res.status === 404) {
       const errorData = await res.json().catch(() => ({}));
-      const error = new Error('Member profile not found');
-      (error as any).requiresRegistration = errorData.requiresRegistration === true;
+      const error = new Error("Member profile not found");
+      (error as any).requiresRegistration =
+        errorData.requiresRegistration === true;
       (error as any).code = errorData.code;
       throw error;
     }
-    throw new Error('Failed to fetch member profile');
+    throw new Error("Failed to fetch member profile");
   }
-  
+
   return res.json();
 }
 
 export async function updateMemberProfile(
   data: Partial<MemberProfile> & { headshot?: File }
 ): Promise<MemberProfile> {
-  const session = await fetch('/api/auth/session').then(res => res.json());
+  const session = await fetch("/api/auth/session").then((res) => res.json());
   const idToken = (session as any)?.idToken;
-  
+
   if (!idToken) {
-    throw new Error('Not authenticated');
+    throw new Error("Not authenticated");
   }
 
   const formData = new FormData();
-  
+
   // Add all fields except headshot
   Object.keys(data).forEach((key) => {
-    if (key !== 'headshot' && data[key as keyof typeof data] !== undefined) {
+    if (key !== "headshot" && data[key as keyof typeof data] !== undefined) {
       const value = data[key as keyof typeof data];
-      if (key === 'social_links' && typeof value === 'object') {
+      if (key === "social_links" && typeof value === "object") {
         formData.append(key, JSON.stringify(value));
-      } else if (key === 'address_is_private' || key === 'phone_is_private') {
+      } else if (key === "address_is_private" || key === "phone_is_private") {
         formData.append(key, String(value));
       } else if (value !== null) {
         formData.append(key, String(value));
@@ -1341,32 +1510,36 @@ export async function updateMemberProfile(
 
   // Add headshot if provided
   if (data.headshot) {
-    formData.append('headshot', data.headshot);
+    formData.append("headshot", data.headshot);
   }
 
   const res = await fetch(`${API_URL}/api/members/profile`, {
-    method: 'PUT',
+    method: "PUT",
     headers: {
-      'Authorization': `Bearer ${idToken}`,
+      Authorization: `Bearer ${idToken}`,
     },
     body: formData,
   });
-  
+
   if (!res.ok) {
     // Try to parse JSON error, fallback to text if not JSON
     let errorData;
-    const contentType = res.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
-      errorData = await res.json().catch(() => ({ error: 'Failed to update profile' }));
+    const contentType = res.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      errorData = await res
+        .json()
+        .catch(() => ({ error: "Failed to update profile" }));
     } else {
       // If HTML error page, try to extract error message
-      const text = await res.text().catch(() => '');
+      const text = await res.text().catch(() => "");
       const errorMatch = text.match(/Error: ([^<]+)/);
-      errorData = { error: errorMatch ? errorMatch[1] : 'Failed to update profile' };
+      errorData = {
+        error: errorMatch ? errorMatch[1] : "Failed to update profile",
+      };
     }
-    throw new Error(errorData.error || 'Failed to update member profile');
+    throw new Error(errorData.error || "Failed to update member profile");
   }
-  
+
   return res.json();
 }
 
@@ -1386,7 +1559,7 @@ export async function getMemberMetrics(): Promise<MemberMetrics> {
   });
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.error || 'Failed to fetch member metrics');
+    throw new Error(error.error || "Failed to fetch member metrics");
   }
   return res.json();
 }
@@ -1394,7 +1567,7 @@ export async function getMemberMetrics(): Promise<MemberMetrics> {
 export interface MemberActivity {
   claims: Array<{
     id: number;
-    type: 'claim';
+    type: "claim";
     listing_id: number;
     name: string;
     amount_cents: number;
@@ -1404,7 +1577,7 @@ export interface MemberActivity {
   }>;
   purchases: Array<{
     id: number;
-    type: 'purchase';
+    type: "purchase";
     product_id: number;
     name: string;
     amount_cents: number;
@@ -1421,7 +1594,7 @@ export async function getMemberActivity(): Promise<MemberActivity> {
   });
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.error || 'Failed to fetch member activity');
+    throw new Error(error.error || "Failed to fetch member activity");
   }
   return res.json();
 }
@@ -1446,35 +1619,48 @@ export interface FeaturedBrother {
 export async function fetchFeaturedBrothers(): Promise<FeaturedBrother[]> {
   try {
     const res = await fetch(`${API_URL}/api/sellers/featured`, {
-      cache: 'no-store', // Ensure fresh data on each request
+      cache: "no-store", // Ensure fresh data on each request
     });
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({}));
-      console.error(`Failed to fetch featured brothers: ${res.status} ${res.statusText}`, errorData);
-      throw new Error(errorData.error || errorData.details || 'Failed to fetch featured brothers');
+      console.error(
+        `Failed to fetch featured brothers: ${res.status} ${res.statusText}`,
+        errorData
+      );
+      throw new Error(
+        errorData.error ||
+          errorData.details ||
+          "Failed to fetch featured brothers"
+      );
     }
     const data = await res.json();
-    console.log(`fetchFeaturedBrothers: Retrieved ${data.length} featured brothers`);
+    console.log(
+      `fetchFeaturedBrothers: Retrieved ${data.length} featured brothers`
+    );
     return data;
   } catch (error) {
-    console.error('Error in fetchFeaturedBrothers:', error);
+    console.error("Error in fetchFeaturedBrothers:", error);
     // Return empty array instead of throwing to prevent UI crashes
     return [];
   }
 }
 
-export async function getSellerWithProducts(sellerId: number): Promise<SellerWithProducts | null> {
+export async function getSellerWithProducts(
+  sellerId: number
+): Promise<SellerWithProducts | null> {
   const res = await fetch(`${API_URL}/api/sellers/${sellerId}/products`);
   if (!res.ok) {
     if (res.status === 404) return null;
-    throw new Error('Failed to fetch seller with products');
+    throw new Error("Failed to fetch seller with products");
   }
   return res.json();
 }
 
-export async function fetchSellersWithProducts(): Promise<SellerWithProducts[]> {
+export async function fetchSellersWithProducts(): Promise<
+  SellerWithProducts[]
+> {
   const res = await fetch(`${API_URL}/api/sellers/collections`);
-  if (!res.ok) throw new Error('Failed to fetch sellers');
+  if (!res.ok) throw new Error("Failed to fetch sellers");
   return res.json();
 }
 
@@ -1499,37 +1685,40 @@ export async function fetchPosts(): Promise<Post[]> {
   const res = await fetch(`${API_URL}/api/connect/posts`, {
     headers,
   });
-  if (!res.ok) throw new Error('Failed to fetch posts');
+  if (!res.ok) throw new Error("Failed to fetch posts");
   return res.json();
 }
 
-export async function createPost(content: string, imageUrl?: string): Promise<Post> {
+export async function createPost(
+  content: string,
+  imageUrl?: string
+): Promise<Post> {
   const headers = await getAuthHeaders();
   const res = await fetch(`${API_URL}/api/connect/posts`, {
-    method: 'POST',
+    method: "POST",
     headers,
     body: JSON.stringify({ content, image_url: imageUrl }),
   });
-  if (!res.ok) throw new Error('Failed to create post');
+  if (!res.ok) throw new Error("Failed to create post");
   return res.json();
 }
 
 export async function likePost(postId: number): Promise<void> {
   const headers = await getAuthHeaders();
   const res = await fetch(`${API_URL}/api/connect/posts/${postId}/like`, {
-    method: 'POST',
+    method: "POST",
     headers,
   });
-  if (!res.ok) throw new Error('Failed to like post');
+  if (!res.ok) throw new Error("Failed to like post");
 }
 
 export async function unlikePost(postId: number): Promise<void> {
   const headers = await getAuthHeaders();
   const res = await fetch(`${API_URL}/api/connect/posts/${postId}/like`, {
-    method: 'DELETE',
+    method: "DELETE",
     headers,
   });
-  if (!res.ok) throw new Error('Failed to unlike post');
+  if (!res.ok) throw new Error("Failed to unlike post");
 }
 
 // Steward API functions
@@ -1537,8 +1726,8 @@ export interface Steward {
   id: number;
   fraternity_member_id: number;
   sponsoring_chapter_id: number;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
-  verification_status: 'PENDING' | 'VERIFIED' | 'FAILED' | 'MANUAL_REVIEW';
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  verification_status: "PENDING" | "VERIFIED" | "FAILED" | "MANUAL_REVIEW";
   verification_date: string | null;
   verification_notes: string | null;
   created_at: string;
@@ -1563,7 +1752,7 @@ export interface StewardListing {
   chapter_donation_cents: number;
   sponsoring_chapter_id: number;
   category_id: number | null;
-  status: 'ACTIVE' | 'CLAIMED' | 'REMOVED';
+  status: "ACTIVE" | "CLAIMED" | "REMOVED";
   claimed_by_fraternity_member_id: number | null;
   claimed_at: string | null;
   created_at: string;
@@ -1573,16 +1762,18 @@ export interface StewardListing {
   images?: StewardListingImage[];
 }
 
-export async function applyToBecomeSteward(sponsoringChapterId: number): Promise<Steward> {
+export async function applyToBecomeSteward(
+  sponsoringChapterId: number
+): Promise<Steward> {
   const headers = await getAuthHeaders();
   const res = await fetch(`${API_URL}/api/stewards/apply`, {
-    method: 'POST',
+    method: "POST",
     headers,
     body: JSON.stringify({ sponsoring_chapter_id: sponsoringChapterId }),
   });
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.error || 'Failed to apply to become a steward');
+    throw new Error(error.error || "Failed to apply to become a steward");
   }
   return res.json();
 }
@@ -1592,28 +1783,30 @@ export async function getStewardProfile(): Promise<Steward> {
   const res = await fetch(`${API_URL}/api/stewards/profile`, {
     headers,
   });
-  if (!res.ok) throw new Error('Failed to fetch steward profile');
+  if (!res.ok) throw new Error("Failed to fetch steward profile");
   return res.json();
 }
 
-export async function createStewardListing(formData: FormData): Promise<StewardListing> {
-  const session = await fetch('/api/auth/session').then(res => res.json());
+export async function createStewardListing(
+  formData: FormData
+): Promise<StewardListing> {
+  const session = await fetch("/api/auth/session").then((res) => res.json());
   const idToken = (session as any)?.idToken;
-  
+
   if (!idToken) {
-    throw new Error('Not authenticated');
+    throw new Error("Not authenticated");
   }
 
   const res = await fetch(`${API_URL}/api/stewards/listings`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Authorization': `Bearer ${idToken}`,
+      Authorization: `Bearer ${idToken}`,
     },
     body: formData,
   });
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.error || 'Failed to create steward listing');
+    throw new Error(error.error || "Failed to create steward listing");
   }
   return res.json();
 }
@@ -1623,7 +1816,7 @@ export async function getStewardListings(): Promise<StewardListing[]> {
   const res = await fetch(`${API_URL}/api/stewards/listings`, {
     headers,
   });
-  if (!res.ok) throw new Error('Failed to fetch steward listings');
+  if (!res.ok) throw new Error("Failed to fetch steward listings");
   return res.json();
 }
 
@@ -1632,7 +1825,7 @@ export async function getStewardListing(id: number): Promise<StewardListing> {
   const res = await fetch(`${API_URL}/api/stewards/listings/${id}`, {
     headers,
   });
-  if (!res.ok) throw new Error('Failed to fetch steward listing');
+  if (!res.ok) throw new Error("Failed to fetch steward listing");
   return res.json();
 }
 
@@ -1643,10 +1836,10 @@ export async function getStewardMarketplace(): Promise<StewardListing[]> {
   });
   if (!res.ok) {
     const error = await res.json();
-    if (error.code === 'VERIFICATION_REQUIRED') {
-      throw new Error('VERIFICATION_REQUIRED');
+    if (error.code === "VERIFICATION_REQUIRED") {
+      throw new Error("VERIFICATION_REQUIRED");
     }
-    throw new Error(error.error || 'Failed to fetch steward marketplace');
+    throw new Error(error.error || "Failed to fetch steward marketplace");
   }
   return res.json();
 }
@@ -1655,42 +1848,51 @@ export async function getStewardMarketplacePublic(): Promise<StewardListing[]> {
   const res = await fetch(`${API_URL}/api/stewards/marketplace/public`);
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.error || 'Failed to fetch steward marketplace');
+    throw new Error(error.error || "Failed to fetch steward marketplace");
   }
   return res.json();
 }
 
-export async function getStewardListingPublic(id: number): Promise<StewardListing> {
+export async function getStewardListingPublic(
+  id: number
+): Promise<StewardListing> {
   const res = await fetch(`${API_URL}/api/stewards/listings/${id}/public`);
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.error || 'Failed to fetch steward listing');
+    throw new Error(error.error || "Failed to fetch steward listing");
   }
   return res.json();
 }
 
-export async function claimStewardListing(listingId: number): Promise<{ success: boolean; listing: StewardListing }> {
+export async function claimStewardListing(
+  listingId: number
+): Promise<{ success: boolean; listing: StewardListing }> {
   const headers = await getAuthHeaders();
-  const res = await fetch(`${API_URL}/api/stewards/listings/${listingId}/claim`, {
-    method: 'POST',
-    headers,
-  });
+  const res = await fetch(
+    `${API_URL}/api/stewards/listings/${listingId}/claim`,
+    {
+      method: "POST",
+      headers,
+    }
+  );
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.error || 'Failed to claim steward listing');
+    throw new Error(error.error || "Failed to claim steward listing");
   }
   return res.json();
 }
 
-export async function createStewardCheckoutSession(listingId: number): Promise<{ sessionId: string; url: string }> {
+export async function createStewardCheckoutSession(
+  listingId: number
+): Promise<{ sessionId: string; url: string }> {
   const headers = await getAuthHeaders();
   const res = await fetch(`${API_URL}/api/steward-checkout/${listingId}`, {
-    method: 'POST',
+    method: "POST",
     headers,
   });
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.error || 'Failed to create checkout session');
+    throw new Error(error.error || "Failed to create checkout session");
   }
   return res.json();
 }
@@ -1699,23 +1901,23 @@ export async function updateStewardListing(
   listingId: number,
   formData: FormData
 ): Promise<StewardListing> {
-  const session = await fetch('/api/auth/session').then(res => res.json());
+  const session = await fetch("/api/auth/session").then((res) => res.json());
   const idToken = (session as any)?.idToken;
-  
+
   if (!idToken) {
-    throw new Error('Not authenticated');
+    throw new Error("Not authenticated");
   }
 
   const res = await fetch(`${API_URL}/api/stewards/listings/${listingId}`, {
-    method: 'PUT',
+    method: "PUT",
     headers: {
-      'Authorization': `Bearer ${idToken}`,
+      Authorization: `Bearer ${idToken}`,
     },
     body: formData,
   });
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.error || 'Failed to update steward listing');
+    throw new Error(error.error || "Failed to update steward listing");
   }
   return res.json();
 }
@@ -1723,12 +1925,12 @@ export async function updateStewardListing(
 export async function deleteStewardListing(listingId: number): Promise<void> {
   const headers = await getAuthHeaders();
   const res = await fetch(`${API_URL}/api/stewards/listings/${listingId}`, {
-    method: 'DELETE',
+    method: "DELETE",
     headers,
   });
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.error || 'Failed to delete steward listing');
+    throw new Error(error.error || "Failed to delete steward listing");
   }
 }
 
@@ -1743,7 +1945,7 @@ export interface StewardClaim {
   shipping_cents: number;
   platform_fee_cents: number;
   chapter_donation_cents: number;
-  status: 'PENDING' | 'PAID' | 'FAILED';
+  status: "PENDING" | "PAID" | "FAILED";
   created_at: string;
   updated_at: string;
 }
@@ -1762,7 +1964,7 @@ export async function getStewardMetrics(): Promise<StewardMetrics> {
   });
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.error || 'Failed to fetch steward metrics');
+    throw new Error(error.error || "Failed to fetch steward metrics");
   }
   return res.json();
 }
@@ -1774,7 +1976,7 @@ export async function getStewardClaims(): Promise<StewardClaim[]> {
   });
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.error || 'Failed to fetch steward claims');
+    throw new Error(error.error || "Failed to fetch steward claims");
   }
   return res.json();
 }
@@ -1787,7 +1989,7 @@ export async function getSellerProfile(): Promise<Seller> {
   });
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.error || 'Failed to fetch seller profile');
+    throw new Error(error.error || "Failed to fetch seller profile");
   }
   return res.json();
 }
@@ -1799,7 +2001,7 @@ export async function getSellerProducts(): Promise<Product[]> {
   });
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.error || 'Failed to fetch seller products');
+    throw new Error(error.error || "Failed to fetch seller products");
   }
   return res.json();
 }
@@ -1811,7 +2013,7 @@ export interface SellerOrder {
   price_cents: number;
   buyer_email: string;
   amount_cents: number;
-  status: 'PENDING' | 'PAID' | 'FAILED';
+  status: "PENDING" | "PAID" | "FAILED";
   stripe_session_id: string | null;
   chapter_id: number | null;
   chapter_name: string | null;
@@ -1834,7 +2036,7 @@ export async function getSellerOrders(): Promise<SellerOrder[]> {
   });
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.error || 'Failed to fetch seller orders');
+    throw new Error(error.error || "Failed to fetch seller orders");
   }
   return res.json();
 }
@@ -1846,7 +2048,7 @@ export async function getSellerMetrics(): Promise<SellerMetrics> {
   });
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.error || 'Failed to fetch seller metrics');
+    throw new Error(error.error || "Failed to fetch seller metrics");
   }
   return res.json();
 }
@@ -1868,12 +2070,12 @@ export interface StripeAccountStatus {
 export async function initiateStripeOnboarding(): Promise<{ url: string }> {
   const headers = await getAuthHeaders();
   const res = await fetch(`${API_URL}/api/sellers/me/stripe/onboard`, {
-    method: 'POST',
+    method: "POST",
     headers,
   });
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.error || 'Failed to initiate Stripe onboarding');
+    throw new Error(error.error || "Failed to initiate Stripe onboarding");
   }
   return res.json();
 }
@@ -1885,7 +2087,7 @@ export async function getStripeAccountStatus(): Promise<StripeAccountStatus> {
   });
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.error || 'Failed to fetch Stripe status');
+    throw new Error(error.error || "Failed to fetch Stripe status");
   }
   return res.json();
 }
@@ -1900,7 +2102,7 @@ export async function syncStripeBusinessDetails(): Promise<{
     website: string | null;
     taxId: string | null;
     businessPhone: string | null;
-    accountType: 'company' | 'individual' | null;
+    accountType: "company" | "individual" | null;
     businessAddress: {
       line1: string | null;
       line2: string | null;
@@ -1913,12 +2115,14 @@ export async function syncStripeBusinessDetails(): Promise<{
 }> {
   const headers = await getAuthHeaders();
   const res = await fetch(`${API_URL}/api/sellers/me/stripe/sync-business`, {
-    method: 'POST',
+    method: "POST",
     headers,
   });
   if (!res.ok) {
     const error = await res.json();
-    throw new Error(error.error || 'Failed to sync business details from Stripe');
+    throw new Error(
+      error.error || "Failed to sync business details from Stripe"
+    );
   }
   return res.json();
 }
@@ -1929,51 +2133,55 @@ export async function fetchPendingStewards(): Promise<Steward[]> {
   const res = await fetch(`${API_URL}/api/admin/stewards/pending`, {
     headers,
   });
-  if (!res.ok) throw new Error('Failed to fetch pending stewards');
+  if (!res.ok) throw new Error("Failed to fetch pending stewards");
   return res.json();
 }
 
 export async function updateStewardStatus(
   stewardId: number,
-  status: 'APPROVED' | 'REJECTED'
+  status: "APPROVED" | "REJECTED"
 ): Promise<Steward> {
   const headers = await getAuthHeaders();
   const res = await fetch(`${API_URL}/api/admin/stewards/${stewardId}`, {
-    method: 'PUT',
+    method: "PUT",
     headers,
     body: JSON.stringify({ status }),
   });
-  if (!res.ok) throw new Error('Failed to update steward status');
+  if (!res.ok) throw new Error("Failed to update steward status");
   return res.json();
 }
 
-export async function fetchStewardActivity(): Promise<Array<{
-  steward_id: number;
-  steward_name: string;
-  total_listings: number;
-  active_listings: number;
-  claimed_listings: number;
-  total_donations_cents: number;
-}>> {
+export async function fetchStewardActivity(): Promise<
+  Array<{
+    steward_id: number;
+    steward_name: string;
+    total_listings: number;
+    active_listings: number;
+    claimed_listings: number;
+    total_donations_cents: number;
+  }>
+> {
   const headers = await getAuthHeaders();
   const res = await fetch(`${API_URL}/api/admin/stewards/activity`, {
     headers,
   });
-  if (!res.ok) throw new Error('Failed to fetch steward activity');
+  if (!res.ok) throw new Error("Failed to fetch steward activity");
   return res.json();
 }
 
-export async function fetchStewardDonations(): Promise<Array<{
-  chapter_id: number;
-  chapter_name: string;
-  total_donations_cents: number;
-  claim_count: number;
-}>> {
+export async function fetchStewardDonations(): Promise<
+  Array<{
+    chapter_id: number;
+    chapter_name: string;
+    total_donations_cents: number;
+    claim_count: number;
+  }>
+> {
   const headers = await getAuthHeaders();
   const res = await fetch(`${API_URL}/api/admin/stewards/donations`, {
     headers,
   });
-  if (!res.ok) throw new Error('Failed to fetch steward donations');
+  if (!res.ok) throw new Error("Failed to fetch steward donations");
   return res.json();
 }
 
@@ -1990,7 +2198,7 @@ export async function fetchPlatformSettings(): Promise<PlatformSetting[]> {
   const res = await fetch(`${API_URL}/api/admin/platform-settings`, {
     headers,
   });
-  if (!res.ok) throw new Error('Failed to fetch platform settings');
+  if (!res.ok) throw new Error("Failed to fetch platform settings");
   return res.json();
 }
 
@@ -2001,11 +2209,10 @@ export async function updatePlatformSetting(
 ): Promise<PlatformSetting> {
   const headers = await getAuthHeaders();
   const res = await fetch(`${API_URL}/api/admin/platform-settings/${key}`, {
-    method: 'PUT',
+    method: "PUT",
     headers,
     body: JSON.stringify({ value, description }),
   });
-  if (!res.ok) throw new Error('Failed to update platform setting');
+  if (!res.ok) throw new Error("Failed to update platform setting");
   return res.json();
 }
-

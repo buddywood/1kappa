@@ -1,24 +1,27 @@
-import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
-import dotenv from 'dotenv';
+import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
+import dotenv from "dotenv";
 
 dotenv.config();
 
 const sesClient = new SESClient({
-  region: process.env.AWS_REGION || 'us-east-1',
+  region: process.env.AWS_REGION || "us-east-1",
   credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
   },
 });
 
-const FROM_EMAIL = process.env.FROM_EMAIL || process.env.SES_FROM_EMAIL || 'no-reply@holdsync.com';
+const FROM_EMAIL =
+  process.env.FROM_EMAIL ||
+  process.env.SES_FROM_EMAIL ||
+  "no-reply@one-kappa.com";
 
 /**
  * Get the logo URL for email templates
  * Uses FRONTEND_URL to reference the logo from the public directory
  */
 function getLogoUrl(): string {
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
   return `${frontendUrl}/horizon-logo.png`;
 }
 
@@ -29,8 +32,8 @@ export async function sendWelcomeEmail(
   email: string,
   name: string
 ): Promise<void> {
-  const subject = 'Welcome to 1Kappa!';
-  
+  const subject = "Welcome to 1Kappa!";
+
   const htmlBody = `
     <!DOCTYPE html>
     <html>
@@ -84,7 +87,7 @@ export async function sendWelcomeEmail(
       </body>
     </html>
   `;
-  
+
   const textBody = `
 Welcome to 1Kappa!
 
@@ -116,16 +119,16 @@ The 1Kappa Team
       Message: {
         Subject: {
           Data: subject,
-          Charset: 'UTF-8',
+          Charset: "UTF-8",
         },
         Body: {
           Html: {
             Data: htmlBody,
-            Charset: 'UTF-8',
+            Charset: "UTF-8",
           },
           Text: {
             Data: textBody,
-            Charset: 'UTF-8',
+            Charset: "UTF-8",
           },
         },
       },
@@ -147,8 +150,8 @@ export async function sendSellerApplicationSubmittedEmail(
   email: string,
   name: string
 ): Promise<void> {
-  const subject = 'Seller Application Received - 1Kappa';
-  
+  const subject = "Seller Application Received - 1Kappa";
+
   const htmlBody = `
     <!DOCTYPE html>
     <html>
@@ -203,7 +206,7 @@ export async function sendSellerApplicationSubmittedEmail(
       </body>
     </html>
   `;
-  
+
   const textBody = `
 Seller Application Received - 1Kappa
 
@@ -235,25 +238,30 @@ The 1Kappa Team
       Message: {
         Subject: {
           Data: subject,
-          Charset: 'UTF-8',
+          Charset: "UTF-8",
         },
         Body: {
           Html: {
             Data: htmlBody,
-            Charset: 'UTF-8',
+            Charset: "UTF-8",
           },
           Text: {
             Data: textBody,
-            Charset: 'UTF-8',
+            Charset: "UTF-8",
           },
         },
       },
     });
 
     await sesClient.send(command);
-    console.log(`✅ Seller application submitted email sent successfully to ${email}`);
+    console.log(
+      `✅ Seller application submitted email sent successfully to ${email}`
+    );
   } catch (error) {
-    console.error(`❌ Error sending seller application submitted email to ${email}:`, error);
+    console.error(
+      `❌ Error sending seller application submitted email to ${email}:`,
+      error
+    );
     // Don't throw - email failure shouldn't break the application submission
   }
 }
@@ -266,14 +274,15 @@ export async function sendSellerApprovedEmail(
   name: string,
   invitationToken?: string
 ): Promise<void> {
-  const subject = 'Congratulations! Your Seller Application Has Been Approved - 1Kappa';
-  
+  const subject =
+    "Congratulations! Your Seller Application Has Been Approved - 1Kappa";
+
   // Build invitation link if token is provided
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-  const invitationLink = invitationToken 
+  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+  const invitationLink = invitationToken
     ? `${frontendUrl}/seller-setup?token=${invitationToken}`
     : `${frontendUrl}/login`;
-  
+
   const htmlBody = `
     <!DOCTYPE html>
     <html>
@@ -295,7 +304,9 @@ export async function sendSellerApprovedEmail(
             Great news! Your seller application has been <strong style="color: #4caf50;">approved</strong> by our team. You can now start listing products in the 1Kappa shop!
           </p>
           
-          ${invitationToken ? `
+          ${
+            invitationToken
+              ? `
           <div style="background-color: #e8f5e9; border-left: 4px solid #4caf50; padding: 15px; margin: 20px 0;">
             <p style="font-size: 14px; margin: 0; color: #2e7d32;">
               <strong>Next Steps:</strong><br>
@@ -317,7 +328,8 @@ export async function sendSellerApprovedEmail(
             Or copy and paste this link into your browser:<br>
             <a href="${invitationLink}" style="color: #dc143c; word-break: break-all;">${invitationLink}</a>
           </p>
-          ` : `
+          `
+              : `
           <div style="background-color: #e8f5e9; border-left: 4px solid #4caf50; padding: 15px; margin: 20px 0;">
             <p style="font-size: 14px; margin: 0; color: #2e7d32;">
               <strong>Next Steps:</strong><br>
@@ -334,7 +346,8 @@ export async function sendSellerApprovedEmail(
               Log In to Your Account
             </a>
           </div>
-          `}
+          `
+          }
           
           <p style="font-size: 16px;">
             We're excited to have you as part of our seller community. If you need any assistance getting started or have questions about listing products, please don't hesitate to reach out.
@@ -356,7 +369,7 @@ export async function sendSellerApprovedEmail(
       </body>
     </html>
   `;
-  
+
   const textBody = `
 Congratulations! Your Seller Application Has Been Approved - 1Kappa
 
@@ -364,19 +377,23 @@ Hello ${name},
 
 Great news! Your seller application has been approved by our team. You can now start listing products in the 1Kappa shop!
 
-${invitationToken ? `
+${
+  invitationToken
+    ? `
 Next Steps:
 • Click this link to set up your seller account: ${invitationLink}
 • Create a secure password for your account
 • Start adding products to your store
 • Your products will be visible to all members once published
-` : `
+`
+    : `
 Next Steps:
 • Log in to your existing account
 • Navigate to your seller dashboard
 • Start adding products to your store
 • Your products will be visible to all members once published
-`}
+`
+}
 
 We're excited to have you as part of our seller community. If you need any assistance getting started or have questions about listing products, please don't hesitate to reach out.
 
@@ -395,16 +412,16 @@ The 1Kappa Team
       Message: {
         Subject: {
           Data: subject,
-          Charset: 'UTF-8',
+          Charset: "UTF-8",
         },
         Body: {
           Html: {
             Data: htmlBody,
-            Charset: 'UTF-8',
+            Charset: "UTF-8",
           },
           Text: {
             Data: textBody,
-            Charset: 'UTF-8',
+            Charset: "UTF-8",
           },
         },
       },
@@ -427,8 +444,8 @@ export async function sendSellerStripeSetupRequiredEmail(
   productName: string,
   productId: number
 ): Promise<void> {
-  const subject = 'Action Required: Connect Stripe to Activate Your Listings';
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const subject = "Action Required: Connect Stripe to Activate Your Listings";
+  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
   const sellerSetupUrl = `${frontendUrl}/seller-setup`;
 
   const htmlBody = `
@@ -535,16 +552,16 @@ The 1Kappa Team
       Message: {
         Subject: {
           Data: subject,
-          Charset: 'UTF-8',
+          Charset: "UTF-8",
         },
         Body: {
           Html: {
             Data: htmlBody,
-            Charset: 'UTF-8',
+            Charset: "UTF-8",
           },
           Text: {
             Data: textBody,
-            Charset: 'UTF-8',
+            Charset: "UTF-8",
           },
         },
       },
@@ -553,8 +570,182 @@ The 1Kappa Team
     await sesClient.send(command);
     console.log(`✅ Stripe setup required email sent successfully to ${email}`);
   } catch (error) {
-    console.error(`❌ Error sending Stripe setup required email to ${email}:`, error);
+    console.error(
+      `❌ Error sending Stripe setup required email to ${email}:`,
+      error
+    );
     // Don't throw - email failure shouldn't break the checkout process
   }
 }
 
+/**
+ * Send email notification to all admins when a new seller application is submitted
+ */
+export async function sendAdminSellerApplicationNotification(
+  sellerName: string,
+  sellerEmail: string,
+  sellerId: number
+): Promise<void> {
+  const subject = "New Seller Application Submitted - 1Kappa";
+  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+  const adminDashboardUrl = `${frontendUrl}/admin`;
+
+  const htmlBody = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>New Seller Application</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background-color: #1a1a2e; padding: 30px; text-align: center;">
+          <img src="${getLogoUrl()}" alt="1Kappa Logo" style="max-width: 300px; height: auto; margin-bottom: 20px;" />
+          <h1 style="color: #dc143c; margin: 0; font-size: 28px;">New Seller Application</h1>
+        </div>
+        
+        <div style="background-color: #f9f9f9; padding: 30px;">
+          <p style="font-size: 16px; margin-top: 0;">Hello Admin,</p>
+          
+          <p style="font-size: 16px;">
+            A new seller application has been submitted and is awaiting your review.
+          </p>
+          
+          <div style="background-color: #fff; border: 2px solid #dc143c; border-radius: 5px; padding: 20px; margin: 20px 0;">
+            <p style="font-size: 16px; margin: 0 0 10px 0;">
+              <strong>Seller Name:</strong> ${sellerName}
+            </p>
+            <p style="font-size: 16px; margin: 0 0 10px 0;">
+              <strong>Email:</strong> ${sellerEmail}
+            </p>
+            <p style="font-size: 16px; margin: 0;">
+              <strong>Application ID:</strong> #${sellerId}
+            </p>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${adminDashboardUrl}" 
+               style="background-color: #dc143c; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+              Review Application
+            </a>
+          </div>
+          
+          <div style="background-color: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; margin: 20px 0;">
+            <p style="font-size: 14px; margin: 0; color: #1565c0;">
+              <strong>Next Steps:</strong><br>
+              • Review the seller's application details in the admin dashboard<br>
+              • Verify vendor license and business information<br>
+              • Approve or reject the application
+            </p>
+          </div>
+          
+          <p style="font-size: 14px; color: #666; margin-top: 30px;">
+            This is an automated notification. Please log in to the admin dashboard to review the application.
+          </p>
+          
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #dc143c;">
+            <p style="font-size: 14px; color: #666; margin: 0;">
+              Best regards,<br>
+              The 1Kappa System
+            </p>
+          </div>
+        </div>
+        
+        <div style="background-color: #1a1a2e; padding: 20px; text-align: center;">
+          <p style="color: #fff; font-size: 12px; margin: 0;">
+            © ${new Date().getFullYear()} 1Kappa. All rights reserved.
+          </p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const textBody = `
+New Seller Application Submitted - 1Kappa
+
+Hello Admin,
+
+A new seller application has been submitted and is awaiting your review.
+
+Seller Name: ${sellerName}
+Email: ${sellerEmail}
+Application ID: #${sellerId}
+
+Review Application: ${adminDashboardUrl}
+
+Next Steps:
+• Review the seller's application details in the admin dashboard
+• Verify vendor license and business information
+• Approve or reject the application
+
+This is an automated notification. Please log in to the admin dashboard to review the application.
+
+Best regards,
+The 1Kappa System
+
+© ${new Date().getFullYear()} 1Kappa. All rights reserved.
+  `;
+
+  try {
+    // Get all admin users
+    const { getAllAdminUsers } = await import("../db/queries-sequelize");
+    const admins = await getAllAdminUsers();
+
+    if (admins.length === 0) {
+      console.log(
+        "⚠️  No admin users found to notify about seller application"
+      );
+      return;
+    }
+
+    // Send email to all admins
+    const emailPromises = admins.map(async (admin) => {
+      try {
+        const command = new SendEmailCommand({
+          Source: FROM_EMAIL,
+          Destination: {
+            ToAddresses: [admin.email],
+          },
+          Message: {
+            Subject: {
+              Data: subject,
+              Charset: "UTF-8",
+            },
+            Body: {
+              Html: {
+                Data: htmlBody,
+                Charset: "UTF-8",
+              },
+              Text: {
+                Data: textBody,
+                Charset: "UTF-8",
+              },
+            },
+          },
+        });
+
+        await sesClient.send(command);
+        console.log(
+          `✅ Admin notification email sent successfully to ${admin.email}`
+        );
+      } catch (error) {
+        console.error(
+          `❌ Error sending admin notification email to ${admin.email}:`,
+          error
+        );
+        // Don't throw - continue sending to other admins even if one fails
+      }
+    });
+
+    await Promise.allSettled(emailPromises);
+    console.log(
+      `✅ Admin notification emails sent to ${admins.length} admin(s) for seller application #${sellerId}`
+    );
+  } catch (error) {
+    console.error(
+      `❌ Error sending admin notification emails for seller application #${sellerId}:`,
+      error
+    );
+    // Don't throw - email failure shouldn't break the application submission
+  }
+}

@@ -34,7 +34,7 @@ export interface Brother {
   industry: string | null;
   job_title: string | null;
   bio: string | null; // biography/about section
-  verification_status?: 'PENDING' | 'VERIFIED' | 'FAILED' | 'MANUAL_REVIEW';
+  verification_status?: "PENDING" | "VERIFIED" | "FAILED" | "MANUAL_REVIEW";
   verification_date?: Date | null;
   verification_notes?: string | null;
   created_at: Date;
@@ -49,10 +49,10 @@ export interface Seller extends Brother {
   business_email: string | null;
   business_phone: string | null;
   kappa_vendor_id: string | null; // Kappa Alpha Psi vendor ID/license number. Required for sellers who sell Kappa branded merchandise
-  merchandise_type: 'KAPPA' | 'NON_KAPPA' | null;
+  merchandise_type: string | null; // Can be single value ('KAPPA' or 'NON_KAPPA') or comma-separated ('KAPPA,NON_KAPPA')
   website: string | null;
   stripe_account_id: string | null;
-  stripe_account_type: 'company' | 'individual' | null;
+  stripe_account_type: "company" | "individual" | null;
   tax_id: string | null;
   business_address_line1: string | null;
   business_address_line2: string | null;
@@ -60,7 +60,7 @@ export interface Seller extends Brother {
   business_state: string | null;
   business_postal_code: string | null;
   business_country: string | null;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  status: "PENDING" | "APPROVED" | "REJECTED";
 }
 
 export interface ProductCategory {
@@ -75,7 +75,7 @@ export interface CategoryAttributeDefinition {
   id: number;
   category_id: number;
   attribute_name: string;
-  attribute_type: 'TEXT' | 'SELECT' | 'NUMBER' | 'BOOLEAN';
+  attribute_type: "TEXT" | "SELECT" | "NUMBER" | "BOOLEAN";
   is_required: boolean;
   display_order: number;
   options: string[] | null;
@@ -92,7 +92,7 @@ export interface ProductAttributeValue {
   value_boolean: boolean | null;
   created_at: Date;
   attribute_name?: string; // Included when joined with category_attribute_definitions
-  attribute_type?: 'TEXT' | 'SELECT' | 'NUMBER' | 'BOOLEAN'; // Included when joined
+  attribute_type?: "TEXT" | "SELECT" | "NUMBER" | "BOOLEAN"; // Included when joined
   display_order?: number; // Included when joined
 }
 
@@ -121,7 +121,7 @@ export interface Order {
   user_id: number;
   amount_cents: number;
   stripe_session_id: string;
-  status: 'PENDING' | 'PAID' | 'FAILED';
+  status: "PENDING" | "PAID" | "FAILED";
   chapter_id: number | null;
   shipping_street?: string | null;
   shipping_city?: string | null;
@@ -146,7 +146,7 @@ export interface Promoter extends Brother {
   user_id: number | null;
   sponsoring_chapter_id: number | null;
   stripe_account_id: string | null;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  status: "PENDING" | "APPROVED" | "REJECTED";
 }
 
 export interface Event {
@@ -166,12 +166,29 @@ export interface Event {
   duration_minutes: number | null;
   event_link: string | null;
   is_featured: boolean;
-  featured_payment_status: 'UNPAID' | 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED';
+  featured_payment_status:
+    | "UNPAID"
+    | "PENDING"
+    | "PAID"
+    | "FAILED"
+    | "REFUNDED";
   stripe_payment_intent_id: string | null;
   ticket_price_cents: number;
-  dress_codes: ('business' | 'business_casual' | 'formal' | 'semi_formal' | 'kappa_casual' | 'greek_encouraged' | 'greek_required' | 'outdoor' | 'athletic' | 'comfortable' | 'all_white')[];
+  dress_codes: (
+    | "business"
+    | "business_casual"
+    | "formal"
+    | "semi_formal"
+    | "kappa_casual"
+    | "greek_encouraged"
+    | "greek_required"
+    | "outdoor"
+    | "athletic"
+    | "comfortable"
+    | "all_white"
+  )[];
   dress_code_notes: string | null;
-  status: 'ACTIVE' | 'CLOSED' | 'CANCELLED';
+  status: "ACTIVE" | "CLOSED" | "CANCELLED";
   created_at: Date;
   updated_at: Date;
 }
@@ -210,8 +227,12 @@ export interface User {
   id: number;
   cognito_sub: string;
   email: string;
-  role: 'ADMIN' | 'SELLER' | 'PROMOTER' | 'GUEST' | 'STEWARD' | 'MEMBER';
-  onboarding_status: 'PRE_COGNITO' | 'COGNITO_CONFIRMED' | 'ONBOARDING_STARTED' | 'ONBOARDING_FINISHED';
+  role: "ADMIN" | "SELLER" | "PROMOTER" | "GUEST" | "STEWARD" | "MEMBER";
+  onboarding_status:
+    | "PRE_COGNITO"
+    | "COGNITO_CONFIRMED"
+    | "ONBOARDING_STARTED"
+    | "ONBOARDING_FINISHED";
   // fraternity_member relationship accessed via email/cognito_sub matching or through role-specific tables
   // Role-specific tables (sellers, promoters, stewards) now reference users via user_id
   features: Record<string, any>;
@@ -225,8 +246,8 @@ export interface Steward {
   // fraternity_member relationship accessed via users table -> email/cognito_sub -> fraternity_members
   user_id: number | null;
   sponsoring_chapter_id: number;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
-  verification_status: 'PENDING' | 'VERIFIED' | 'FAILED' | 'MANUAL_REVIEW';
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  verification_status: "PENDING" | "VERIFIED" | "FAILED" | "MANUAL_REVIEW";
   verification_date: Date | null;
   verification_notes: string | null;
   stripe_account_id: string | null;
@@ -243,7 +264,7 @@ export interface StewardListing {
   shipping_cost_cents: number;
   chapter_donation_cents: number;
   sponsoring_chapter_id: number;
-  status: 'ACTIVE' | 'CLAIMED' | 'REMOVED';
+  status: "ACTIVE" | "CLAIMED" | "REMOVED";
   claimed_by_fraternity_member_id: number | null;
   claimed_at: Date | null;
   created_at: Date;
@@ -259,7 +280,7 @@ export interface StewardClaim {
   shipping_cents: number;
   platform_fee_cents: number;
   chapter_donation_cents: number;
-  status: 'PENDING' | 'PAID' | 'FAILED';
+  status: "PENDING" | "PAID" | "FAILED";
   created_at: Date;
   updated_at: Date;
 }
@@ -285,4 +306,3 @@ export interface UserAddress {
   created_at: Date;
   updated_at: Date;
 }
-
