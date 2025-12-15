@@ -2,7 +2,7 @@
   "expo": {
     "name": "1KAPPA",
     "slug": "onekappa-mobile-app",
-    "version": "25.12.1",
+    "version": "25.12.25",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",

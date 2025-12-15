@@ -1,6 +1,13 @@
 import { useEffect, useState, useRef } from "react";
 import { StatusBar } from "expo-status-bar";
-import { StyleSheet, ScrollView, View, Animated, Linking } from "react-native";
+import {
+  StyleSheet,
+  ScrollView,
+  View,
+  Animated,
+  Linking,
+  Image,
+} from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import * as SplashScreen from "expo-splash-screen";
 import { COLORS } from "./lib/constants";
@@ -26,11 +33,20 @@ import SellersScreen from "./components/SellersScreen";
 import ProfileScreen from "./components/ProfileScreen";
 import EditProfileScreen from "./components/EditProfileScreen";
 import SettingsScreen from "./components/SettingsScreen";
+import NotificationsScreen from "./components/NotificationsScreen";
 import MemberSetupScreen from "./components/MemberSetupScreen";
 import MemberDashboardScreen from "./components/MemberDashboardScreen";
 import SellerSetupScreen from "./components/SellerSetupScreen";
+import SellerDashboardScreen from "./components/SellerDashboardScreen";
+import SellerListingScreen from "./components/SellerListingScreen";
 import BottomTabBar from "./components/BottomTabBar";
-import { Product, Event, StewardListing } from "./lib/api";
+import {
+  Product,
+  Event,
+  StewardListing,
+  getUnreadNotificationCount,
+} from "./lib/api";
+import { useAuth } from "./lib/auth";
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -48,11 +64,15 @@ type Screen =
   | "profile"
   | "edit-profile"
   | "settings"
+  | "notifications"
   | "member-setup"
   | "member-dashboard"
-  | "seller-setup";
+  | "seller-setup"
+  | "seller-dashboard"
+  | "seller-listing";
 
-export default function App() {
+function AppContent() {
+  const { user, token } = useAuth();
   const [selectedProductId, setSelectedProductId] = useState<number | null>(
     null
   );
@@ -66,35 +86,32 @@ export default function App() {
   const [profileInitialMode, setProfileInitialMode] = useState<
     "login" | "register" | "view"
   >("login");
-  const [appIsReady, setAppIsReady] = useState(false);
-  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const [profileErrorMessage, setProfileErrorMessage] = useState<string | null>(
+    null
+  );
+  const [notificationCount, setNotificationCount] = useState(0);
 
+  // Fetch notification count when user is authenticated
   useEffect(() => {
-    // Prepare app and animate splash screen
-    const prepare = async () => {
-      try {
-        // Simulate loading tasks (fonts, data, etc.)
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-      } catch (e) {
-        console.warn(e);
-      } finally {
-        // App is ready, start fade animation
-        setAppIsReady(true);
-
-        // Animate splash screen fade out
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 500, // Animation duration in ms
-          useNativeDriver: true,
-        }).start(async () => {
-          // Hide native splash screen after animation completes
-          await SplashScreen.hideAsync();
-        });
+    const loadNotificationCount = async () => {
+      if (token && user?.email) {
+        try {
+          const count = await getUnreadNotificationCount(token, user.email);
+          setNotificationCount(count);
+        } catch (error) {
+          console.error("Error fetching notification count:", error);
+          setNotificationCount(0);
+        }
+      } else {
+        setNotificationCount(0);
       }
     };
 
-    prepare();
-  }, [fadeAnim]);
+    loadNotificationCount();
+    // Refresh notification count every 30 seconds
+    const interval = setInterval(loadNotificationCount, 30000);
+    return () => clearInterval(interval);
+  }, [token, user?.email]);
 
   const handleMenuPress = () => {
     // Menu toggle is handled in Header component
@@ -192,9 +209,30 @@ export default function App() {
   };
 
   const handleNotificationPress = () => {
-    // TODO: Navigate to notifications screen when navigation is implemented
-    console.log("Notifications pressed - navigate to Notifications screen");
+    setCurrentScreen("notifications");
   };
+
+  // Fetch notification count when user is authenticated
+  useEffect(() => {
+    const loadNotificationCount = async () => {
+      if (token && user?.email) {
+        try {
+          const count = await getUnreadNotificationCount(token, user.email);
+          setNotificationCount(count);
+        } catch (error) {
+          console.error("Error fetching notification count:", error);
+          setNotificationCount(0);
+        }
+      } else {
+        setNotificationCount(0);
+      }
+    };
+
+    loadNotificationCount();
+    // Refresh notification count every 30 seconds
+    const interval = setInterval(loadNotificationCount, 30000);
+    return () => clearInterval(interval);
+  }, [token, user?.email]);
 
   // Render different screens based on currentScreen state
   const renderScreen = () => {
@@ -289,9 +327,12 @@ export default function App() {
             initialMode={
               profileInitialMode === "view" ? undefined : profileInitialMode
             }
+            initialErrorMessage={profileErrorMessage}
             onMyEventsPress={() => setCurrentScreen("my-events")}
             onEditProfilePress={() => setCurrentScreen("edit-profile")}
             onSettingsPress={() => setCurrentScreen("settings")}
+            onMemberDashboardPress={() => setCurrentScreen("member-dashboard")}
+            onSellerDashboardPress={() => setCurrentScreen("seller-dashboard")}
           />
         );
       case "edit-profile":
@@ -304,7 +345,19 @@ export default function App() {
           />
         );
       case "settings":
-        return <SettingsScreen onBack={() => setCurrentScreen("profile")} />;
+        return (
+          <SettingsScreen
+            onBack={() => setCurrentScreen("profile")}
+            onNotificationsPress={() => setCurrentScreen("notifications")}
+          />
+        );
+      case "notifications":
+        return (
+          <NotificationsScreen
+            onBack={() => setCurrentScreen("profile")}
+            onProductPress={handleProductPress}
+          />
+        );
       case "member-setup":
         return (
           <MemberSetupScreen
@@ -353,6 +406,41 @@ export default function App() {
             onContinue={handleSellerSetupContinue}
           />
         );
+      case "seller-dashboard":
+        return (
+          <SellerDashboardScreen
+            onBack={handleBackToHome}
+            onCreateProductPress={() => {
+              setCurrentScreen("seller-listing");
+            }}
+            onEditProductPress={(productId) => {
+              // For now, edit opens web - can be implemented later
+              Linking.openURL(
+                `${
+                  process.env.EXPO_PUBLIC_WEB_URL || "http://localhost:3000"
+                }/seller-dashboard/listings/edit/${productId}`
+              );
+            }}
+            onSessionExpired={() => {
+              // Handle session expiration - route to login
+              setProfileErrorMessage(
+                "Your session has expired. Please log in again."
+              );
+              setProfileInitialMode("login");
+              setCurrentScreen("profile");
+            }}
+          />
+        );
+      case "seller-listing":
+        return (
+          <SellerListingScreen
+            onBack={() => setCurrentScreen("seller-dashboard")}
+            onSuccess={() => {
+              setCurrentScreen("seller-dashboard");
+              // Refresh dashboard data by navigating away and back
+            }}
+          />
+        );
       case "home":
       default:
         return (
@@ -370,7 +458,7 @@ export default function App() {
               onStewardMarketplacePress={handleStewardMarketplacePress}
               onShopPress={handleShopPress}
               onNotificationPress={handleNotificationPress}
-              notificationCount={0}
+              notificationCount={notificationCount}
             />
             <ScrollView
               style={styles.scrollView}
@@ -391,19 +479,86 @@ export default function App() {
     }
   };
 
-  // Show animated splash overlay while app is loading
+  return (
+    <>
+      <StatusBar style="auto" />
+      <View style={styles.contentWrapper}>{renderScreen()}</View>
+
+      {/* Bottom Tab Bar */}
+      <BottomTabBar
+        currentScreen={currentScreen}
+        onScreenChange={setCurrentScreen}
+      />
+
+      {/* Product Detail Modal */}
+      {selectedProductId !== null && (
+        <ProductDetail
+          productId={selectedProductId}
+          onClose={() => setSelectedProductId(null)}
+          onSellerPress={handleSellerPress}
+        />
+      )}
+
+      {/* Steward Listing Detail Modal */}
+      {selectedListingId !== null && (
+        <StewardListingDetail
+          listingId={selectedListingId}
+          onClose={() => setSelectedListingId(null)}
+          onSellerPress={handleSellerPress}
+        />
+      )}
+    </>
+  );
+}
+
+export default function App() {
+  const [appIsReady, setAppIsReady] = useState(false);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    // Prepare app and animate splash screen
+    const prepare = async () => {
+      try {
+        // Simulate loading tasks (fonts, data, etc.)
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+      } catch (e) {
+        console.warn(e);
+      } finally {
+        // App is ready, start fade animation
+        setAppIsReady(true);
+
+        // Animate splash screen fade out
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 500, // Animation duration in ms
+          useNativeDriver: true,
+        }).start(async () => {
+          // Hide native splash screen after animation completes
+          await SplashScreen.hideAsync();
+        });
+      }
+    };
+
+    prepare();
+  }, [fadeAnim]);
+
   if (!appIsReady) {
     return (
-      <Animated.View
-        style={[
-          styles.splashContainer,
-          {
-            opacity: fadeAnim,
-          },
-        ]}
-      >
-        {/* This will show the native splash screen while animating */}
-      </Animated.View>
+      <View style={styles.splashContainer}>
+        <Animated.View
+          style={[
+            styles.splashContainer,
+            {
+              opacity: fadeAnim,
+            },
+          ]}
+        >
+          <Image
+            source={require("./assets/icon.png")}
+            style={{ width: 100, height: 100 }}
+          />
+        </Animated.View>
+      </View>
     );
   }
 
@@ -412,32 +567,7 @@ export default function App() {
       <CartProvider>
         <SafeAreaProvider>
           <SafeAreaView style={styles.container} edges={["top"]}>
-            <StatusBar style="auto" />
-            <View style={styles.contentWrapper}>{renderScreen()}</View>
-
-            {/* Bottom Tab Bar */}
-            <BottomTabBar
-              currentScreen={currentScreen}
-              onScreenChange={setCurrentScreen}
-            />
-
-            {/* Product Detail Modal */}
-            {selectedProductId !== null && (
-              <ProductDetail
-                productId={selectedProductId}
-                onClose={() => setSelectedProductId(null)}
-                onSellerPress={handleSellerPress}
-              />
-            )}
-
-            {/* Steward Listing Detail Modal */}
-            {selectedListingId !== null && (
-              <StewardListingDetail
-                listingId={selectedListingId}
-                onClose={() => setSelectedListingId(null)}
-                onSellerPress={handleSellerPress}
-              />
-            )}
+            <AppContent />
           </SafeAreaView>
         </SafeAreaProvider>
       </CartProvider>

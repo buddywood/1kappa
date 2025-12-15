@@ -199,6 +199,17 @@ export async function fetchChapters(): Promise<Chapter[]> {
   }
 }
 
+export async function fetchCollegiateChapters(): Promise<Chapter[]> {
+  try {
+    const res = await fetch(`${API_URL}/api/chapters/active-collegiate`);
+    if (!res.ok) throw new Error("Failed to fetch collegiate chapters");
+    return res.json();
+  } catch (error) {
+    console.error("Error fetching collegiate chapters:", error);
+    return [];
+  }
+}
+
 export async function fetchProducts(): Promise<Product[]> {
   try {
     const res = await fetch(`${API_URL}/api/products`);
@@ -592,6 +603,28 @@ export async function fetchCategoryAttributeDefinitions(
   }
 }
 
+export interface Seller {
+  id: number;
+  status: string;
+  stripe_account_id: string | null;
+  verification_status?: string;
+}
+
+export async function getSellerProfile(token: string): Promise<Seller> {
+  const res = await authenticatedFetch(`${API_URL}/api/sellers/me`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) throw new Error("Failed to fetch seller profile");
+  return res.json();
+}
+
+// Note: createProduct is handled directly in SellerListingScreen
+// because FormData requires special handling and we can't use authenticatedFetch
+// which may interfere with Content-Type headers needed for multipart/form-data
+
 export async function fetchSellersWithProducts(): Promise<
   SellerWithProducts[]
 > {
@@ -891,7 +924,11 @@ export async function getOrderCount(token: string): Promise<number> {
 
     const orders = await res.json();
     return Array.isArray(orders) ? orders.length : 0;
-  } catch (error) {
+  } catch (error: any) {
+    // Re-throw session expired errors
+    if (error.code === "SESSION_EXPIRED") {
+      throw error;
+    }
     console.error("Error fetching order count:", error);
     return 0;
   }
@@ -921,8 +958,179 @@ export async function getSavedItemsCount(
 
     const products = await res.json();
     return Array.isArray(products) ? products.length : 0;
-  } catch (error) {
+  } catch (error: any) {
+    // Re-throw session expired errors
+    if (error.code === "SESSION_EXPIRED") {
+      throw error;
+    }
     console.error("Error fetching saved items count:", error);
     return 0;
+  }
+}
+
+export interface Notification {
+  id: number;
+  user_email: string;
+  type:
+    | "PURCHASE_BLOCKED"
+    | "ITEM_AVAILABLE"
+    | "ORDER_CONFIRMED"
+    | "ORDER_SHIPPED";
+  title: string;
+  message: string;
+  related_product_id: number | null;
+  related_order_id: number | null;
+  is_read: boolean;
+  created_at: string;
+  read_at: string | null;
+}
+
+/**
+ * Get notifications for the current user
+ */
+export async function getNotifications(
+  token: string,
+  userEmail: string,
+  limit?: number
+): Promise<Notification[]> {
+  try {
+    const url = limit
+      ? `${API_URL}/api/notifications/${userEmail}?limit=${limit}`
+      : `${API_URL}/api/notifications/${userEmail}`;
+    const res = await authenticatedFetch(url, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error("Failed to fetch notifications");
+    }
+
+    return res.json();
+  } catch (error) {
+    console.error("Error fetching notifications:", error);
+    throw error;
+  }
+}
+
+/**
+ * Get unread notification count for the current user
+ */
+export async function getUnreadNotificationCount(
+  token: string,
+  userEmail: string
+): Promise<number> {
+  try {
+    const res = await authenticatedFetch(
+      `${API_URL}/api/notifications/${userEmail}/count`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!res.ok) {
+      return 0;
+    }
+
+    const data = await res.json();
+    return data.count || 0;
+  } catch (error) {
+    console.error("Error fetching notification count:", error);
+    return 0;
+  }
+}
+
+/**
+ * Mark a notification as read
+ */
+export async function markNotificationAsRead(
+  token: string,
+  notificationId: number,
+  userEmail: string
+): Promise<void> {
+  try {
+    const res = await authenticatedFetch(
+      `${API_URL}/api/notifications/${notificationId}/read`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userEmail }),
+      }
+    );
+
+    if (!res.ok) {
+      throw new Error("Failed to mark notification as read");
+    }
+  } catch (error) {
+    console.error("Error marking notification as read:", error);
+    throw error;
+  }
+}
+
+/**
+ * Mark all notifications as read
+ */
+export async function markAllNotificationsAsRead(
+  token: string,
+  userEmail: string
+): Promise<number> {
+  try {
+    const res = await authenticatedFetch(
+      `${API_URL}/api/notifications/${userEmail}/read-all`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!res.ok) {
+      throw new Error("Failed to mark all notifications as read");
+    }
+
+    const data = await res.json();
+    return data.count || 0;
+  } catch (error) {
+    console.error("Error marking all notifications as read:", error);
+    throw error;
+  }
+}
+
+/**
+ * Delete a notification
+ */
+export async function deleteNotification(
+  token: string,
+  notificationId: number,
+  userEmail: string
+): Promise<void> {
+  try {
+    const res = await authenticatedFetch(
+      `${API_URL}/api/notifications/${notificationId}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userEmail }),
+      }
+    );
+
+    if (!res.ok) {
+      throw new Error("Failed to delete notification");
+    }
+  } catch (error) {
+    console.error("Error deleting notification:", error);
+    throw error;
   }
 }

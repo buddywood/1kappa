@@ -632,80 +632,10 @@ router.get("/featured", async (req: Request, res: Response) => {
   }
 });
 
-// Get a specific seller with their products (public endpoint)
-// This must come before /me routes to avoid route conflicts
-router.get("/:id/products", async (req: Request, res: Response) => {
-  try {
-    const sellerId = parseInt(req.params.id);
-    if (isNaN(sellerId)) {
-      return res.status(400).json({ error: "Invalid seller ID" });
-    }
-
-    // Get seller with role flags
-    const sellerResult = await pool.query(
-      `SELECT 
-        s.*,
-        m.id as fraternity_member_id,
-        CASE WHEN m.id IS NOT NULL THEN true ELSE false END as is_fraternity_member,
-        CASE WHEN s.status = 'APPROVED' THEN true ELSE false END as is_seller,
-        CASE WHEN st.id IS NOT NULL THEN true ELSE false END as is_steward,
-        CASE WHEN pr.id IS NOT NULL THEN true ELSE false END as is_promoter
-      FROM sellers s
-      LEFT JOIN fraternity_members m ON s.email = m.email
-      LEFT JOIN users u_st ON (u_st.email = m.email OR u_st.cognito_sub = m.cognito_sub)
-      LEFT JOIN stewards st ON st.user_id = u_st.id AND st.status = 'APPROVED'
-      LEFT JOIN promoters pr ON s.email = pr.email AND pr.status = 'APPROVED'
-      WHERE s.id = $1`,
-      [sellerId]
-    );
-
-    if (sellerResult.rows.length === 0) {
-      return res.status(404).json({ error: "Seller not found" });
-    }
-
-    const seller = sellerResult.rows[0];
-    if (seller.status !== "APPROVED") {
-      return res.status(404).json({ error: "Seller not approved" });
-    }
-
-    const products = await getProductsBySeller(sellerId);
-
-    // Get initiated chapter, season, and year if seller is a fraternity member
-    let initiated_chapter_id = null;
-    let initiated_season = null;
-    let initiated_year = null;
-    if (seller.fraternity_member_id) {
-      const memberResult = await pool.query(
-        "SELECT initiated_chapter_id, initiated_season, initiated_year FROM fraternity_members WHERE id = $1",
-        [seller.fraternity_member_id]
-      );
-      if (memberResult.rows.length > 0) {
-        initiated_chapter_id = memberResult.rows[0].initiated_chapter_id;
-        initiated_season = memberResult.rows[0].initiated_season;
-        initiated_year = memberResult.rows[0].initiated_year;
-      }
-    }
-
-    // Parse social_links if it's a string
-    const socialLinks =
-      typeof seller.social_links === "string"
-        ? JSON.parse(seller.social_links)
-        : seller.social_links || {};
-
-    res.json({
-      ...seller,
-      social_links: socialLinks,
-      product_count: products.length,
-      products: products,
-      initiated_chapter_id,
-      initiated_season,
-      initiated_year,
-    });
-  } catch (error) {
-    console.error("Error fetching seller with products:", error);
-    res.status(500).json({ error: "Failed to fetch seller with products" });
-  }
-});
+// ============================================
+// AUTHENTICATED SELLER ROUTES (/me)
+// These must come BEFORE /:id routes to avoid route conflicts
+// ============================================
 
 // Get current seller's profile (authenticated seller)
 router.get("/me", authenticate, async (req: Request, res: Response) => {
@@ -1112,5 +1042,116 @@ router.post(
     }
   }
 );
+
+// Update seller's sponsoring chapter
+router.put(
+  "/me/sponsoring-chapter",
+  authenticate,
+  async (req: Request, res: Response) => {
+    try {
+      if (!req.user || !req.user.sellerId) {
+        return res.status(403).json({ error: "Not a seller" });
+      }
+
+      const { sponsoring_chapter_id } = req.body;
+      if (!sponsoring_chapter_id || typeof sponsoring_chapter_id !== "number") {
+        return res
+          .status(400)
+          .json({ error: "Valid sponsoring_chapter_id is required" });
+      }
+
+      // Update the seller's sponsoring chapter
+      await pool.query(
+        "UPDATE sellers SET sponsoring_chapter_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2",
+        [sponsoring_chapter_id, req.user.sellerId]
+      );
+
+      // Fetch updated seller
+      const updatedSeller = await getSellerById(req.user.sellerId);
+      res.json(updatedSeller);
+    } catch (error: any) {
+      console.error("Error updating seller sponsoring chapter:", error);
+      res.status(500).json({ error: "Failed to update sponsoring chapter" });
+    }
+  }
+);
+
+// ============================================
+// PUBLIC SELLER ROUTES (/:id)
+// ============================================
+
+// Get a specific seller with their products (public endpoint)
+router.get("/:id/products", async (req: Request, res: Response) => {
+  try {
+    const sellerId = parseInt(req.params.id);
+    if (isNaN(sellerId)) {
+      return res.status(400).json({ error: "Invalid seller ID" });
+    }
+
+    // Get seller with role flags
+    const sellerResult = await pool.query(
+      `SELECT 
+        s.*,
+        m.id as fraternity_member_id,
+        CASE WHEN m.id IS NOT NULL THEN true ELSE false END as is_fraternity_member,
+        CASE WHEN s.status = 'APPROVED' THEN true ELSE false END as is_seller,
+        CASE WHEN st.id IS NOT NULL THEN true ELSE false END as is_steward,
+        CASE WHEN pr.id IS NOT NULL THEN true ELSE false END as is_promoter
+      FROM sellers s
+      LEFT JOIN fraternity_members m ON s.email = m.email
+      LEFT JOIN users u_st ON (u_st.email = m.email OR u_st.cognito_sub = m.cognito_sub)
+      LEFT JOIN stewards st ON st.user_id = u_st.id AND st.status = 'APPROVED'
+      LEFT JOIN promoters pr ON s.email = pr.email AND pr.status = 'APPROVED'
+      WHERE s.id = $1`,
+      [sellerId]
+    );
+
+    if (sellerResult.rows.length === 0) {
+      return res.status(404).json({ error: "Seller not found" });
+    }
+
+    const seller = sellerResult.rows[0];
+    if (seller.status !== "APPROVED") {
+      return res.status(404).json({ error: "Seller not approved" });
+    }
+
+    const products = await getProductsBySeller(sellerId);
+
+    // Get initiated chapter, season, and year if seller is a fraternity member
+    let initiated_chapter_id = null;
+    let initiated_season = null;
+    let initiated_year = null;
+    if (seller.fraternity_member_id) {
+      const memberResult = await pool.query(
+        "SELECT initiated_chapter_id, initiated_season, initiated_year FROM fraternity_members WHERE id = $1",
+        [seller.fraternity_member_id]
+      );
+      if (memberResult.rows.length > 0) {
+        initiated_chapter_id = memberResult.rows[0].initiated_chapter_id;
+        initiated_season = memberResult.rows[0].initiated_season;
+        initiated_year = memberResult.rows[0].initiated_year;
+      }
+    }
+
+    // Parse social_links if it's a string
+    const socialLinks =
+      typeof seller.social_links === "string"
+        ? JSON.parse(seller.social_links)
+        : seller.social_links || {};
+
+    res.json({
+      ...seller,
+      social_links: socialLinks,
+      product_count: products.length,
+      products: products,
+      initiated_chapter_id,
+      initiated_season,
+      initiated_year,
+    });
+  } catch (error) {
+    console.error("Error fetching seller with products:", error);
+    res.status(500).json({ error: "Failed to fetch seller with products" });
+  }
+});
 
 export default router;

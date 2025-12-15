@@ -9,16 +9,20 @@ import {
   Alert,
   Modal,
   TextInput,
+  FlatList,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { COLORS, API_URL } from "../lib/constants";
+import { Linking } from "react-native";
+import { COLORS, API_URL, WEB_URL } from "../lib/constants";
 import { useAuth } from "../lib/auth";
 import ScreenHeader from "./ScreenHeader";
 import { authenticatedFetch } from "../lib/api-utils";
+import { fetchCollegiateChapters, type Chapter } from "../lib/api";
 import FormCard from "./ui/FormCard";
 
 interface SettingsScreenProps {
   onBack: () => void;
+  onNotificationsPress?: () => void;
 }
 
 interface UserInfo {
@@ -76,7 +80,10 @@ type SettingsTab =
   | "connected"
   | "delete";
 
-export default function SettingsScreen({ onBack }: SettingsScreenProps) {
+export default function SettingsScreen({
+  onBack,
+  onNotificationsPress,
+}: SettingsScreenProps) {
   const { user, token, logout } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -96,10 +103,16 @@ export default function SettingsScreen({ onBack }: SettingsScreenProps) {
   );
   const [promoterProfile, setPromoterProfile] =
     useState<PromoterProfile | null>(null);
+  const [chapters, setChapters] = useState<Chapter[]>([]);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteEmailConfirm, setDeleteEmailConfirm] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [chapterPickerOpen, setChapterPickerOpen] = useState(false);
+  const [editingChapterType, setEditingChapterType] = useState<
+    "seller" | "promoter" | "steward" | null
+  >(null);
+  const [updatingChapter, setUpdatingChapter] = useState(false);
 
   useEffect(() => {
     if (token) {
@@ -172,6 +185,13 @@ export default function SettingsScreen({ onBack }: SettingsScreenProps) {
         );
       }
 
+      // Fetch chapters for displaying chapter names
+      promises.push(
+        fetchCollegiateChapters()
+          .then(setChapters)
+          .catch(() => setChapters([]))
+      );
+
       await Promise.all(promises);
     } catch (err: any) {
       console.error("Error loading settings:", err);
@@ -218,7 +238,7 @@ export default function SettingsScreen({ onBack }: SettingsScreenProps) {
   };
 
   const fetchStewardProfile = async (): Promise<StewardProfile> => {
-    const res = await authenticatedFetch(`${API_URL}/api/stewards/me`, {
+    const res = await authenticatedFetch(`${API_URL}/api/stewards/profile`, {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -243,7 +263,7 @@ export default function SettingsScreen({ onBack }: SettingsScreenProps) {
     email: string
   ): Promise<number> => {
     const res = await authenticatedFetch(
-      `${API_URL}/api/notifications/unread-count/${email}`,
+      `${API_URL}/api/notifications/${email}/count`,
       {
         method: "GET",
         headers: {
@@ -316,7 +336,7 @@ export default function SettingsScreen({ onBack }: SettingsScreenProps) {
   const getRoleStatusBadge = (status: string | undefined) => {
     if (!status) return null;
     const statusColors: Record<string, string> = {
-      APPROVED: COLORS.green || "#10B981",
+      APPROVED: "#10B981",
       PENDING: COLORS.auroraGold || "#F59E0B",
       REJECTED: "#EF4444",
     };
@@ -326,6 +346,42 @@ export default function SettingsScreen({ onBack }: SettingsScreenProps) {
         <Text style={[styles.badgeText, { color }]}>{status}</Text>
       </View>
     );
+  };
+
+  const getChapterName = (chapterId: number | null): string | null => {
+    if (!chapterId) return null;
+    const chapter = chapters.find((c) => c.id === chapterId);
+    return chapter?.name || null;
+  };
+
+  const updateSponsoringChapter = async (
+    type: "seller" | "promoter" | "steward",
+    chapterId: number
+  ): Promise<void> => {
+    let endpoint = "";
+    if (type === "seller") {
+      endpoint = `${API_URL}/api/sellers/me/sponsoring-chapter`;
+    } else if (type === "promoter") {
+      endpoint = `${API_URL}/api/promoters/me/sponsoring-chapter`;
+    } else {
+      endpoint = `${API_URL}/api/stewards/me/sponsoring-chapter`;
+    }
+
+    const res = await authenticatedFetch(endpoint, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ sponsoring_chapter_id: chapterId }),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(
+        errorData.error || `Failed to update ${type} sponsoring chapter`
+      );
+    }
   };
 
   const tabs: { id: SettingsTab; label: string; icon: string }[] = [
@@ -377,37 +433,41 @@ export default function SettingsScreen({ onBack }: SettingsScreenProps) {
         )}
 
         {/* Tab Selector */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.tabScrollView}
-          contentContainerStyle={styles.tabScrollContent}
-        >
-          {tabs.map((tab) => (
-            <TouchableOpacity
-              key={tab.id}
-              style={[styles.tab, activeTab === tab.id && styles.tabActive]}
-              onPress={() => setActiveTab(tab.id)}
-            >
-              <Ionicons
-                name={tab.icon as any}
-                size={18}
-                color={
-                  activeTab === tab.id ? COLORS.crimson : COLORS.midnightNavy
-                }
-                style={styles.tabIcon}
-              />
-              <Text
-                style={[
-                  styles.tabText,
-                  activeTab === tab.id && styles.tabTextActive,
-                ]}
-              >
-                {tab.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        {/* Tab Selector */}
+        <View style={styles.tabRail}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tabRailContent}
+          >
+            {tabs.map((tab) => {
+              const isActive = activeTab === tab.id;
+
+              return (
+                <TouchableOpacity
+                  key={tab.id}
+                  style={[styles.tab, isActive && styles.tabActive]}
+                  onPress={() => setActiveTab(tab.id)}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons
+                    name={tab.icon as any}
+                    size={16}
+                    color={
+                      isActive ? COLORS.crimson : COLORS.midnightNavy + "80"
+                    }
+                    style={styles.tabIcon}
+                  />
+                  <Text
+                    style={[styles.tabText, isActive && styles.tabTextActive]}
+                  >
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
 
         <FormCard style={styles.formCard}>
           {/* Roles & Access */}
@@ -511,60 +571,122 @@ export default function SettingsScreen({ onBack }: SettingsScreenProps) {
                 Chapters associated with your roles
               </Text>
 
+              <View style={styles.donationInfoCard}>
+                <View style={styles.donationInfoHeader}>
+                  <Ionicons
+                    name="information-circle"
+                    size={20}
+                    color={COLORS.crimson}
+                  />
+                  <Text style={styles.donationInfoTitle}>
+                    Chapter Donation Program
+                  </Text>
+                </View>
+                <Text style={styles.donationInfoText}>
+                  Our platform donates 1-2% of sales to the chapter of your
+                  choosing. This advances our commitment to providing avenues of
+                  support for undergraduate Kappa Alpha Psi chapters.
+                </Text>
+                <TouchableOpacity
+                  style={styles.contactLink}
+                  onPress={() => {
+                    Linking.openURL(`${WEB_URL}/support`).catch((err) => {
+                      console.error("Failed to open support page:", err);
+                    });
+                  }}
+                >
+                  <Text style={styles.contactLinkText}>
+                    Have questions? Contact us
+                  </Text>
+                  <Ionicons
+                    name="arrow-forward"
+                    size={16}
+                    color={COLORS.crimson}
+                  />
+                </TouchableOpacity>
+              </View>
+
               {sellerProfile?.sponsoring_chapter_id && (
                 <View style={styles.chapterCard}>
                   <View style={styles.chapterHeader}>
-                    <Text style={styles.chapterTitle}>
-                      Seller Sponsoring Chapter
-                    </Text>
-                    <View style={styles.chapterBadge}>
-                      <Text style={styles.chapterBadgeText}>Seller</Text>
-                    </View>
+                    <Text style={styles.chapterTitle}>Your selection</Text>
                   </View>
                   <Text style={styles.chapterId}>
-                    Chapter ID: {sellerProfile.sponsoring_chapter_id}
+                    {getChapterName(sellerProfile.sponsoring_chapter_id) ||
+                      `Chapter ID: ${sellerProfile.sponsoring_chapter_id}`}
                   </Text>
-                  <Text style={styles.chapterNote}>
-                    Set during seller application process
-                  </Text>
+                  <TouchableOpacity
+                    style={styles.changeChapterButton}
+                    onPress={() => {
+                      setEditingChapterType("seller");
+                      setChapterPickerOpen(true);
+                    }}
+                  >
+                    <Ionicons
+                      name="create-outline"
+                      size={16}
+                      color={COLORS.crimson}
+                    />
+                    <Text style={styles.changeChapterButtonText}>
+                      Change Chapter
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               )}
 
               {promoterProfile?.sponsoring_chapter_id && (
                 <View style={styles.chapterCard}>
                   <View style={styles.chapterHeader}>
-                    <Text style={styles.chapterTitle}>
-                      Promoter Sponsoring Chapter
-                    </Text>
-                    <View style={styles.chapterBadge}>
-                      <Text style={styles.chapterBadgeText}>Promoter</Text>
-                    </View>
+                    <Text style={styles.chapterTitle}>Your selection</Text>
                   </View>
                   <Text style={styles.chapterId}>
-                    Chapter ID: {promoterProfile.sponsoring_chapter_id}
+                    {getChapterName(promoterProfile.sponsoring_chapter_id) ||
+                      `Chapter ID: ${promoterProfile.sponsoring_chapter_id}`}
                   </Text>
-                  <Text style={styles.chapterNote}>
-                    Set during promoter application process
-                  </Text>
+                  <TouchableOpacity
+                    style={styles.changeChapterButton}
+                    onPress={() => {
+                      setEditingChapterType("promoter");
+                      setChapterPickerOpen(true);
+                    }}
+                  >
+                    <Ionicons
+                      name="create-outline"
+                      size={16}
+                      color={COLORS.crimson}
+                    />
+                    <Text style={styles.changeChapterButtonText}>
+                      Change Chapter
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               )}
 
               {stewardProfile?.sponsoring_chapter_id && (
                 <View style={styles.chapterCard}>
                   <View style={styles.chapterHeader}>
-                    <Text style={styles.chapterTitle}>
-                      Steward Sponsoring Chapter
-                    </Text>
-                    <View style={styles.chapterBadge}>
-                      <Text style={styles.chapterBadgeText}>Steward</Text>
-                    </View>
+                    <Text style={styles.chapterTitle}>Your selection</Text>
                   </View>
                   <Text style={styles.chapterId}>
-                    Chapter ID: {stewardProfile.sponsoring_chapter_id}
+                    {getChapterName(stewardProfile.sponsoring_chapter_id) ||
+                      `Chapter ID: ${stewardProfile.sponsoring_chapter_id}`}
                   </Text>
-                  <Text style={styles.chapterNote}>
-                    Set during steward application process
-                  </Text>
+                  <TouchableOpacity
+                    style={styles.changeChapterButton}
+                    onPress={() => {
+                      setEditingChapterType("steward");
+                      setChapterPickerOpen(true);
+                    }}
+                  >
+                    <Ionicons
+                      name="create-outline"
+                      size={16}
+                      color={COLORS.crimson}
+                    />
+                    <Text style={styles.changeChapterButtonText}>
+                      Change Chapter
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               )}
 
@@ -786,6 +908,21 @@ export default function SettingsScreen({ onBack }: SettingsScreenProps) {
                       }`
                     : "You have no unread notifications"}
                 </Text>
+                {onNotificationsPress && (
+                  <TouchableOpacity
+                    style={styles.viewAllButton}
+                    onPress={onNotificationsPress}
+                  >
+                    <Text style={styles.viewAllButtonText}>
+                      View All Notifications
+                    </Text>
+                    <Ionicons
+                      name="arrow-forward"
+                      size={16}
+                      color={COLORS.crimson}
+                    />
+                  </TouchableOpacity>
+                )}
               </View>
 
               <View style={styles.notificationTypes}>
@@ -982,6 +1119,107 @@ export default function SettingsScreen({ onBack }: SettingsScreenProps) {
         </FormCard>
       </ScrollView>
 
+      {/* Chapter Picker Modal */}
+      <Modal
+        visible={chapterPickerOpen}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => {
+          setChapterPickerOpen(false);
+          setEditingChapterType(null);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Chapter</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setChapterPickerOpen(false);
+                  setEditingChapterType(null);
+                }}
+                style={styles.modalCloseButton}
+              >
+                <Ionicons name="close" size={24} color={COLORS.midnightNavy} />
+              </TouchableOpacity>
+            </View>
+            {updatingChapter ? (
+              <View style={styles.emptyContainer}>
+                <ActivityIndicator size="large" color={COLORS.crimson} />
+                <Text style={styles.emptyText}>Updating chapter...</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={chapters}
+                keyExtractor={(item) => item.id.toString()}
+                renderItem={({ item }) => {
+                  const currentChapterId =
+                    editingChapterType === "seller"
+                      ? sellerProfile?.sponsoring_chapter_id
+                      : editingChapterType === "promoter"
+                      ? promoterProfile?.sponsoring_chapter_id
+                      : stewardProfile?.sponsoring_chapter_id;
+                  const isSelected = currentChapterId === item.id;
+                  return (
+                    <TouchableOpacity
+                      style={[
+                        styles.industryItem,
+                        isSelected && styles.industryItemSelected,
+                      ]}
+                      onPress={async () => {
+                        if (isSelected) {
+                          setChapterPickerOpen(false);
+                          setEditingChapterType(null);
+                          return;
+                        }
+                        try {
+                          setUpdatingChapter(true);
+                          await updateSponsoringChapter(
+                            editingChapterType!,
+                            item.id
+                          );
+                          // Reload settings to get updated data
+                          await loadSettings();
+                          setChapterPickerOpen(false);
+                          setEditingChapterType(null);
+                          setUpdatingChapter(false);
+                        } catch (err: any) {
+                          console.error("Error updating chapter:", err);
+                          setError(err.message || "Failed to update chapter");
+                          setUpdatingChapter(false);
+                        }
+                      }}
+                      disabled={updatingChapter}
+                    >
+                      <Text
+                        style={[
+                          styles.industryItemText,
+                          isSelected && styles.industryItemTextSelected,
+                        ]}
+                      >
+                        {item.name}
+                      </Text>
+                      {isSelected && (
+                        <Ionicons
+                          name="checkmark"
+                          size={20}
+                          color={COLORS.white}
+                        />
+                      )}
+                    </TouchableOpacity>
+                  );
+                }}
+                ListEmptyComponent={
+                  <View style={styles.emptyContainer}>
+                    <Text style={styles.emptyText}>No chapters available</Text>
+                  </View>
+                }
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
+
       {/* Delete Account Dialog */}
       <Modal
         visible={deleteDialogOpen}
@@ -993,9 +1231,9 @@ export default function SettingsScreen({ onBack }: SettingsScreenProps) {
           setError("");
         }}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Delete Account</Text>
+        <View style={styles.modalOverlayCentered}>
+          <View style={styles.modalContentCentered}>
+            <Text style={styles.modalTitleCentered}>Delete Account</Text>
             <Text style={styles.modalDescription}>
               This action cannot be undone. Please enter your email address to
               confirm.
@@ -1110,29 +1348,49 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     gap: 8,
   },
+  tabRail: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 12,
+    padding: 6,
+    backgroundColor: COLORS.frostGray,
+    borderRadius: 16,
+  },
+
+  tabRailContent: {
+    gap: 6,
+  },
+
   tab: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: 12,
+    backgroundColor: "transparent",
+  },
+
+  tabActive: {
     backgroundColor: COLORS.white,
     borderWidth: 1,
-    borderColor: COLORS.frostGray,
-    marginRight: 8,
+    borderColor: COLORS.crimson + "40",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  tabActive: {
-    backgroundColor: COLORS.crimson + "10",
-    borderColor: COLORS.crimson,
-  },
+
   tabIcon: {
     marginRight: 6,
   },
+
   tabText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "500",
-    color: COLORS.midnightNavy,
+    color: COLORS.midnightNavy + "80",
   },
+
   tabTextActive: {
     color: COLORS.crimson,
     fontWeight: "600",
@@ -1243,6 +1501,61 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.midnightNavy,
     opacity: 0.5,
+  },
+  changeChapterButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: COLORS.white,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.crimson,
+    alignSelf: "flex-start",
+  },
+  changeChapterButtonText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: COLORS.crimson,
+  },
+  donationInfoCard: {
+    backgroundColor: COLORS.cream + "80",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: COLORS.crimson + "30",
+  },
+  donationInfoHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 12,
+  },
+  donationInfoTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: COLORS.midnightNavy,
+  },
+  donationInfoText: {
+    fontSize: 14,
+    color: COLORS.midnightNavy,
+    opacity: 0.8,
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  contactLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 4,
+  },
+  contactLinkText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: COLORS.crimson,
   },
   metricsContainer: {
     gap: 12,
@@ -1384,6 +1697,24 @@ const styles = StyleSheet.create({
     opacity: 0.5,
     marginTop: 8,
   },
+  viewAllButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.crimson,
+    gap: 8,
+  },
+  viewAllButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.crimson,
+  },
   securityCard: {
     backgroundColor: COLORS.white,
     borderRadius: 12,
@@ -1486,28 +1817,85 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
+  },
+  modalOverlayCentered: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
   },
-  modalContent: {
+  modalContentCentered: {
     backgroundColor: COLORS.white,
     borderRadius: 16,
     padding: 24,
     width: "100%",
     maxWidth: 400,
   },
+  modalContent: {
+    backgroundColor: COLORS.cream,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: "80%",
+    paddingBottom: 32,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.frostGray,
+  },
   modalTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: COLORS.midnightNavy,
+  },
+  modalTitleCentered: {
     fontSize: 20,
     fontWeight: "600",
     color: COLORS.midnightNavy,
     marginBottom: 8,
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  industryItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.frostGray,
+  },
+  industryItemSelected: {
+    backgroundColor: COLORS.crimson,
+  },
+  industryItemText: {
+    fontSize: 16,
+    color: COLORS.midnightNavy,
+  },
+  industryItemTextSelected: {
+    fontWeight: "600",
+    color: COLORS.white,
+  },
+  emptyContainer: {
+    padding: 32,
+    alignItems: "center",
+  },
+  emptyText: {
+    fontSize: 16,
+    color: COLORS.midnightNavy,
+    opacity: 0.6,
   },
   modalDescription: {
     fontSize: 14,
     color: COLORS.midnightNavy,
     opacity: 0.7,
     marginBottom: 20,
+    paddingHorizontal: 16,
   },
   modalLabel: {
     fontSize: 14,

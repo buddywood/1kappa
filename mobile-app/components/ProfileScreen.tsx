@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,9 +6,11 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  ActivityIndicator,
+  Linking,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { COLORS } from "../lib/constants";
+import { COLORS, API_URL, WEB_URL } from "../lib/constants";
 import { useAuth } from "../lib/auth";
 import ScreenHeader from "./ScreenHeader";
 import { forgotPassword } from "../lib/cognito";
@@ -20,6 +22,8 @@ import SectionHeader from "./ui/SectionHeader";
 import Checkbox from "./ui/Checkbox";
 import MenuItem from "./ui/MenuItem";
 import { getOrderCount, getSavedItemsCount } from "../lib/api";
+import { authenticatedFetch } from "../lib/api-utils";
+import { Ionicons } from "@expo/vector-icons";
 
 const REMEMBERED_EMAIL_KEY = "@1kappa:remembered_email";
 const REMEMBER_ME_KEY = "@1kappa:remember_me";
@@ -27,17 +31,47 @@ const REMEMBER_ME_KEY = "@1kappa:remember_me";
 interface ProfileScreenProps {
   onBack: () => void;
   initialMode?: "login" | "register";
+  initialErrorMessage?: string | null;
   onMyEventsPress?: () => void;
   onEditProfilePress?: () => void;
   onSettingsPress?: () => void;
+  onMemberDashboardPress?: () => void;
+  onSellerDashboardPress?: () => void;
+}
+
+interface UserInfo {
+  id: number;
+  email: string;
+  is_fraternity_member: boolean;
+  is_seller: boolean;
+  is_promoter: boolean;
+  is_steward: boolean;
+}
+
+interface SellerProfile {
+  id: number;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+}
+
+interface PromoterProfile {
+  id: number;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+}
+
+interface StewardProfile {
+  id: number;
+  status: "PENDING" | "APPROVED" | "REJECTED";
 }
 
 export default function ProfileScreen({
   onBack,
   initialMode = "login",
+  initialErrorMessage = null,
   onMyEventsPress,
   onEditProfilePress,
   onSettingsPress,
+  onMemberDashboardPress,
+  onSellerDashboardPress,
 }: ProfileScreenProps) {
   const { isGuest, user, login, logout, token } = useAuth();
   const [email, setEmail] = React.useState("");
@@ -45,7 +79,9 @@ export default function ProfileScreen({
   const [isLogin, setIsLogin] = React.useState(initialMode === "login");
   const [name, setName] = React.useState("");
   const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<string | null>(
+    initialErrorMessage || null
+  );
   const [verificationCode, setVerificationCode] = React.useState("");
   const [needsVerification, setNeedsVerification] = React.useState(false);
   const [cognitoSub, setCognitoSub] = React.useState<string | null>(null);
@@ -58,6 +94,16 @@ export default function ProfileScreen({
   >(null);
   const [orderCount, setOrderCount] = React.useState(0);
   const [savedItemsCount, setSavedItemsCount] = React.useState(0);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [sellerProfile, setSellerProfile] = useState<SellerProfile | null>(
+    null
+  );
+  const [promoterProfile, setPromoterProfile] =
+    useState<PromoterProfile | null>(null);
+  const [stewardProfile, setStewardProfile] = useState<StewardProfile | null>(
+    null
+  );
+  const [loadingRoles, setLoadingRoles] = useState(false);
 
   // Load remembered email on mount
   React.useEffect(() => {
@@ -82,6 +128,93 @@ export default function ProfileScreen({
     loadRememberedEmail();
   }, []);
 
+  // Load user info and role profiles
+  useEffect(() => {
+    const loadUserInfo = async () => {
+      if (!isGuest && user && token) {
+        try {
+          setLoadingRoles(true);
+          const userRes = await authenticatedFetch(`${API_URL}/api/users/me`, {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (!userRes.ok) {
+            throw new Error("Failed to fetch user info");
+          }
+
+          const userData = await userRes.json();
+          setUserInfo(userData);
+
+          // Fetch role-specific profiles in parallel
+          const promises: Promise<any>[] = [];
+
+          if (userData.is_seller) {
+            promises.push(
+              authenticatedFetch(`${API_URL}/api/sellers/me`, {
+                method: "GET",
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              })
+                .then((res) => res.json())
+                .then(setSellerProfile)
+                .catch(() => null)
+            );
+          }
+
+          if (userData.is_promoter) {
+            promises.push(
+              authenticatedFetch(`${API_URL}/api/promoters/me`, {
+                method: "GET",
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              })
+                .then((res) => res.json())
+                .then(setPromoterProfile)
+                .catch(() => null)
+            );
+          }
+
+          if (userData.is_steward) {
+            promises.push(
+              authenticatedFetch(`${API_URL}/api/stewards/profile`, {
+                method: "GET",
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              })
+                .then((res) => res.json())
+                .then(setStewardProfile)
+                .catch(() => null)
+            );
+          }
+
+          await Promise.all(promises);
+        } catch (error: any) {
+          // Check if it's a session expired error
+          if (error.code === "SESSION_EXPIRED") {
+            // Logout and show login with error message
+            await logout();
+            setError(
+              error.message || "Your session has expired. Please log in again."
+            );
+            setIsLogin(true);
+            return;
+          }
+          console.error("Error loading user info:", error);
+        } finally {
+          setLoadingRoles(false);
+        }
+      }
+    };
+
+    loadUserInfo();
+  }, [isGuest, user, token, logout]);
+
   // Load order and saved items counts
   React.useEffect(() => {
     const loadCounts = async () => {
@@ -93,7 +226,17 @@ export default function ProfileScreen({
           ]);
           setOrderCount(orders);
           setSavedItemsCount(savedItems);
-        } catch (error) {
+        } catch (error: any) {
+          // Check if it's a session expired error
+          if (error.code === "SESSION_EXPIRED") {
+            // Logout and show login with error message
+            await logout();
+            setError(
+              error.message || "Your session has expired. Please log in again."
+            );
+            setIsLogin(true);
+            return;
+          }
           console.error("Error loading counts:", error);
           // Silently fail - counts will remain 0
         }
@@ -101,7 +244,29 @@ export default function ProfileScreen({
     };
 
     loadCounts();
-  }, [isGuest, user, token]);
+  }, [isGuest, user, token, logout]);
+
+  const getRoleStatusBadge = (status: string | undefined) => {
+    if (!status) return null;
+    const variants: Record<string, { text: string; color: string }> = {
+      APPROVED: { text: "Approved", color: "#10B981" },
+      PENDING: { text: "Pending", color: "#F59E0B" },
+      REJECTED: { text: "Rejected", color: "#EF4444" },
+    };
+    const config = variants[status] || variants.PENDING;
+    return (
+      <View
+        style={[
+          styles.badge,
+          { backgroundColor: config.color + "20", borderColor: config.color },
+        ]}
+      >
+        <Text style={[styles.badgeText, { color: config.color }]}>
+          {config.text}
+        </Text>
+      </View>
+    );
+  };
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -114,6 +279,8 @@ export default function ProfileScreen({
 
     try {
       await login(email, password);
+      // Clear any session expiration error on successful login
+      setError(null);
 
       // Save or clear remembered email and enable auto-login based on rememberMe preference
       if (rememberMe) {
@@ -241,23 +408,211 @@ export default function ProfileScreen({
             {user.email && <Text style={styles.userEmail}>{user.email}</Text>}
           </View>
 
-          <View style={styles.menuSection}>
-            {onEditProfilePress && (
-              <MenuItem label="Edit Profile" onPress={onEditProfilePress} />
+          {/* Roles & Access Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Roles & Access</Text>
+            <Text style={styles.sectionDescription}>
+              Your current roles and access levels
+            </Text>
+
+            {loadingRoles ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color={COLORS.crimson} />
+              </View>
+            ) : (
+              <>
+                {userInfo?.is_fraternity_member && (
+                  <View style={styles.roleCard}>
+                    <View style={styles.roleHeader}>
+                      <Text style={styles.roleTitle}>Member</Text>
+                      <View
+                        style={[
+                          styles.badge,
+                          {
+                            backgroundColor: COLORS.crimson + "20",
+                            borderColor: COLORS.crimson,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[styles.badgeText, { color: COLORS.crimson }]}
+                        >
+                          Active
+                        </Text>
+                      </View>
+                    </View>
+                    <Text style={styles.roleDescription}>
+                      Verified fraternity member
+                    </Text>
+                    {onMemberDashboardPress && (
+                      <TouchableOpacity
+                        style={styles.dashboardButton}
+                        onPress={onMemberDashboardPress}
+                      >
+                        <Text style={styles.dashboardButtonText}>
+                          View Dashboard
+                        </Text>
+                        <Ionicons
+                          name="arrow-forward"
+                          size={16}
+                          color={COLORS.crimson}
+                        />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+
+                {userInfo?.is_seller && (
+                  <View style={styles.roleCard}>
+                    <View style={styles.roleHeader}>
+                      <Text style={styles.roleTitle}>Seller</Text>
+                      {getRoleStatusBadge(sellerProfile?.status)}
+                    </View>
+                    <Text style={styles.roleDescription}>
+                      {sellerProfile?.status === "APPROVED"
+                        ? "You can list and sell products"
+                        : sellerProfile?.status === "PENDING"
+                        ? "Your seller application is pending approval"
+                        : "Your seller application was rejected"}
+                    </Text>
+                    {sellerProfile?.status === "APPROVED" && (
+                      <TouchableOpacity
+                        style={styles.dashboardButton}
+                        onPress={() => {
+                          if (onSellerDashboardPress) {
+                            onSellerDashboardPress();
+                          }
+                        }}
+                      >
+                        <Text style={styles.dashboardButtonText}>
+                          Dashboard
+                        </Text>
+                        <Ionicons
+                          name="arrow-forward"
+                          size={16}
+                          color={COLORS.crimson}
+                        />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+
+                {userInfo?.is_promoter && (
+                  <View style={styles.roleCard}>
+                    <View style={styles.roleHeader}>
+                      <Text style={styles.roleTitle}>Promoter</Text>
+                      {getRoleStatusBadge(promoterProfile?.status)}
+                    </View>
+                    <Text style={styles.roleDescription}>
+                      {promoterProfile?.status === "APPROVED"
+                        ? "You can create and manage events"
+                        : promoterProfile?.status === "PENDING"
+                        ? "Your promoter application is pending approval"
+                        : "Your promoter application was rejected"}
+                    </Text>
+                    {promoterProfile?.status === "APPROVED" && (
+                      <TouchableOpacity
+                        style={styles.dashboardButton}
+                        onPress={() => {
+                          Linking.openURL(
+                            `${WEB_URL}/promoter-dashboard`
+                          ).catch((err) => {
+                            console.error("Failed to open dashboard:", err);
+                          });
+                        }}
+                      >
+                        <Text style={styles.dashboardButtonText}>
+                          Dashboard
+                        </Text>
+                        <Ionicons
+                          name="arrow-forward"
+                          size={16}
+                          color={COLORS.crimson}
+                        />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+
+                {userInfo?.is_steward && (
+                  <View style={styles.roleCard}>
+                    <View style={styles.roleHeader}>
+                      <Text style={styles.roleTitle}>Steward</Text>
+                      {getRoleStatusBadge(stewardProfile?.status)}
+                    </View>
+                    <Text style={styles.roleDescription}>
+                      {stewardProfile?.status === "APPROVED"
+                        ? "You can list legacy fraternity paraphernalia"
+                        : stewardProfile?.status === "PENDING"
+                        ? "Your steward application is pending approval"
+                        : "Your steward application was rejected"}
+                    </Text>
+                    {stewardProfile?.status === "APPROVED" && (
+                      <TouchableOpacity
+                        style={styles.dashboardButton}
+                        onPress={() => {
+                          Linking.openURL(`${WEB_URL}/steward-dashboard`).catch(
+                            (err) => {
+                              console.error("Failed to open dashboard:", err);
+                            }
+                          );
+                        }}
+                      >
+                        <Text style={styles.dashboardButtonText}>
+                          Dashboard
+                        </Text>
+                        <Ionicons
+                          name="arrow-forward"
+                          size={16}
+                          color={COLORS.crimson}
+                        />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+
+                {!userInfo?.is_fraternity_member &&
+                  !userInfo?.is_seller &&
+                  !userInfo?.is_promoter &&
+                  !userInfo?.is_steward && (
+                    <View style={styles.emptyState}>
+                      <Text style={styles.emptyStateText}>
+                        You don't have any active roles. Complete your member
+                        profile or apply for a role to get started.
+                      </Text>
+                    </View>
+                  )}
+              </>
             )}
-            {user?.is_promoter && onMyEventsPress && (
-              <MenuItem label="My Events" onPress={onMyEventsPress} />
-            )}
-            {orderCount > 1 && (
-              <MenuItem label="My Orders" onPress={() => {}} />
-            )}
-            {savedItemsCount > 1 && (
-              <MenuItem label="Saved Items" onPress={() => {}} />
-            )}
-            {onSettingsPress && (
-              <MenuItem label="Settings" onPress={onSettingsPress} />
-            )}
-            <MenuItem label="Log Out" onPress={logout} variant="logout" />
+          </View>
+
+          {/* General Settings Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>General</Text>
+            <View style={styles.menuSection}>
+              {onEditProfilePress && (
+                <MenuItem label="Edit Profile" onPress={onEditProfilePress} />
+              )}
+              {user?.is_promoter && onMyEventsPress && (
+                <MenuItem label="My Events" onPress={onMyEventsPress} />
+              )}
+              {orderCount > 1 && (
+                <MenuItem label="My Orders" onPress={() => {}} />
+              )}
+              {savedItemsCount > 1 && (
+                <MenuItem label="Saved Items" onPress={() => {}} />
+              )}
+              {onSettingsPress && (
+                <MenuItem label="Settings" onPress={onSettingsPress} />
+              )}
+            </View>
+          </View>
+
+          {/* Log Out */}
+          <View style={styles.section}>
+            <View style={styles.menuSection}>
+              <MenuItem label="Log Out" onPress={logout} variant="logout" />
+            </View>
           </View>
         </ScrollView>
       </View>
@@ -367,6 +722,11 @@ export default function ProfileScreen({
             {error && (
               <View style={styles.errorContainer}>
                 <Text style={styles.errorText}>{error}</Text>
+                {error.includes("session has expired") && (
+                  <Text style={styles.errorHint}>
+                    Please sign in again to continue.
+                  </Text>
+                )}
               </View>
             )}
 
@@ -532,6 +892,93 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     borderRadius: 12,
     overflow: "hidden",
+    marginTop: 12,
+  },
+  section: {
+    marginBottom: 24,
+    paddingHorizontal: 16,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: COLORS.midnightNavy,
+    marginBottom: 4,
+  },
+  sectionDescription: {
+    fontSize: 14,
+    color: COLORS.midnightNavy,
+    opacity: 0.6,
+    marginBottom: 16,
+  },
+  roleCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: COLORS.frostGray,
+  },
+  roleHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  roleTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: COLORS.midnightNavy,
+  },
+  roleDescription: {
+    fontSize: 14,
+    color: COLORS.midnightNavy,
+    opacity: 0.7,
+    marginBottom: 12,
+  },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  dashboardButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: COLORS.white,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.crimson,
+    alignSelf: "flex-start",
+  },
+  dashboardButtonText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: COLORS.crimson,
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: "center",
+  },
+  emptyState: {
+    backgroundColor: COLORS.white,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: COLORS.frostGray,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    color: COLORS.midnightNavy,
+    opacity: 0.7,
+    textAlign: "center",
   },
   errorContainer: {
     backgroundColor: "#FEE2E2",
@@ -547,5 +994,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 20,
     fontWeight: "500",
+  },
+  errorHint: {
+    color: "#DC2626",
+    fontSize: 12,
+    textAlign: "center",
+    marginTop: 4,
+    opacity: 0.8,
   },
 });

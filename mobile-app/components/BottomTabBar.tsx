@@ -1,11 +1,21 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../lib/constants';
+import React from "react";
+import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { COLORS } from "../lib/constants";
 
-type TabScreen = 'home' | 'shop' | 'events' | 'steward-marketplace' | 'profile';
-type Screen = TabScreen | 'my-events' | 'create-event' | 'event-detail' | 'edit-event' | 'seller-store' | 'member-setup' | 'member-dashboard' | 'seller-setup';
+type TabScreen = "home" | "shop" | "events" | "steward-marketplace" | "profile";
+type Screen =
+  | TabScreen
+  | "my-events"
+  | "create-event"
+  | "event-detail"
+  | "edit-event"
+  | "seller-store"
+  | "member-setup"
+  | "member-dashboard"
+  | "seller-setup"
+  | "seller-dashboard";
 
 interface BottomTabBarProps {
   currentScreen: Screen;
@@ -19,53 +29,56 @@ export default function BottomTabBar({
   const insets = useSafeAreaInsets();
 
   const tabs = [
-    { 
-      id: 'home' as TabScreen, 
-      label: 'Home', 
-      imageSource: require('../assets/icon.png'),
+    {
+      id: "home" as TabScreen,
+      label: "Home",
+      imageSource: require("../assets/icon.png"),
       iconName: null,
-      isCenter: false
+      isCenter: false,
     },
-    { 
-      id: 'events' as TabScreen, 
-      label: 'Events', 
-      iconName: 'calendar-outline' as keyof typeof Ionicons.glyphMap,
-      activeIconName: 'calendar' as keyof typeof Ionicons.glyphMap,
-      isCenter: false
+    {
+      id: "events" as TabScreen,
+      label: "Events",
+      iconName: "calendar-outline" as keyof typeof Ionicons.glyphMap,
+      activeIconName: "calendar" as keyof typeof Ionicons.glyphMap,
+      isCenter: false,
     },
-    { 
-      id: 'shop' as TabScreen, 
-      label: 'Shop', 
-      iconName: 'bag-outline' as keyof typeof Ionicons.glyphMap,
-      activeIconName: 'bag' as keyof typeof Ionicons.glyphMap,
-      isCenter: true
+    {
+      id: "shop" as TabScreen,
+      label: "Shop",
+      iconName: "bag-outline" as keyof typeof Ionicons.glyphMap,
+      activeIconName: "bag" as keyof typeof Ionicons.glyphMap,
+      isCenter: true,
     },
-    { 
-      id: 'steward-marketplace' as TabScreen, 
-      label: 'Steward', 
-      iconName: 'diamond-outline' as keyof typeof Ionicons.glyphMap,
-      activeIconName: 'diamond' as keyof typeof Ionicons.glyphMap,
-      isCenter: false
+    {
+      id: "steward-marketplace" as TabScreen,
+      label: "Steward",
+      iconName: "diamond-outline" as keyof typeof Ionicons.glyphMap,
+      activeIconName: "diamond" as keyof typeof Ionicons.glyphMap,
+      isCenter: false,
     },
-    { 
-      id: 'profile' as TabScreen, 
-      label: 'Profile', 
-      iconName: 'person-outline' as keyof typeof Ionicons.glyphMap,
-      activeIconName: 'person' as keyof typeof Ionicons.glyphMap,
-      isCenter: false
+    {
+      id: "profile" as TabScreen,
+      label: "Profile",
+      iconName: "person-outline" as keyof typeof Ionicons.glyphMap,
+      activeIconName: "person" as keyof typeof Ionicons.glyphMap,
+      isCenter: false,
     },
   ];
 
   return (
-    <View 
+    <View
       style={[styles.container, { paddingBottom: insets.bottom }]}
       pointerEvents="box-none"
     >
       {tabs.map((tab) => {
         // Events tab should be active for events, my-events, and create-event screens
-        const isActive = tab.id === 'events' 
-          ? (currentScreen === 'events' || currentScreen === 'my-events' || currentScreen === 'create-event')
-          : currentScreen === tab.id;
+        const isActive =
+          tab.id === "events"
+            ? currentScreen === "events" ||
+              currentScreen === "my-events" ||
+              currentScreen === "create-event"
+            : currentScreen === tab.id;
         const isCenter = tab.isCenter;
         return (
           <TouchableOpacity
@@ -76,13 +89,19 @@ export default function BottomTabBar({
           >
             {isCenter ? (
               <View style={styles.centerTabWrapper}>
-                <View style={[
-                  styles.centerTabIconContainer,
-                  isActive && styles.centerTabIconContainerActive
-                ]}>
+                <View
+                  style={[
+                    styles.centerTabIconContainer,
+                    isActive && styles.centerTabIconContainerActive,
+                  ]}
+                >
                   {tab.iconName ? (
                     <Ionicons
-                      name={isActive && tab.activeIconName ? tab.activeIconName : tab.iconName}
+                      name={
+                        isActive && tab.activeIconName
+                          ? tab.activeIconName
+                          : tab.iconName
+                      }
                       size={28}
                       color={COLORS.white}
                       style={styles.icon}
@@ -106,7 +125,11 @@ export default function BottomTabBar({
                   />
                 ) : tab.iconName ? (
                   <Ionicons
-                    name={isActive && tab.activeIconName ? tab.activeIconName : tab.iconName}
+                    name={
+                      isActive && tab.activeIconName
+                        ? tab.activeIconName
+                        : tab.iconName
+                    }
                     size={24}
                     color={isActive ? COLORS.crimson : COLORS.midnightNavy}
                     style={[styles.icon, { opacity: isActive ? 1 : 0.6 }]}
@@ -126,11 +149,11 @@ export default function BottomTabBar({
 
 const styles = StyleSheet.create({
   container: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    flexDirection: 'row',
+    flexDirection: "row",
     backgroundColor: COLORS.white,
     borderTopWidth: 1,
     borderTopColor: COLORS.frostGray,
@@ -145,18 +168,18 @@ const styles = StyleSheet.create({
   },
   tab: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'flex-end',
+    alignItems: "center",
+    justifyContent: "flex-end",
     paddingVertical: 8,
     minHeight: 60,
   },
   centerTab: {
-    justifyContent: 'flex-start',
+    justifyContent: "flex-start",
     paddingTop: 0,
   },
   centerTabWrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginTop: -30,
   },
   centerTabIconContainer: {
@@ -164,8 +187,8 @@ const styles = StyleSheet.create({
     height: 64,
     borderRadius: 32,
     backgroundColor: COLORS.crimson,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 8,
     shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 6 },
@@ -195,18 +218,17 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: COLORS.midnightNavy,
     opacity: 0.6,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   centerLabel: {
     color: COLORS.midnightNavy,
     opacity: 0.8,
-    fontWeight: '600',
+    fontWeight: "600",
     marginTop: 0,
   },
   labelActive: {
     color: COLORS.crimson,
     opacity: 1,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
-

@@ -245,6 +245,40 @@ router.post(
   }
 );
 
+// Update steward's sponsoring chapter
+router.put(
+  "/me/sponsoring-chapter",
+  authenticate,
+  requireSteward,
+  async (req: Request, res: Response) => {
+    try {
+      if (!req.user || !req.user.stewardId) {
+        return res.status(403).json({ error: "Not a steward" });
+      }
+
+      const { sponsoring_chapter_id } = req.body;
+      if (!sponsoring_chapter_id || typeof sponsoring_chapter_id !== "number") {
+        return res
+          .status(400)
+          .json({ error: "Valid sponsoring_chapter_id is required" });
+      }
+
+      // Update the steward's sponsoring chapter
+      await pool.query(
+        "UPDATE stewards SET sponsoring_chapter_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2",
+        [sponsoring_chapter_id, req.user.stewardId]
+      );
+
+      // Fetch updated steward
+      const updatedSteward = await getStewardById(req.user.stewardId);
+      res.json(updatedSteward);
+    } catch (error: any) {
+      console.error("Error updating steward sponsoring chapter:", error);
+      res.status(500).json({ error: "Failed to update sponsoring chapter" });
+    }
+  }
+);
+
 // Get current steward profile
 router.get(
   "/profile",

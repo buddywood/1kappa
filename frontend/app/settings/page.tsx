@@ -1,23 +1,37 @@
-'use client';
+"use client";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
-import Link from 'next/link';
-import Header from '../components/Header';
-import Footer from '../components/Footer';
-import { SkeletonLoader } from '../components/SkeletonLoader';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import Link from "next/link";
+import Header from "../components/Header";
+import Footer from "../components/Footer";
+import { SkeletonLoader } from "../components/SkeletonLoader";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import SearchableSelect from "../components/SearchableSelect";
 import {
   Shield,
   Building2,
@@ -31,7 +45,7 @@ import {
   XCircle,
   ExternalLink,
   Wallet,
-} from 'lucide-react';
+} from "lucide-react";
 import {
   getAuthHeaders,
   getSellerProfile,
@@ -40,14 +54,16 @@ import {
   getStewardProfile,
   getPromoterProfile,
   getUnreadNotificationCount,
+  fetchActiveCollegiateChapters,
   type Seller,
   type SellerMetrics,
   type StripeAccountStatus,
   type Steward,
   type Promoter,
-} from '@/lib/api';
+  type Chapter,
+} from "@/lib/api";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 interface UserInfo {
   id: number;
@@ -73,22 +89,31 @@ export default function SettingsPage() {
   const router = useRouter();
   const { data: session, status: sessionStatus } = useSession();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [sellerProfile, setSellerProfile] = useState<Seller | null>(null);
-  const [sellerMetrics, setSellerMetrics] = useState<SellerMetrics | null>(null);
-  const [stripeStatus, setStripeStatus] = useState<StripeAccountStatus | null>(null);
+  const [sellerMetrics, setSellerMetrics] = useState<SellerMetrics | null>(
+    null
+  );
+  const [stripeStatus, setStripeStatus] = useState<StripeAccountStatus | null>(
+    null
+  );
   const [stewardProfile, setStewardProfile] = useState<Steward | null>(null);
   const [promoterProfile, setPromoterProfile] = useState<Promoter | null>(null);
+  const [chapters, setChapters] = useState<Chapter[]>([]);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleteEmailConfirm, setDeleteEmailConfirm] = useState('');
+  const [editingChapterType, setEditingChapterType] = useState<
+    "seller" | "promoter" | "steward" | null
+  >(null);
+  const [updatingChapter, setUpdatingChapter] = useState(false);
+  const [deleteEmailConfirm, setDeleteEmailConfirm] = useState("");
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    if (sessionStatus === 'loading') return;
-    if (sessionStatus !== 'authenticated' || !session?.user) {
-      router.push('/login');
+    if (sessionStatus === "loading") return;
+    if (sessionStatus !== "authenticated" || !session?.user) {
+      router.push("/login");
       return;
     }
     loadSettings();
@@ -97,7 +122,7 @@ export default function SettingsPage() {
   const loadSettings = async () => {
     try {
       setLoading(true);
-      setError('');
+      setError("");
 
       // Get auth headers - handle case where onboarding might not be complete
       let headers: HeadersInit;
@@ -105,25 +130,25 @@ export default function SettingsPage() {
         headers = await getAuthHeaders();
       } catch (authError: any) {
         // If auth fails, try to get token directly from session
-        const sessionRes = await fetch('/api/auth/session');
+        const sessionRes = await fetch("/api/auth/session");
         const sessionData = await sessionRes.json();
         const idToken = (sessionData as any)?.idToken;
-        
+
         if (!idToken) {
-          throw new Error('Not authenticated');
+          throw new Error("Not authenticated");
         }
-        
+
         headers = {
-          'Authorization': `Bearer ${idToken}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+          "Content-Type": "application/json",
         };
       }
-      
+
       // Fetch user info
       const userRes = await fetch(`${API_URL}/api/users/me`, { headers });
       if (!userRes.ok) {
         const errorData = await userRes.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to fetch user info');
+        throw new Error(errorData.error || "Failed to fetch user info");
       }
       const userData = await userRes.json();
       setUserInfo(userData);
@@ -134,23 +159,33 @@ export default function SettingsPage() {
       // Fetch seller data if user is a seller
       if (userData.is_seller) {
         promises.push(
-          getSellerProfile().then(setSellerProfile).catch(() => null),
-          getSellerMetrics().then(setSellerMetrics).catch(() => null),
-          getStripeAccountStatus().then(setStripeStatus).catch(() => null)
+          getSellerProfile()
+            .then(setSellerProfile)
+            .catch(() => null),
+          getSellerMetrics()
+            .then(setSellerMetrics)
+            .catch(() => null),
+          getStripeAccountStatus()
+            .then(setStripeStatus)
+            .catch(() => null)
         );
       }
 
       // Fetch steward data if user is a steward
       if (userData.is_steward) {
         promises.push(
-          getStewardProfile().then(setStewardProfile).catch(() => null)
+          getStewardProfile()
+            .then(setStewardProfile)
+            .catch(() => null)
         );
       }
 
       // Fetch promoter data if user is a promoter
       if (userData.is_promoter) {
         promises.push(
-          getPromoterProfile().then(setPromoterProfile).catch(() => null)
+          getPromoterProfile()
+            .then(setPromoterProfile)
+            .catch(() => null)
         );
       }
 
@@ -163,10 +198,17 @@ export default function SettingsPage() {
         );
       }
 
+      // Fetch chapters for displaying chapter names
+      promises.push(
+        fetchActiveCollegiateChapters()
+          .then(setChapters)
+          .catch(() => setChapters([]))
+      );
+
       await Promise.all(promises);
     } catch (err: any) {
-      console.error('Error loading settings:', err);
-      setError(err.message || 'Failed to load settings');
+      console.error("Error loading settings:", err);
+      setError(err.message || "Failed to load settings");
     } finally {
       setLoading(false);
     }
@@ -174,51 +216,51 @@ export default function SettingsPage() {
 
   const handleDeleteAccount = async () => {
     if (deleteEmailConfirm !== userInfo?.email) {
-      setError('Email confirmation does not match');
+      setError("Email confirmation does not match");
       return;
     }
 
     try {
       setDeleting(true);
-      setError('');
-      
+      setError("");
+
       // Get auth headers - handle case where onboarding might not be complete
       let headers: HeadersInit;
       try {
         headers = await getAuthHeaders();
       } catch (authError: any) {
         // If auth fails, try to get token directly from session
-        const sessionRes = await fetch('/api/auth/session');
+        const sessionRes = await fetch("/api/auth/session");
         const sessionData = await sessionRes.json();
         const idToken = (sessionData as any)?.idToken;
-        
+
         if (!idToken) {
-          throw new Error('Not authenticated');
+          throw new Error("Not authenticated");
         }
-        
+
         headers = {
-          'Authorization': `Bearer ${idToken}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${idToken}`,
+          "Content-Type": "application/json",
         };
       }
-      
+
       const res = await fetch(`${API_URL}/api/users/me/delete`, {
-        method: 'DELETE',
+        method: "DELETE",
         headers,
       });
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to delete account');
+        throw new Error(errorData.error || "Failed to delete account");
       }
 
       // Sign out and redirect
-      const { signOut } = await import('next-auth/react');
+      const { signOut } = await import("next-auth/react");
       await signOut({ redirect: false });
-      router.push('/login?deleted=true');
+      router.push("/login?deleted=true");
     } catch (err: any) {
-      console.error('Error deleting account:', err);
-      setError(err.message || 'Failed to delete account');
+      console.error("Error deleting account:", err);
+      setError(err.message || "Failed to delete account");
       setDeleting(false);
     }
   };
@@ -228,28 +270,93 @@ export default function SettingsPage() {
   };
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'Never';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
+    if (!dateString) return "Never";
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
     });
   };
 
   const getRoleStatusBadge = (status: string | undefined) => {
     if (!status) return null;
     const variants: Record<string, { text: string; className: string }> = {
-      APPROVED: { text: 'Approved', className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
-      PENDING: { text: 'Pending', className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' },
-      REJECTED: { text: 'Rejected', className: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' },
+      APPROVED: {
+        text: "Approved",
+        className:
+          "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+      },
+      PENDING: {
+        text: "Pending",
+        className:
+          "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+      },
+      REJECTED: {
+        text: "Rejected",
+        className:
+          "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+      },
     };
     const config = variants[status] || variants.PENDING;
     return <Badge className={config.className}>{config.text}</Badge>;
   };
 
-  if (sessionStatus === 'loading' || loading) {
+  const getChapterName = (chapterId: number | null): string | null => {
+    if (!chapterId) return null;
+    const chapter = chapters.find((c) => c.id === chapterId);
+    return chapter?.name || null;
+  };
+
+  const updateSponsoringChapter = async (
+    type: "seller" | "promoter" | "steward",
+    chapterId: number
+  ): Promise<void> => {
+    try {
+      setUpdatingChapter(true);
+      setError("");
+
+      const headers = await getAuthHeaders();
+      let endpoint = "";
+      if (type === "seller") {
+        endpoint = `${API_URL}/api/sellers/me/sponsoring-chapter`;
+      } else if (type === "promoter") {
+        endpoint = `${API_URL}/api/promoters/me/sponsoring-chapter`;
+      } else {
+        endpoint = `${API_URL}/api/stewards/me/sponsoring-chapter`;
+      }
+
+      const res = await fetch(endpoint, {
+        method: "PUT",
+        headers: {
+          ...headers,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ sponsoring_chapter_id: chapterId }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(
+          errorData.error || `Failed to update ${type} sponsoring chapter`
+        );
+      }
+
+      // Reload settings to get updated data
+      await loadSettings();
+      setEditingChapterType(null);
+      setSuccess("Sponsoring chapter updated successfully");
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err: any) {
+      console.error("Error updating chapter:", err);
+      setError(err.message || "Failed to update chapter");
+    } finally {
+      setUpdatingChapter(false);
+    }
+  };
+
+  if (sessionStatus === "loading" || loading) {
     return (
       <div className="min-h-screen bg-cream dark:bg-black">
         <Header />
@@ -259,7 +366,7 @@ export default function SettingsPage() {
     );
   }
 
-  if (sessionStatus !== 'authenticated' || !userInfo) {
+  if (sessionStatus !== "authenticated" || !userInfo) {
     return null;
   }
 
@@ -278,8 +385,12 @@ export default function SettingsPage() {
 
         {error && (
           <Alert className="mb-6 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20">
-            <AlertTitle className="text-red-800 dark:text-red-400">Error</AlertTitle>
-            <AlertDescription className="text-red-700 dark:text-red-300">{error}</AlertDescription>
+            <AlertTitle className="text-red-800 dark:text-red-400">
+              Error
+            </AlertTitle>
+            <AlertDescription className="text-red-700 dark:text-red-300">
+              {error}
+            </AlertDescription>
           </Alert>
         )}
 
@@ -334,14 +445,14 @@ export default function SettingsPage() {
                         {getRoleStatusBadge(sellerProfile?.status)}
                       </div>
                       <p className="text-sm text-midnight-navy/70 dark:text-gray-400">
-                        {sellerProfile?.status === 'APPROVED' 
-                          ? 'You can list and sell products'
-                          : sellerProfile?.status === 'PENDING'
-                          ? 'Your seller application is pending approval'
-                          : 'Your seller application was rejected'}
+                        {sellerProfile?.status === "APPROVED"
+                          ? "You can list and sell products"
+                          : sellerProfile?.status === "PENDING"
+                          ? "Your seller application is pending approval"
+                          : "Your seller application was rejected"}
                       </p>
                     </div>
-                    {sellerProfile?.status === 'APPROVED' && (
+                    {sellerProfile?.status === "APPROVED" && (
                       <Link href="/seller-dashboard">
                         <Button variant="outline" size="sm">
                           Dashboard
@@ -360,14 +471,14 @@ export default function SettingsPage() {
                         {getRoleStatusBadge(promoterProfile?.status)}
                       </div>
                       <p className="text-sm text-midnight-navy/70 dark:text-gray-400">
-                        {promoterProfile?.status === 'APPROVED'
-                          ? 'You can create and manage events'
-                          : promoterProfile?.status === 'PENDING'
-                          ? 'Your promoter application is pending approval'
-                          : 'Your promoter application was rejected'}
+                        {promoterProfile?.status === "APPROVED"
+                          ? "You can create and manage events"
+                          : promoterProfile?.status === "PENDING"
+                          ? "Your promoter application is pending approval"
+                          : "Your promoter application was rejected"}
                       </p>
                     </div>
-                    {promoterProfile?.status === 'APPROVED' && (
+                    {promoterProfile?.status === "APPROVED" && (
                       <Link href="/promoter-dashboard">
                         <Button variant="outline" size="sm">
                           Dashboard
@@ -386,14 +497,14 @@ export default function SettingsPage() {
                         {getRoleStatusBadge(stewardProfile?.status)}
                       </div>
                       <p className="text-sm text-midnight-navy/70 dark:text-gray-400">
-                        {stewardProfile?.status === 'APPROVED'
-                          ? 'You can list legacy fraternity paraphernalia'
-                          : stewardProfile?.status === 'PENDING'
-                          ? 'Your steward application is pending approval'
-                          : 'Your steward application was rejected'}
+                        {stewardProfile?.status === "APPROVED"
+                          ? "You can list legacy fraternity paraphernalia"
+                          : stewardProfile?.status === "PENDING"
+                          ? "Your steward application is pending approval"
+                          : "Your steward application was rejected"}
                       </p>
                     </div>
-                    {stewardProfile?.status === 'APPROVED' && (
+                    {stewardProfile?.status === "APPROVED" && (
                       <Link href="/steward-dashboard">
                         <Button variant="outline" size="sm">
                           Dashboard
@@ -404,13 +515,17 @@ export default function SettingsPage() {
                   </div>
                 )}
 
-                {!userInfo.is_fraternity_member && !userInfo.is_seller && !userInfo.is_promoter && !userInfo.is_steward && (
-                  <Alert>
-                    <AlertDescription>
-                      You don&apos;t have any active roles. Complete your member profile or apply for a role to get started.
-                    </AlertDescription>
-                  </Alert>
-                )}
+                {!userInfo.is_fraternity_member &&
+                  !userInfo.is_seller &&
+                  !userInfo.is_promoter &&
+                  !userInfo.is_steward && (
+                    <Alert>
+                      <AlertDescription>
+                        You don&apos;t have any active roles. Complete your
+                        member profile or apply for a role to get started.
+                      </AlertDescription>
+                    </Alert>
+                  )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -428,58 +543,204 @@ export default function SettingsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <Alert className="bg-cream/50 dark:bg-gray-900/50 border-crimson/20">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 mt-0.5">
+                      <Building2 className="h-5 w-5 text-crimson" />
+                    </div>
+                    <div className="flex-1">
+                      <AlertTitle className="text-midnight-navy dark:text-gray-100 mb-2">
+                        Chapter Donation Program
+                      </AlertTitle>
+                      <AlertDescription className="text-midnight-navy/80 dark:text-gray-300">
+                        Our platform donates 1-2% of sales to the chapter of
+                        your choosing. This advances our commitment to providing
+                        avenues of support for undergraduate Kappa Alpha Psi
+                        chapters.
+                      </AlertDescription>
+                      <Link
+                        href="/support"
+                        className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-crimson hover:text-aurora-gold dark:hover:text-crimson/80 transition-colors"
+                      >
+                        Have questions? Contact us
+                        <ExternalLink className="h-3 w-3" />
+                      </Link>
+                    </div>
+                  </div>
+                </Alert>
                 {sellerProfile?.sponsoring_chapter_id && (
                   <div className="p-4 border rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-semibold">Seller Sponsoring Chapter</h3>
-                      <Badge variant="outline">Seller</Badge>
+                      <h3 className="font-semibold">Your selection</h3>
                     </div>
-                    <p className="text-sm text-midnight-navy/70 dark:text-gray-400">
-                      Chapter ID: {sellerProfile.sponsoring_chapter_id}
-                    </p>
-                    <p className="text-xs text-midnight-navy/60 dark:text-gray-500 mt-1">
-                      Set during seller application process
-                    </p>
+                    {editingChapterType === "seller" ? (
+                      <div className="space-y-2">
+                        <SearchableSelect
+                          options={chapters.map((ch) => ({
+                            id: ch.id,
+                            label: ch.name,
+                            value: ch.id.toString(),
+                          }))}
+                          value={sellerProfile.sponsoring_chapter_id.toString()}
+                          onChange={(value) => {
+                            updateSponsoringChapter("seller", parseInt(value));
+                          }}
+                          placeholder="Select chapter"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditingChapterType(null);
+                          }}
+                          disabled={updatingChapter}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-sm text-midnight-navy/70 dark:text-gray-400 mb-2">
+                          {getChapterName(
+                            sellerProfile.sponsoring_chapter_id
+                          ) ||
+                            `Chapter ID: ${sellerProfile.sponsoring_chapter_id}`}
+                        </p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditingChapterType("seller");
+                          }}
+                          disabled={updatingChapter}
+                        >
+                          Change Chapter
+                        </Button>
+                      </>
+                    )}
                   </div>
                 )}
 
                 {promoterProfile?.sponsoring_chapter_id && (
                   <div className="p-4 border rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-semibold">Promoter Sponsoring Chapter</h3>
-                      <Badge variant="outline">Promoter</Badge>
+                      <h3 className="font-semibold">Your selection</h3>
                     </div>
-                    <p className="text-sm text-midnight-navy/70 dark:text-gray-400">
-                      Chapter ID: {promoterProfile.sponsoring_chapter_id}
-                    </p>
-                    <p className="text-xs text-midnight-navy/60 dark:text-gray-500 mt-1">
-                      Set during promoter application process
-                    </p>
+                    {editingChapterType === "promoter" ? (
+                      <div className="space-y-2">
+                        <SearchableSelect
+                          options={chapters.map((ch) => ({
+                            id: ch.id,
+                            label: ch.name,
+                            value: ch.id.toString(),
+                          }))}
+                          value={promoterProfile.sponsoring_chapter_id.toString()}
+                          onChange={(value) => {
+                            updateSponsoringChapter(
+                              "promoter",
+                              parseInt(value)
+                            );
+                          }}
+                          placeholder="Select chapter"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditingChapterType(null);
+                          }}
+                          disabled={updatingChapter}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-sm text-midnight-navy/70 dark:text-gray-400 mb-2">
+                          {getChapterName(
+                            promoterProfile.sponsoring_chapter_id
+                          ) ||
+                            `Chapter ID: ${promoterProfile.sponsoring_chapter_id}`}
+                        </p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditingChapterType("promoter");
+                          }}
+                          disabled={updatingChapter}
+                        >
+                          Change Chapter
+                        </Button>
+                      </>
+                    )}
                   </div>
                 )}
 
                 {stewardProfile?.sponsoring_chapter_id && (
                   <div className="p-4 border rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-semibold">Steward Sponsoring Chapter</h3>
-                      <Badge variant="outline">Steward</Badge>
+                      <h3 className="font-semibold">Your selection</h3>
                     </div>
-                    <p className="text-sm text-midnight-navy/70 dark:text-gray-400">
-                      Chapter ID: {stewardProfile.sponsoring_chapter_id}
-                    </p>
-                    <p className="text-xs text-midnight-navy/60 dark:text-gray-500 mt-1">
-                      Set during steward application process
-                    </p>
+                    {editingChapterType === "steward" ? (
+                      <div className="space-y-2">
+                        <SearchableSelect
+                          options={chapters.map((ch) => ({
+                            id: ch.id,
+                            label: ch.name,
+                            value: ch.id.toString(),
+                          }))}
+                          value={stewardProfile.sponsoring_chapter_id.toString()}
+                          onChange={(value) => {
+                            updateSponsoringChapter("steward", parseInt(value));
+                          }}
+                          placeholder="Select chapter"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditingChapterType(null);
+                          }}
+                          disabled={updatingChapter}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-sm text-midnight-navy/70 dark:text-gray-400 mb-2">
+                          {getChapterName(
+                            stewardProfile.sponsoring_chapter_id
+                          ) ||
+                            `Chapter ID: ${stewardProfile.sponsoring_chapter_id}`}
+                        </p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditingChapterType("steward");
+                          }}
+                          disabled={updatingChapter}
+                        >
+                          Change Chapter
+                        </Button>
+                      </>
+                    )}
                   </div>
                 )}
 
-                {!sellerProfile?.sponsoring_chapter_id && !promoterProfile?.sponsoring_chapter_id && !stewardProfile?.sponsoring_chapter_id && (
-                  <Alert>
-                    <AlertDescription>
-                      You don&apos;t have any sponsoring chapters. Sponsoring chapters are set when you apply for seller, promoter, or steward roles.
-                    </AlertDescription>
-                  </Alert>
-                )}
+                {!sellerProfile?.sponsoring_chapter_id &&
+                  !promoterProfile?.sponsoring_chapter_id &&
+                  !stewardProfile?.sponsoring_chapter_id && (
+                    <Alert>
+                      <AlertDescription>
+                        You don&apos;t have any sponsoring chapters. Sponsoring
+                        chapters are set when you apply for seller, promoter, or
+                        steward roles.
+                      </AlertDescription>
+                    </Alert>
+                  )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -513,7 +774,9 @@ export default function SettingsPage() {
                         <div className="p-4 border rounded-lg">
                           <div className="flex items-center gap-2 mb-2">
                             <CreditCard className="h-4 w-4 text-midnight-navy/70" />
-                            <h3 className="text-sm font-medium">Pending Payouts</h3>
+                            <h3 className="text-sm font-medium">
+                              Pending Payouts
+                            </h3>
                           </div>
                           <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                             {formatPrice(sellerMetrics.totalPayoutsCents)}
@@ -525,10 +788,14 @@ export default function SettingsPage() {
                         <div className="p-4 border rounded-lg">
                           <div className="flex items-center gap-2 mb-2">
                             <Building2 className="h-4 w-4 text-midnight-navy/70" />
-                            <h3 className="text-sm font-medium">Chapter Donations</h3>
+                            <h3 className="text-sm font-medium">
+                              Chapter Donations
+                            </h3>
                           </div>
                           <p className="text-2xl font-bold text-crimson">
-                            {formatPrice(sellerMetrics.totalUndergradDonationsCents || 0)}
+                            {formatPrice(
+                              sellerMetrics.totalUndergradDonationsCents || 0
+                            )}
                           </p>
                           <p className="text-xs text-midnight-navy/60 dark:text-gray-500 mt-1">
                             To collegiate chapters
@@ -554,7 +821,8 @@ export default function SettingsPage() {
                         {stripeStatus.connected ? (
                           <div className="space-y-2 text-sm">
                             <p className="text-midnight-navy/70 dark:text-gray-400">
-                              Account ID: {stripeStatus.accountId?.substring(0, 20)}...
+                              Account ID:{" "}
+                              {stripeStatus.accountId?.substring(0, 20)}...
                             </p>
                             <div className="flex items-center gap-4">
                               <div className="flex items-center gap-2">
@@ -577,8 +845,16 @@ export default function SettingsPage() {
                             {stripeStatus.requirements && (
                               <Alert className="mt-4">
                                 <AlertDescription className="text-xs">
-                                  {stripeStatus.requirements.currently_due?.length ? (
-                                    <span>Additional information required: {stripeStatus.requirements.currently_due.length} item(s)</span>
+                                  {stripeStatus.requirements.currently_due
+                                    ?.length ? (
+                                    <span>
+                                      Additional information required:{" "}
+                                      {
+                                        stripeStatus.requirements.currently_due
+                                          .length
+                                      }{" "}
+                                      item(s)
+                                    </span>
                                   ) : (
                                     <span>All requirements met</span>
                                   )}
@@ -614,7 +890,8 @@ export default function SettingsPage() {
                 ) : (
                   <Alert>
                     <AlertDescription>
-                      Payment and payout information is only available for sellers. Apply to become a seller to start earning.
+                      Payment and payout information is only available for
+                      sellers. Apply to become a seller to start earning.
                     </AlertDescription>
                   </Alert>
                 )}
@@ -638,11 +915,15 @@ export default function SettingsPage() {
                 <div className="p-4 border rounded-lg">
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <h3 className="font-semibold mb-1">Notification Center</h3>
+                      <h3 className="font-semibold mb-1">
+                        Notification Center
+                      </h3>
                       <p className="text-sm text-midnight-navy/70 dark:text-gray-400">
-                        {unreadNotifications > 0 
-                          ? `You have ${unreadNotifications} unread notification${unreadNotifications > 1 ? 's' : ''}`
-                          : 'You have no unread notifications'}
+                        {unreadNotifications > 0
+                          ? `You have ${unreadNotifications} unread notification${
+                              unreadNotifications > 1 ? "s" : ""
+                            }`
+                          : "You have no unread notifications"}
                       </p>
                     </div>
                     {unreadNotifications > 0 && (
@@ -682,7 +963,8 @@ export default function SettingsPage() {
                     </div>
                   </div>
                   <p className="text-xs text-midnight-navy/60 dark:text-gray-500 mt-2">
-                    Notification preferences are managed automatically. All notification types are enabled.
+                    Notification preferences are managed automatically. All
+                    notification types are enabled.
                   </p>
                 </div>
               </CardContent>
@@ -708,7 +990,8 @@ export default function SettingsPage() {
                     {userInfo.email}
                   </p>
                   <p className="text-xs text-midnight-navy/60 dark:text-gray-500">
-                    Your email address is used for authentication and cannot be changed here.
+                    Your email address is used for authentication and cannot be
+                    changed here.
                   </p>
                 </div>
 
@@ -770,7 +1053,8 @@ export default function SettingsPage() {
                     </Badge>
                   </div>
                   <p className="text-xs text-midnight-navy/60 dark:text-gray-500">
-                    Your account is authenticated through AWS Cognito. This connection is required and cannot be disconnected.
+                    Your account is authenticated through AWS Cognito. This
+                    connection is required and cannot be disconnected.
                   </p>
                 </div>
 
@@ -796,7 +1080,8 @@ export default function SettingsPage() {
                     {stripeStatus?.connected ? (
                       <div className="space-y-2">
                         <p className="text-xs text-midnight-navy/60 dark:text-gray-500">
-                          Account ID: {stripeStatus.accountId?.substring(0, 20)}...
+                          Account ID: {stripeStatus.accountId?.substring(0, 20)}
+                          ...
                         </p>
                         <Link href="/seller-dashboard/stripe-setup">
                           <Button variant="outline" size="sm">
@@ -838,12 +1123,17 @@ export default function SettingsPage() {
               </CardHeader>
               <CardContent>
                 <Alert className="mb-6 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20">
-                  <AlertTitle className="text-red-800 dark:text-red-400">Warning</AlertTitle>
+                  <AlertTitle className="text-red-800 dark:text-red-400">
+                    Warning
+                  </AlertTitle>
                   <AlertDescription className="text-red-700 dark:text-red-300">
-                    This action cannot be undone. Deleting your account will permanently remove:
+                    This action cannot be undone. Deleting your account will
+                    permanently remove:
                     <ul className="list-disc list-inside mt-2 space-y-1">
                       <li>Your user account and profile</li>
-                      <li>All your listings, products, or events (if applicable)</li>
+                      <li>
+                        All your listings, products, or events (if applicable)
+                      </li>
                       <li>Your order history and transaction data</li>
                       <li>All associated data and preferences</li>
                     </ul>
@@ -852,7 +1142,8 @@ export default function SettingsPage() {
 
                 <div className="space-y-4">
                   <p className="text-sm text-midnight-navy/70 dark:text-gray-400">
-                    If you&apos;re sure you want to delete your account, click the button below and confirm by entering your email address.
+                    If you&apos;re sure you want to delete your account, click
+                    the button below and confirm by entering your email address.
                   </p>
                   <Button
                     variant="destructive"
@@ -862,12 +1153,16 @@ export default function SettingsPage() {
                   </Button>
                 </div>
 
-                <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <Dialog
+                  open={deleteDialogOpen}
+                  onOpenChange={setDeleteDialogOpen}
+                >
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>Delete Account</DialogTitle>
                       <DialogDescription>
-                        This action cannot be undone. Please enter your email address to confirm.
+                        This action cannot be undone. Please enter your email
+                        address to confirm.
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
@@ -877,7 +1172,9 @@ export default function SettingsPage() {
                           id="email-confirm"
                           type="email"
                           value={deleteEmailConfirm}
-                          onChange={(e) => setDeleteEmailConfirm(e.target.value)}
+                          onChange={(e) =>
+                            setDeleteEmailConfirm(e.target.value)
+                          }
                           placeholder={userInfo.email}
                         />
                         <p className="text-xs text-midnight-navy/60 dark:text-gray-500 mt-1">
@@ -890,8 +1187,8 @@ export default function SettingsPage() {
                         variant="outline"
                         onClick={() => {
                           setDeleteDialogOpen(false);
-                          setDeleteEmailConfirm('');
-                          setError('');
+                          setDeleteEmailConfirm("");
+                          setError("");
                         }}
                         disabled={deleting}
                       >
@@ -900,9 +1197,11 @@ export default function SettingsPage() {
                       <Button
                         variant="destructive"
                         onClick={handleDeleteAccount}
-                        disabled={deleting || deleteEmailConfirm !== userInfo.email}
+                        disabled={
+                          deleting || deleteEmailConfirm !== userInfo.email
+                        }
                       >
-                        {deleting ? 'Deleting...' : 'Delete Account'}
+                        {deleting ? "Deleting..." : "Delete Account"}
                       </Button>
                     </DialogFooter>
                   </DialogContent>
@@ -916,4 +1215,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-

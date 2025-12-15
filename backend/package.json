@@ -1,6 +1,6 @@
 {
   "name": "1kappa-backend",
-  "version": "1.0.0",
+  "version": "25.12.25",
   "description": "Express.js backend for 1Kappa",
   "main": "dist/server.js",
   "scripts": {

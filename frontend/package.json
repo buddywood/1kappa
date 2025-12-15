@@ -1,6 +1,6 @@
 {
   "name": "1kappa-frontend",
-  "version": "0.1.0",
+  "version": "25.12.25",
   "private": true,
   "scripts": {
     "dev": "next dev",
