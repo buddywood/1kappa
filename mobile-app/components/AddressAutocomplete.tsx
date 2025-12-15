@@ -176,7 +176,7 @@ export default function AddressAutocomplete({
         <Text style={styles.label}>Location {required && "*"}</Text>
         <View style={styles.inputContainer}>
           <TextInput
-            style={[styles.input, rightIcon && styles.inputWithIcon]}
+            style={[styles.input, rightIcon ? styles.inputWithIcon : undefined]}
             value={searchQuery}
             onChangeText={handleTextChange}
             placeholder="Start typing an address..."

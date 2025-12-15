@@ -61,7 +61,7 @@ export default function NotificationsScreen({
     if (!token || !user?.email) return;
 
     try {
-      await markNotificationAsRead(token, notificationId, user.email);
+      await markNotificationAsRead(token, notificationId, user.email!);
       setNotifications((prev) =>
         prev.map((n) => (n.id === notificationId ? { ...n, is_read: true } : n))
       );
@@ -75,7 +75,7 @@ export default function NotificationsScreen({
     if (!token || !user?.email) return;
 
     try {
-      await markAllNotificationsAsRead(token, user.email);
+      await markAllNotificationsAsRead(token, user.email!);
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
     } catch (err) {
       console.error("Error marking all notifications as read:", err);
@@ -96,7 +96,7 @@ export default function NotificationsScreen({
           style: "destructive",
           onPress: async () => {
             try {
-              await deleteNotification(token, notificationId, user.email);
+              await deleteNotification(token, notificationId, user.email!);
               setNotifications((prev) =>
                 prev.filter((n) => n.id !== notificationId)
               );
@@ -248,9 +248,11 @@ export default function NotificationsScreen({
                           {notification.message}
                         </Text>
                         <View style={styles.notificationFooter}>
-                          <Text style={styles.notificationDate}>
-                            {formatDate(notification.created_at)}
-                          </Text>
+                          {notification.created_at && (
+                            <Text style={styles.notificationDate}>
+                              {formatDate(notification.created_at)}
+                            </Text>
+                          )}
                           {notification.related_product_id && (
                             <TouchableOpacity
                               style={styles.viewProductButton}

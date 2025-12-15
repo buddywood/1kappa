@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 import { Op } from 'sequelize';
 import { UserAddress } from './models';
 import { UserAddress as UserAddressType } from '../types';

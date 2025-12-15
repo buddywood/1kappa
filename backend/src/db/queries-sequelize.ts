@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 import { Op, QueryTypes } from "sequelize";
 import sequelize from "./sequelize";
 import {

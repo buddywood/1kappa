@@ -332,7 +332,9 @@ router.get("/stewards/pending", async (req: Request, res: Response) => {
     const enrichedStewards = await Promise.all(
       stewards.map(async (steward) => {
         // Get member via users table -> email/cognito_sub -> fraternity_members
-        let userResult = { rows: [] };
+        let userResult: {
+          rows: { email: string | null; cognito_sub: string | null }[];
+        } = { rows: [] };
         if (steward.user_id) {
           userResult = await pool.query(
             "SELECT email, cognito_sub FROM users WHERE id = $1",

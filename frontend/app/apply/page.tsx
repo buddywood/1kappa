@@ -728,7 +728,7 @@ function ApplyPageContent() {
               </Label>
               <Input
                 type="text"
-                required={formData.merchandise_type === "KAPPA"}
+                required={formData.merchandise_type.includes("KAPPA")}
                 value={formData.kappa_vendor_id}
                 onChange={(e) =>
                   setFormData({ ...formData, kappa_vendor_id: e.target.value })

@@ -5,20 +5,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../lib/constants";
 
 type TabScreen = "home" | "shop" | "events" | "steward-marketplace" | "profile";
-type Screen =
-  | TabScreen
-  | "my-events"
-  | "create-event"
-  | "event-detail"
-  | "edit-event"
-  | "seller-store"
-  | "member-setup"
-  | "member-dashboard"
-  | "seller-setup"
-  | "seller-dashboard";
 
 interface BottomTabBarProps {
-  currentScreen: Screen;
+  currentScreen: string;
   onScreenChange: (screen: TabScreen) => void;
 }
 

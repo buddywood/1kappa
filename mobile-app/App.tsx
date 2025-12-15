@@ -355,7 +355,10 @@ function AppContent() {
         return (
           <NotificationsScreen
             onBack={() => setCurrentScreen("profile")}
-            onProductPress={handleProductPress}
+            onProductPress={(productId: number) => {
+              console.log("Notification tapped product", productId);
+              setSelectedProductId(productId);
+            }}
           />
         );
       case "member-setup":

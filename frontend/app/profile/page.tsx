@@ -601,6 +601,7 @@ function ProfilePageContent() {
     if (profile) {
       setFormData({
         name: profile.name || "",
+        membership_number: profile.membership_number || "",
         initiated_chapter_id: profile.initiated_chapter_id?.toString() || "",
         initiated_season: profile.initiated_season || "",
         initiated_year: profile.initiated_year?.toString() || "",

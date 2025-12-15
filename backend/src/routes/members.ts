@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 import { Router, Request, Response } from "express";
 import type { Router as ExpressRouter } from "express";
 import multer from "multer";

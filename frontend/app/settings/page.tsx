@@ -60,7 +60,6 @@ import {
   type StripeAccountStatus,
   type Steward,
   type Promoter,
-  type Chapter,
 } from "@/lib/api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
@@ -77,7 +76,7 @@ interface UserInfo {
   created_at: string;
 }
 
-interface Chapter {
+interface SettingsChapter {
   id: number;
   name: string;
   type: string;
@@ -100,7 +99,8 @@ export default function SettingsPage() {
   );
   const [stewardProfile, setStewardProfile] = useState<Steward | null>(null);
   const [promoterProfile, setPromoterProfile] = useState<Promoter | null>(null);
-  const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [chapters, setChapters] = useState<SettingsChapter[]>([]);
+  const [success, setSuccess] = useState("");
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingChapterType, setEditingChapterType] = useState<

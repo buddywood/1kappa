@@ -106,3 +106,4 @@ eas build:view [BUILD_ID]
 - Environment variables are automatically loaded from the "production" environment
 - Builds typically take 10-20 minutes to complete
 - You'll receive an email notification when the build is ready
+

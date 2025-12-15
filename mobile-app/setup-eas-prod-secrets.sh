@@ -19,3 +19,4 @@ echo ""
 echo "✅ Production environment variables created successfully!"
 echo ""
 echo "To verify, run: eas env:list"
+

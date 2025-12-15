@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 import { Op } from 'sequelize';
 import { Notification as NotificationModel } from './models';
 

@@ -118,3 +118,4 @@ eas build:list
 - The `production` profile in `eas.json` will use these environment variables
 - These variables will be available in your app as `process.env.EXPO_PUBLIC_API_URL` and `process.env.EXPO_PUBLIC_WEB_URL`
 - The app already has fallback values in `lib/constants.ts`, but production builds will use the EAS secrets
+

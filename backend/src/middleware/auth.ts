@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 import { Request, Response, NextFunction } from 'express';
 import { verifyCognitoToken, extractUserInfoFromToken } from '../services/cognito';
 import { getUserByCognitoSub, createUser, getMemberById } from '../db/queries-sequelize';

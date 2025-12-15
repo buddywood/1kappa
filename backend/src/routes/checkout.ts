@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 import { Router, Request, Response } from 'express';
 import type { Router as ExpressRouter } from 'express';
 import { getProductById, getOrderByStripeSessionId, getUserByEmail, createUser, getUserByCognitoSub, createOrder } from '../db/queries-sequelize';

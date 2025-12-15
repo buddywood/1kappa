@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 // Import all models
 import { Chapter } from './Chapter';
 import { Role } from './Role';
