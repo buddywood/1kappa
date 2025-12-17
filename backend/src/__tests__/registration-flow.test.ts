@@ -127,6 +127,7 @@ describe('Registration Flow Tests', () => {
       (queries.createSeller as jest.Mock).mockResolvedValue({
         id: 1,
         ...sellerApplication,
+        kappa_vendor_id: null, // Explicitly set to null for NON_KAPPA merchandise
         status: 'PENDING',
         store_logo_url: 'https://s3.amazonaws.com/store-logos/logo.jpg',
         created_at: new Date(),
@@ -151,10 +152,16 @@ describe('Registration Flow Tests', () => {
         .field('sponsoring_chapter_id', sellerApplication.sponsoring_chapter_id.toString())
         .field('business_name', sellerApplication.business_name)
         .field('merchandise_type', sellerApplication.merchandise_type)
+        .field('kappa_vendor_id', sellerApplication.kappa_vendor_id || '')
         .field('website', sellerApplication.website)
         .field('social_links', sellerApplication.social_links)
         .attach('store_logo', Buffer.from('fake logo'), 'logo.jpg');
 
+      if (response.status !== 201) {
+        console.error('Test failed with status:', response.status);
+        console.error('Response body:', JSON.stringify(response.body, null, 2));
+        console.error('createSeller was called with:', (queries.createSeller as jest.Mock).mock.calls);
+      }
       expect(response.status).toBe(201);
       expect(response.body.status).toBe('PENDING');
       expect(response.body.email).toBe(sellerApplication.email);
