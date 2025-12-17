@@ -144,6 +144,13 @@ describe('Registration Flow Tests', () => {
 
       // Mock: Email service
       (emailService.sendSellerApplicationSubmittedEmail as jest.Mock) = jest.fn().mockResolvedValue(undefined);
+      
+      // Mock: Admin notification (dynamically imported in route)
+      if (!(emailService as any).sendAdminSellerApplicationNotification) {
+        (emailService as any).sendAdminSellerApplicationNotification = jest.fn().mockResolvedValue(undefined);
+      } else {
+        ((emailService as any).sendAdminSellerApplicationNotification as jest.Mock) = jest.fn().mockResolvedValue(undefined);
+      }
 
       const response = await request(app)
         .post('/api/sellers/apply')
@@ -157,11 +164,6 @@ describe('Registration Flow Tests', () => {
         .field('social_links', sellerApplication.social_links)
         .attach('store_logo', Buffer.from('fake logo'), 'logo.jpg');
 
-      if (response.status !== 201) {
-        console.error('Test failed with status:', response.status);
-        console.error('Response body:', JSON.stringify(response.body, null, 2));
-        console.error('createSeller was called with:', (queries.createSeller as jest.Mock).mock.calls);
-      }
       expect(response.status).toBe(201);
       expect(response.body.status).toBe('PENDING');
       expect(response.body.email).toBe(sellerApplication.email);
