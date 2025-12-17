@@ -27,6 +27,7 @@ import {
   fetchEventTypes,
   EventType,
 } from "../lib/api";
+import { SEED_EVENTS } from "../lib/seedData";
 import { API_URL } from "../lib/constants";
 import ScreenHeader from "./ScreenHeader";
 
@@ -218,10 +219,12 @@ export default function EventsScreen({
           .catch(() => []),
         fetchEventTypes().catch(() => []),
       ]);
-      setEvents(eventsData);
+      
+      const finalEvents = eventsData.length > 0 ? eventsData : SEED_EVENTS;
+      setEvents(finalEvents);
       setChapters(chaptersData);
       setEventTypes(eventTypesData);
-      await geocodeAllEvents(eventsData);
+      await geocodeAllEvents(finalEvents);
       if (userLocation) {
         computeEventDistances();
       }
@@ -233,25 +236,57 @@ export default function EventsScreen({
   };
   useEffect(() => {
     const loadData = async () => {
+      console.log("EventsScreen: Starting loadData");
       try {
         setLoading(true);
-        const [eventsData, chaptersData, eventTypesData] = await Promise.all([
+        console.log("EventsScreen: Fetching data...");
+        
+        // Add timeout promise
+        const timeout = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error("Request timed out")), 10000)
+        );
+
+        const dataPromise = Promise.all([
           fetchEvents(),
           fetch(`${API_URL}/api/chapters/active-collegiate`)
             .then((res) => res.json())
-            .catch(() => []),
-          fetchEventTypes().catch(() => []),
+            .catch((err) => {
+              console.warn("Chapters fetch failed:", err);
+              return [];
+            }),
+          fetchEventTypes().catch((err) => {
+            console.warn("EventTypes fetch failed:", err);
+            return [];
+          }),
         ]);
-        setEvents(eventsData);
+
+        const [eventsData, chaptersData, eventTypesData] = (await Promise.race([
+          dataPromise,
+          timeout,
+        ])) as [Event[], Chapter[], EventType[]];
+        
+        console.log("EventsScreen: Data fetched. Events:", eventsData?.length);
+        
+        const finalEvents = eventsData && eventsData.length > 0 ? eventsData : SEED_EVENTS;
+        console.log("EventsScreen: Using final events:", finalEvents.length, "Seed used:", finalEvents === SEED_EVENTS);
+
+        setEvents(finalEvents);
         setChapters(chaptersData);
         setEventTypes(eventTypesData);
-        await geocodeAllEvents(eventsData);
+        
+        console.log("EventsScreen: Starting geocoding...");
+        await geocodeAllEvents(finalEvents).catch(err => console.warn("Geocoding non-fatal error:", err));
+        console.log("EventsScreen: Geocoding done");
+
         if (userLocation) {
           computeEventDistances();
         }
       } catch (error) {
         console.error("Error loading events:", error);
+        // Fallback to seed data on error as well
+        setEvents(SEED_EVENTS);
       } finally {
+        console.log("EventsScreen: Finally block - setting loading false");
         setLoading(false);
       }
     };

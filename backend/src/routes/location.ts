@@ -22,12 +22,32 @@ router.post('/reverse-geocode', async (req: Request, res: Response) => {
     }
 
     res.json(result);
-  } catch (error) {
+  } catch (error: any) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: 'Invalid coordinates', details: error.errors });
     }
-    console.error('Error reverse geocoding:', error);
-    res.status(500).json({ error: 'Failed to reverse geocode location' });
+    
+    // Log detailed error information
+    console.error('Error reverse geocoding:', {
+      message: error.message,
+      code: error.code,
+      name: error.name,
+      stack: error.stack,
+    });
+    
+    // Provide specific error messages for common issues
+    let userMessage = 'Failed to reverse geocode location';
+    if (error.message?.includes('AWS_LOCATION_PLACE_INDEX_NAME is not configured')) {
+      userMessage = 'Location service is not configured. Please contact support.';
+    } else if (error.message?.includes('signature') || error.name === 'SignatureDoesNotMatch') {
+      userMessage = 'Location service authentication error. Please contact support.';
+      console.error('⚠️  AWS Location Signature Error - Check AWS credentials in Heroku config');
+    } else if (error.name === 'AccessDeniedException' || error.code === 'AccessDeniedException') {
+      userMessage = 'Location service access denied. Please contact support.';
+      console.error('⚠️  AWS Location Access Denied - Check IAM permissions for Location service');
+    }
+    
+    res.status(500).json({ error: userMessage });
   }
 });
 

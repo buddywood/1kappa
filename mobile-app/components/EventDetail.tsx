@@ -21,6 +21,7 @@ import {
   fetchEventTypes,
   EventType,
 } from "../lib/api";
+import { SEED_EVENTS } from "../lib/seedData";
 import { COLORS, WEB_URL } from "../lib/constants";
 import { getEventFullSizeUrl } from "../lib/imageUtils";
 import { useAuth } from "../lib/auth";
@@ -72,6 +73,18 @@ export default function EventDetail({
         setLoading(true);
         setError(null);
         setImageLoading(true);
+
+        // Check for seed data first
+        const seedEvent = SEED_EVENTS.find(e => e.id === eventId);
+        if (seedEvent) {
+          console.log("EventDetail: Loaded seed event", seedEvent.title);
+          setEvent(seedEvent);
+          setChapters([]); 
+          setEventTypes([]);
+          setLoading(false);
+          return;
+        }
+
         const [eventData, chaptersData, eventTypesData] = await Promise.all([
           fetchEvent(eventId),
           fetchChapters().catch(() => []),

@@ -1,3 +1,4 @@
+import { SEED_PRODUCTS } from '../lib/seedData';
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { fetchFeaturedProducts, Product } from '../lib/api';
@@ -33,9 +34,10 @@ export default function FeaturedProducts({ onProductPress }: FeaturedProductsPro
     const loadProducts = async () => {
       try {
         const data = await fetchFeaturedProducts();
-        setProducts(data); // Featured products endpoint returns last 10 products
+        setProducts(data.length > 0 ? data : SEED_PRODUCTS.slice(0, 4)); // Featured products endpoint returns last 10 products
       } catch (error) {
         console.error('Error loading featured products:', error);
+        setProducts(SEED_PRODUCTS.slice(0, 4));
       } finally {
         setLoading(false);
       }

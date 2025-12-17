@@ -22,8 +22,10 @@ import {
   CategoryAttributeDefinition,
   fetchChapters,
   Chapter,
+  StewardListing,
 } from "../lib/api";
-import { COLORS } from "../lib/constants";
+import { COLORS, WEB_URL } from "../lib/constants";
+import { SEED_PRODUCTS, SEED_STEWARDS } from "../lib/seedData";
 import { useAuth } from "../lib/auth";
 import { fetchProduct } from "../lib/api";
 import ScreenHeader from "./ScreenHeader";
@@ -60,6 +62,43 @@ export default function ProductDetail({
       try {
         setLoading(true);
         setError(null);
+
+        // Check for seed data first
+        const seedProduct = SEED_PRODUCTS.find(p => p.id === productId);
+        if (seedProduct) {
+          console.log("ProductDetail: Loaded seed product", seedProduct.name);
+          setProduct(seedProduct);
+          setChapters([]); // Seed products don't strictly need chapters for display logic here
+          setLoading(false);
+          return;
+        }
+
+        const seedSteward = SEED_STEWARDS.find(s => s.id === productId);
+        if (seedSteward) {
+          console.log("ProductDetail: Loaded seed steward item", seedSteward.name);
+          // Convert steward listing to Product shape
+          const productFromSteward: any = {
+            id: seedSteward.id,
+            seller_id: 0,
+            name: seedSteward.name,
+            description: seedSteward.description || '',
+            price_cents: seedSteward.shipping_cost_cents + seedSteward.chapter_donation_cents,
+            image_url: seedSteward.image_url,
+            category_id: seedSteward.category_id,
+            seller_name: seedSteward.steward?.member?.name || 'Steward',
+            is_steward: true,
+            is_kappa_branded: false, 
+            attributes: [],
+            // details needed for badges
+            seller_fraternity_member_id: seedSteward.steward?.fraternity_member_id,
+            seller_initiated_chapter_id: seedSteward.steward?.sponsoring_chapter_id,
+          };
+          setProduct(productFromSteward);
+          setChapters([]);
+          setLoading(false);
+          return;
+        }
+
         const [productData, chaptersData] = await Promise.all([
           fetchProduct(productId),
           fetchChapters().catch(() => []),
@@ -151,6 +190,26 @@ export default function ProductDetail({
         setError("Please sign in to purchase this item");
         return;
       }
+    }
+
+    // Check if this is a seed product
+    const isSeedProduct = SEED_PRODUCTS.some(p => p.id === product.id) || SEED_STEWARDS.some(s => s.id === product.id);
+    
+    if (isSeedProduct) {
+       setCheckingOut(true);
+       try {
+         // Simulate checkout by opening main site
+         await WebBrowser.openBrowserAsync(WEB_URL || "https://www.one-kappa.com", {
+            presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
+            controlsColor: COLORS.crimson,
+            toolbarColor: COLORS.white,
+         });
+       } catch (error) {
+         console.error("Error opening seed checkout:", error);
+       } finally {
+         setCheckingOut(false);
+       }
+       return;
     }
 
     setCheckingOut(true);

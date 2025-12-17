@@ -62,9 +62,9 @@ export class Seller extends BaseModel {
 
   @Column({
     type: DataType.STRING(100),
-    allowNull: false,
+    allowNull: true,
   })
-  kappa_vendor_id!: string;
+  kappa_vendor_id!: string | null;
 
   @Column({
     type: DataType.TEXT,

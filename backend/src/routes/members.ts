@@ -1075,13 +1075,33 @@ router.post(
             });
         }
 
-        const uploadResult = await uploadToS3(
-          req.file.buffer,
-          req.file.originalname,
-          req.file.mimetype,
-          "headshots"
-        );
-        headshotUrl = uploadResult.url;
+        // Try to upload to S3, but don't fail the entire request if it fails
+        try {
+          const uploadResult = await uploadToS3(
+            req.file.buffer,
+            req.file.originalname,
+            req.file.mimetype,
+            "headshots"
+          );
+          headshotUrl = uploadResult.url;
+        } catch (s3Error: any) {
+          // Log S3 errors but allow draft to be saved without headshot
+          console.error("S3 upload error (draft will be saved without headshot):", {
+            message: s3Error.message,
+            code: s3Error.code,
+            name: s3Error.name,
+          });
+          
+          // If it's a signature error, provide specific guidance
+          if (s3Error.message?.includes("signature") || s3Error.name === "SignatureDoesNotMatch") {
+            console.error("⚠️  AWS S3 Signature Error - Check AWS credentials in Heroku config");
+            console.error("   Verify AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are correct");
+            console.error("   Ensure AWS_SECRET_ACCESS_KEY doesn't have extra whitespace/newlines");
+          }
+          
+          // Continue without headshot - user can upload it later
+          headshotUrl = undefined;
+        }
       }
 
       // Parse form data
@@ -1358,6 +1378,11 @@ router.post(
         userMessage =
           "Some of the information provided is invalid. Please review your entries and try again.";
         statusCode = 400;
+      } else if (error.message?.includes("signature") || error.name === "SignatureDoesNotMatch") {
+        // AWS S3 signature error - this shouldn't happen here since we catch it above, but just in case
+        userMessage =
+          "There was an issue uploading your photo. Your progress has been saved, but you may need to upload your photo again.";
+        statusCode = 500;
       }
 
       res.status(statusCode).json({ error: userMessage });

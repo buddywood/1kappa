@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { COLORS } from "../lib/constants";
+import { SEED_PRODUCTS } from "../lib/seedData";
 import { fetchProducts, Product } from "../lib/api";
 import { useCart } from "../lib/CartContext";
 import { useAuth } from "../lib/auth";
@@ -52,9 +53,10 @@ export default function ShopScreen({
       try {
         setLoading(true);
         const data = await fetchProducts();
-        setProducts(data);
+        setProducts(data.length > 0 ? data : SEED_PRODUCTS);
       } catch (error) {
         console.error("Error loading products:", error);
+        setProducts(SEED_PRODUCTS);
       } finally {
         setLoading(false);
       }

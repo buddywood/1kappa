@@ -1,10 +1,14 @@
 import { LocationClient, SearchPlaceIndexForPositionCommand } from '@aws-sdk/client-location';
 
+// Trim whitespace from credentials to prevent signature errors
+const accessKeyId = (process.env.AWS_ACCESS_KEY_ID || '').trim();
+const secretAccessKey = (process.env.AWS_SECRET_ACCESS_KEY || '').trim();
+
 const locationClient = new LocationClient({
   region: process.env.AWS_REGION || 'us-east-1',
   credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+    accessKeyId,
+    secretAccessKey,
   },
 });
 

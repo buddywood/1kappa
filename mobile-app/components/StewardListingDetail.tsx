@@ -11,8 +11,10 @@ import {
   Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as WebBrowser from 'expo-web-browser';
 import { StewardListing, getStewardListingPublic, fetchChapters, Chapter } from '../lib/api';
-import { COLORS } from '../lib/constants';
+import { SEED_STEWARDS } from '../lib/seedData';
+import { COLORS, WEB_URL } from '../lib/constants';
 import { useAuth } from '../lib/auth';
 import ScreenHeader from './ScreenHeader';
 import PrimaryButton from './ui/PrimaryButton';
@@ -42,6 +44,17 @@ export default function StewardListingDetail({
       try {
         setLoading(true);
         setError(null);
+        
+        // Check for seed data first
+        const seedListing = SEED_STEWARDS.find(s => s.id === listingId);
+        if (seedListing) {
+          console.log('StewardListingDetail: Loaded seed listing', seedListing.name);
+          setListing(seedListing);
+          setChapters([]); // Seed listings don't strictly need chapters for display logic here
+          setLoading(false);
+          return;
+        }
+
         const [listingData, chaptersData] = await Promise.all([
           getStewardListingPublic(listingId),
           fetchChapters().catch(() => []),
@@ -224,6 +237,19 @@ export default function StewardListingDetail({
               title={isGuest ? "Sign in to Claim" : "Claim This Item"}
               onPress={() => {
                 if (!isGuest) {
+                  // Check if this is a seed listing
+                  const isSeedListing = SEED_STEWARDS.some(s => s.id === listingId);
+                  
+                  if (isSeedListing) {
+                    // Simulate claim by opening main site in browser
+                    WebBrowser.openBrowserAsync(WEB_URL || "https://www.one-kappa.com", {
+                      presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
+                      controlsColor: COLORS.crimson,
+                      toolbarColor: COLORS.white,
+                    }).catch(err => console.error("Error opening seed claim:", err));
+                    return;
+                  }
+
                   // TODO: Implement claim functionality for authenticated users
                   console.log('Claim listing:', listingId);
                 }

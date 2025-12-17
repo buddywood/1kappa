@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, 
 import { fetchUpcomingEvents, fetchChapters, Event, Chapter } from '../lib/api';
 import { COLORS } from '../lib/constants';
 import { useAuth } from '../lib/auth';
+import { SEED_EVENTS } from '../lib/seedData';
 
 interface EventsSectionProps {
   onEventPress?: (event: Event) => void;
@@ -31,10 +32,14 @@ export default function EventsSection({ onEventPress, onRSVPPress }: EventsSecti
           fetchUpcomingEvents(),
           fetchChapters(),
         ]);
-        setEvents(eventsData);
+        
+        // Use seed events if API returns empty
+        setEvents(eventsData.length > 0 ? eventsData : SEED_EVENTS.slice(0, 3));
         setChapters(chaptersData);
       } catch (error) {
         console.error('Error loading events:', error);
+        // Fallback to seed events on error
+        setEvents(SEED_EVENTS.slice(0, 3));
       } finally {
         setLoading(false);
       }

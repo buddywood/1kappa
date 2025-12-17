@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../lib/constants';
 import { getStewardMarketplacePublic, StewardListing, Chapter, fetchProductCategories, ProductCategory } from '../lib/api';
+import { SEED_STEWARDS } from '../lib/seedData';
 import { API_URL } from '../lib/constants';
 import ProductCard from './ProductCard';
 import ScreenHeader from './ScreenHeader';
@@ -51,11 +52,12 @@ export default function StewardMarketplaceScreen({
           fetch(`${API_URL}/api/chapters/active-collegiate`).then(res => res.json()).catch(() => []),
           fetchProductCategories(),
         ]);
-        setListings(listingsData);
+        setListings(listingsData.length > 0 ? listingsData : SEED_STEWARDS);
         setChapters(chaptersRes);
         setCategories(categoriesData);
       } catch (error) {
         console.error('Error loading steward listings:', error);
+        setListings(SEED_STEWARDS);
       } finally {
         setLoading(false);
       }
