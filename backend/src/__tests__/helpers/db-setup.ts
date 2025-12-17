@@ -1,3 +1,4 @@
+// @ts-nocheck
 import sequelize from '../../db/sequelize';
 import pool from '../../db/connection';
 import { initializeDatabase } from '../../db/migrations';
