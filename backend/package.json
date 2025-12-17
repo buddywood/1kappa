@@ -67,6 +67,7 @@
     "@aws-sdk/client-location": "^3.929.0",
     "@aws-sdk/client-s3": "^3.490.0",
     "@aws-sdk/client-ses": "^3.929.0",
+    "@aws-sdk/client-sts": "^3.929.0",
     "@aws-sdk/s3-request-presigner": "^3.490.0",
     "@types/cors": "^2.8.19",
     "@types/image-size": "^0.7.0",
