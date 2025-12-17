@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { fetchEvents, fetchEventTypes, type Event, type EventType } from '@/lib/api';
+import { SEED_EVENTS } from '@/lib/seedData';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import EventCard from '../components/EventCard';
@@ -37,12 +38,19 @@ function EventsPageContent() {
       fetchEventTypes().catch(() => [])
     ])
       .then(([eventsData, eventTypesData]) => {
-        setEvents(eventsData);
+        // Fallback to seed data if API returns empty or only one (empty array check is robust)
+        if (eventsData.length === 0) {
+           setEvents(SEED_EVENTS);
+        } else {
+           setEvents(eventsData);
+        }
         setEventTypes(eventTypesData);
       })
       .catch((err) => {
         console.error('Error fetching events:', err);
-        setError('Failed to load events');
+        // Fallback to seed data on error
+        setEvents(SEED_EVENTS);
+        // Don't show error to user, show seed data
       })
       .finally(() => setLoading(false));
   }, []);

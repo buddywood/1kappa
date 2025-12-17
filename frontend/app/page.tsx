@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { fetchProducts, fetchFeaturedProducts, fetchFeaturedBrothers, fetchChapters, fetchUpcomingEvents, type Product } from '@/lib/api';
+import { SEED_PRODUCTS, SEED_EVENTS, SEED_FEATURED_BROTHERS } from '@/lib/seedData';
 import Image from 'next/image';
 import Header from './components/Header';
 import HeroBanner from './components/HeroBanner';
@@ -15,7 +16,7 @@ import Footer from './components/Footer';
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
-  const [allProducts, featuredProducts, featuredBrothers, chapters, events] = await Promise.all([
+  let [allProducts, featuredProducts, featuredBrothers, chapters, events] = await Promise.all([
     fetchProducts().catch((err) => {
       console.error('Error fetching products:', err);
       return [];
@@ -37,6 +38,12 @@ export default async function Home() {
       return [];
     }),
   ]);
+
+  // Fallback to seed data if API returns empty
+  if (allProducts.length === 0) allProducts = SEED_PRODUCTS;
+  if (featuredProducts.length === 0) featuredProducts = SEED_PRODUCTS.slice(0, 4);
+  if (featuredBrothers.length === 0) featuredBrothers = SEED_FEATURED_BROTHERS;
+  if (events.length === 0) events = SEED_EVENTS;
 
   // Use all products for seller grouping, featured products for featured section
   const products = allProducts;

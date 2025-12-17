@@ -7,6 +7,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { getStewardListing, getStewardListingPublic, claimStewardListing, createStewardCheckoutSession, fetchChapters } from '@/lib/api';
 import type { StewardListing, Chapter, StewardListingImage } from '@/lib/api';
+import { SEED_STEWARDS } from '@/lib/seedData';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
 import VerificationBadge from '../../components/VerificationBadge';
@@ -30,6 +31,17 @@ export default function StewardListingPage() {
 
   useEffect(() => {
     async function loadListing() {
+      // Check for seed data first
+      const seedListing = SEED_STEWARDS.find(s => s.id === listingId);
+      if (seedListing) {
+        setListing(seedListing);
+        setChapters([]);
+        // Mock fee for seed listing
+        setPlatformFee(Math.round((seedListing.shipping_cost_cents + seedListing.chapter_donation_cents) * 0.05));
+        setLoading(false);
+        return;
+      }
+
       try {
         // Use public endpoint for guests, authenticated endpoint for members
         const fetchListing = isGuest 
@@ -55,7 +67,12 @@ export default function StewardListingPage() {
         }
       } catch (err: any) {
         console.error('Error loading listing:', err);
-        if (err.message === 'VERIFICATION_REQUIRED' || err.message.includes('verified')) {
+        // Fallback check again
+        const fallbackSeed = SEED_STEWARDS.find(s => s.id === listingId);
+        if (fallbackSeed) {
+          setListing(fallbackSeed);
+          setPlatformFee(Math.round((fallbackSeed.shipping_cost_cents + fallbackSeed.chapter_donation_cents) * 0.05));
+        } else if (err.message === 'VERIFICATION_REQUIRED' || err.message.includes('verified')) {
           setError('You must be a verified member to view this listing.');
         } else if (err.message === 'Not authenticated' && !isGuest) {
           router.push('/login');
@@ -82,6 +99,14 @@ export default function StewardListingPage() {
   const handleClaim = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!listing) return;
+
+    // Check if seed listing
+    const isSeed = SEED_STEWARDS.some(s => s.id === listing.id);
+    if (isSeed) {
+       // Simulate claim for seed items
+       window.open('https://www.one-kappa.com', '_blank');
+       return;
+    }
 
     // Require authentication for checkout
     if (sessionStatus !== 'authenticated' || !session?.user?.email) {

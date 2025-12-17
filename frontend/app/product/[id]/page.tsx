@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { fetchProduct, fetchChapters, addFavorite, removeFavorite, checkFavorite } from '@/lib/api';
 import type { Product, Chapter, ProductImage } from '@/lib/api';
+import { SEED_PRODUCTS } from '@/lib/seedData';
 import { Heart } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -29,8 +30,20 @@ export default function ProductPage() {
 
   useEffect(() => {
     if (params.id) {
+      const productId = Number(params.id);
+      
+      // Check for seed data first
+      const seedProduct = SEED_PRODUCTS.find(p => p.id === productId);
+      
+      if (seedProduct) {
+        setProduct(seedProduct);
+        setChapters([]); // Or mock chapters if needed
+        setLoading(false);
+        return;
+      }
+
       Promise.all([
-        fetchProduct(Number(params.id)),
+        fetchProduct(productId),
         fetchChapters().catch(() => [])
       ])
         .then(([productData, chaptersData]) => {
@@ -39,7 +52,13 @@ export default function ProductPage() {
         })
         .catch((err) => {
           console.error(err);
-          setError('Failed to load product');
+          // Fallback check again just in case ID parsing differed or something
+          const fallbackSeed = SEED_PRODUCTS.find(p => p.id === productId); 
+          if (fallbackSeed) {
+             setProduct(fallbackSeed);
+          } else {
+             setError('Failed to load product');
+          }
         })
         .finally(() => setLoading(false));
     }
@@ -48,6 +67,10 @@ export default function ProductPage() {
   // Check favorite status when product and session are loaded
   useEffect(() => {
     if (product && sessionStatus === 'authenticated' && session?.user?.email) {
+      // Don't check favorites for seed products to avoid 404s
+      const isSeed = SEED_PRODUCTS.some(p => p.id === product.id);
+      if (isSeed) return;
+
       checkFavorite(session.user.email, product.id)
         .then(setIsFavorited)
         .catch(() => setIsFavorited(false));
@@ -69,6 +92,10 @@ export default function ProductPage() {
       router.push('/login');
       return;
     }
+    
+    // Disable favorites for seed products
+    const isSeed = SEED_PRODUCTS.some(p => p.id === product.id);
+    if (isSeed) return;
 
     setFavoriteLoading(true);
     try {
@@ -90,6 +117,14 @@ export default function ProductPage() {
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!product) return;
+
+    // Check if seed product
+    const isSeed = SEED_PRODUCTS.some(p => p.id === product.id);
+    if (isSeed) {
+      // Simulate external checkout for seed items
+      window.open('https://www.one-kappa.com', '_blank');
+      return;
+    }
 
     // Redirect to checkout page
     router.push(`/checkout/${product.id}`);

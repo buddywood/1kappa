@@ -37,7 +37,9 @@
       "bundleIdentifier": "com.onekappa.app",
       "icon": "./assets/icon-ios.icon",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSPhotoLibraryUsageDescription": "1KAPPA uses your photo library to let you upload profile photos and share images for events and community posts, such as selecting a picture for your profile or adding photos to an event page.",
+        "NSPhotoLibraryAddUsageDescription": "1KAPPA saves images you create or select, such as profile photos or event images, to your photo library only when you choose to do so."
       }
     },
     "android": {

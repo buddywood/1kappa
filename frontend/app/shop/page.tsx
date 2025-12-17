@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { fetchProducts, fetchChapters, fetchSellersWithProducts, fetchProductCategories, getStewardMarketplace, getStewardMarketplacePublic, type Product, type Chapter, type SellerWithProducts, type ProductCategory, type StewardListing } from '@/lib/api';
+import { SEED_PRODUCTS, SEED_STEWARDS } from '@/lib/seedData';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import VerificationBadge from '../components/VerificationBadge';
@@ -128,7 +129,18 @@ function ShopPageContent() {
     }
 
     Promise.all(fetchPromises)
-      .then(([chaptersData, categoriesData, productsOrListingsData, sellersData, stewardListingsData]) => {
+      .then((results) => {
+        let [chaptersData, categoriesData, productsOrListingsData, sellersData, stewardListingsData] = results;
+        
+        // Fallback to seed data if empty
+        if (productsOrListingsData.length === 0) {
+          if (roleFilter === 'steward') {
+             productsOrListingsData = SEED_STEWARDS;
+          } else {
+             productsOrListingsData = SEED_PRODUCTS;
+          }
+        }
+
         setChapters(chaptersData);
         // Sort categories by display_order, then by name
         const sortedCategories = [...categoriesData].sort((a, b) => {

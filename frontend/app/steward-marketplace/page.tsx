@@ -8,6 +8,7 @@ import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { getStewardMarketplace, getStewardMarketplacePublic, fetchProductCategories, type StewardListing, type ProductCategory } from '@/lib/api';
+import { SEED_STEWARDS } from '@/lib/seedData';
 import SearchableSelect from '../components/SearchableSelect';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -45,7 +46,14 @@ export default function StewardMarketplacePage() {
           fetchProductCategories(),
         ]);
         console.log('Steward Marketplace - Loaded listings:', listingsData.length, listingsData);
-        setListings(listingsData);
+        
+        // Fallback to seed data if API returns empty
+        if (listingsData.length === 0) {
+          setListings(SEED_STEWARDS);
+        } else {
+          setListings(listingsData);
+        }
+
         // Sort categories by display_order, then by name
         const sortedCategories = [...categoriesData].sort((a, b) => {
           if (a.display_order !== b.display_order) {
@@ -62,7 +70,10 @@ export default function StewardMarketplacePage() {
           router.push('/login');
           return;
         } else {
-          setError(err.message || 'Failed to load marketplace');
+          // Fallback to seed data on generic error
+          console.log('Using seed data fallback due to error');
+          setListings(SEED_STEWARDS);
+          // Don't set error so the UI shows the listings
         }
       } finally {
         setLoading(false);

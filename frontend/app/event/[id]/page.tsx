@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { fetchEvent, fetchChapters, fetchEventTypes } from "@/lib/api";
 import type { Event, Chapter, EventType } from "@/lib/api";
+import { SEED_EVENTS } from "@/lib/seedData";
 import { getEventFullSizeUrl } from "@/lib/imageUtils";
 import Image from "next/image";
 import Link from "next/link";
@@ -59,8 +60,22 @@ export default function EventPage() {
 
   useEffect(() => {
     if (params.id) {
+      const eventId = Number(params.id);
+
+      // Check for seed data first
+      const seedEvent = SEED_EVENTS.find(e => e.id === eventId);
+      if (seedEvent) {
+         setEvent(seedEvent);
+         setChapters([]);
+         setLoading(false);
+         // Simulate loading event types if needed or mock?
+         // Fetching event types is fine, usually static.
+         fetchEventTypes().then(setEventTypes).catch(() => []);
+         return;
+      }
+
       Promise.all([
-        fetchEvent(Number(params.id)),
+        fetchEvent(eventId),
         fetchChapters().catch(() => []),
         fetchEventTypes().catch(() => []),
       ])
@@ -71,7 +86,14 @@ export default function EventPage() {
         })
         .catch((err) => {
           console.error(err);
-          setError("Failed to load event");
+          // Fallback check again
+          const fallbackSeed = SEED_EVENTS.find(e => e.id === eventId);
+          if (fallbackSeed) {
+             setEvent(fallbackSeed);
+             fetchEventTypes().then(setEventTypes).catch(() => []);
+          } else {
+             setError("Failed to load event");
+          }
         })
         .finally(() => setLoading(false));
     }
