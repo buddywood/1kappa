@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
 import { fetchFeaturedBrothers, FeaturedBrother } from '../lib/api';
+import { SEED_FEATURED_BROTHERS } from '../lib/seedData';
 import { COLORS } from '../lib/constants';
 import UserRoleBadges from './UserRoleBadges';
 
@@ -16,9 +17,16 @@ export default function FeaturedBrothers({ onSellerPress }: FeaturedBrothersProp
     const loadData = async () => {
       try {
         const brothers = await fetchFeaturedBrothers();
-        setFeaturedBrothers(brothers);
+        if (brothers.length > 0) {
+          setFeaturedBrothers(brothers);
+        } else {
+          // Fallback to seed data
+          setFeaturedBrothers(SEED_FEATURED_BROTHERS);
+        }
       } catch (error) {
         console.error('Error loading featured brothers:', error);
+        // Fallback to seed data on error
+        setFeaturedBrothers(SEED_FEATURED_BROTHERS);
       } finally {
         setLoading(false);
       }

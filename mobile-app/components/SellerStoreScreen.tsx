@@ -24,6 +24,7 @@ import {
 } from '../lib/api';
 import { useCart } from '../lib/CartContext';
 import { useAuth } from '../lib/auth';
+import { SEED_FEATURED_BROTHERS, SEED_PRODUCTS } from '../lib/seedData';
 
 const { width } = Dimensions.get('window');
 
@@ -52,6 +53,41 @@ export default function SellerStoreScreen({
     const loadData = async () => {
       try {
         setLoading(true);
+
+        // Check if this is a seed featured brother
+        const seedBrother = SEED_FEATURED_BROTHERS.find(b => b.id === sellerId);
+        
+        if (seedBrother) {
+          // Construct SellerWithProducts from seed data
+          const seedProducts = SEED_PRODUCTS.filter(p => p.seller_id === sellerId);
+          
+          setSeller({
+            id: seedBrother.id,
+            name: seedBrother.name,
+            business_name: seedBrother.business_name,
+            headshot_url: seedBrother.headshot_url,
+            sponsoring_chapter_id: seedBrother.sponsoring_chapter_id,
+            social_links: seedBrother.social_links,
+            fraternity_member_id: seedBrother.fraternity_member_id,
+            initiated_chapter_id: seedBrother.initiated_chapter_id,
+            initiated_season: seedBrother.initiated_season,
+            initiated_year: seedBrother.initiated_year,
+            product_count: seedProducts.length,
+            is_fraternity_member: seedBrother.is_member,
+            is_seller: seedBrother.is_seller,
+            is_promoter: seedBrother.is_promoter,
+            is_steward: seedBrother.is_steward,
+            products: seedProducts,
+            status: "APPROVED",
+            stripe_account_id: null
+          });
+          
+          // Still fetch chapters for badges
+          const chaptersData = await fetchChapters();
+          setChapters(chaptersData);
+          return;
+        }
+
         const [sellerData, chaptersData] = await Promise.all([
           fetchSellerWithProducts(sellerId),
           fetchChapters(),

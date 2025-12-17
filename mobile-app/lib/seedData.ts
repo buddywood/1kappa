@@ -94,7 +94,7 @@ export const SEED_EVENTS: Event[] = [
 export const SEED_PRODUCTS: Product[] = [
   {
     id: 2001,
-    seller_id: 50,
+    seller_id: 101,
     name: "Classic Crimson Hoodie",
     description: "Premium quality cotton hoodie featuring embroidered fraternity crest. Perfect for chilly evenings on the yard or casual wear. Unisex fit, available in sizes S-XXL.",
     price_cents: 4500,
@@ -102,10 +102,10 @@ export const SEED_PRODUCTS: Product[] = [
     category_id: 1,
     category_name: "Apparel",
     is_kappa_branded: true,
-    seller_name: "Campus Apparel Co.",
-    seller_business_name: "Campus Apparel",
+    seller_name: "Chapter Made",
+    seller_business_name: "Brother Michael's Nupe Collection",
     seller_status: "APPROVED",
-    is_fraternity_member: false, // Vendor
+    is_fraternity_member: true,
     is_seller: true,
     attributes: [
       { 
@@ -116,7 +116,7 @@ export const SEED_PRODUCTS: Product[] = [
   },
   {
     id: 2002,
-    seller_id: 51,
+    seller_id: 101,
     name: "Diamond Knit Beanie",
     description: "Keep warm in style with this crimson and cream knit beanie. Features a subtle diamond pattern and cuffed brim. One size fits most.",
     price_cents: 2000,
@@ -124,15 +124,15 @@ export const SEED_PRODUCTS: Product[] = [
     category_id: 1,
     category_name: "Accessories",
     is_kappa_branded: true,
-    seller_name: "Brother Johns",
-    seller_business_name: null,
+    seller_name: "Chapter Made",
+    seller_business_name: "Brother Michael's Nupe Collection",
     seller_status: "APPROVED",
     is_fraternity_member: true,
     is_seller: true,
   },
   {
     id: 2003,
-    seller_id: 52,
+    seller_id: 102,
     name: "Vintage 1911 Tee",
     description: "Celebrate history with this vintage-inspired 1911 graphic t-shirt. Soft tri-blend fabric ensures comfort and durability. A must-have for every wardrobe.",
     price_cents: 2500,
@@ -140,15 +140,15 @@ export const SEED_PRODUCTS: Product[] = [
     category_id: 1,
     category_name: "Apparel",
     is_kappa_branded: true,
-    seller_name: "Legacy Wear",
-    seller_business_name: "Legacy Wear LLC",
+    seller_name: "Brother David",
+    seller_business_name: "Legacy Fine Goods",
     seller_status: "APPROVED",
     is_fraternity_member: true,
     is_seller: true,
   },
   {
     id: 2004,
-    seller_id: 53,
+    seller_id: 103,
     name: "Executive Leather Portfolio",
     description: "Handcrafted leather portfolio with embossed insignia. Includes notepad holder, card slots, and pen loop. Ideal for meetings and conferences.",
     price_cents: 8500,
@@ -156,8 +156,8 @@ export const SEED_PRODUCTS: Product[] = [
     category_id: 2,
     category_name: "Office",
     is_kappa_branded: false,
-    seller_name: "Professional Gear",
-    seller_business_name: null,
+    seller_name: "Brother James",
+    seller_business_name: "Nupe Outfitters",
     seller_status: "APPROVED",
     is_fraternity_member: true,
     is_seller: true,
@@ -255,5 +255,61 @@ export const SEED_STEWARDS: any[] = [
       name: "Atlanta Alumni"
     },
     can_claim: true
+  }
+];
+
+export const SEED_FEATURED_BROTHERS: any[] = [
+  {
+    id: 101,
+    name: "Brother Michael",
+    business_name: "Brother Michael's Nupe Collection",
+    headshot_url: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1974&auto=format&fit=crop",
+    sponsoring_chapter_id: 1,
+    chapter_name: "Chicago Alumni",
+    social_links: {},
+    website: null,
+    product_count: 5,
+    is_member: true,
+    is_seller: true,
+    is_promoter: false,
+    is_steward: false,
+    fraternity_member_id: 101,
+    initiated_chapter_id: 1,
+    initiated_season: "Spring",
+    initiated_year: 1990
+  },
+  {
+    id: 102,
+    name: "Brother David",
+    business_name: "Legacy Fine Goods",
+    headshot_url: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=1974&auto=format&fit=crop",
+    sponsoring_chapter_id: 1,
+    chapter_name: "Chicago Alumni",
+    social_links: {},
+    website: null,
+    product_count: 3,
+    is_member: true,
+    is_seller: true,
+    fraternity_member_id: 102,
+    initiated_chapter_id: 1,
+    initiated_season: "Fall",
+    initiated_year: 2005
+  },
+  {
+    id: 103,
+    name: "Brother James",
+    business_name: "Nupe Outfitters",
+    headshot_url: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=1976&auto=format&fit=crop",
+    sponsoring_chapter_id: 2,
+    chapter_name: "Atlanta Alumni",
+    social_links: {},
+    website: null,
+    product_count: 8,
+    is_member: true,
+    is_seller: true,
+    fraternity_member_id: 103,
+    initiated_chapter_id: 2,
+    initiated_season: "Spring",
+    initiated_year: 2010
   }
 ];
