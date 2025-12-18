@@ -34,17 +34,30 @@ import {
   fetchPendingMembers,
   updateMemberVerificationStatus,
   fetchChapters,
+  adminFetchAllProducts,
+  adminFetchProduct,
+  adminUpdateProduct,
+  adminDeleteProduct,
+  adminFetchAllEvents,
+  adminFetchEvent,
+  adminUpdateEvent,
+  adminDeleteEvent,
+  adminUploadImage,
+  fetchProductCategories,
+  fetchEventTypes,
 } from '@/lib/api';
-import type { Seller, Promoter, Order, PlatformSetting, MemberProfile, Chapter } from '@/lib/api';
+import type { Seller, Promoter, Order, PlatformSetting, MemberProfile, Chapter, Product, Event, ProductCategory, EventType } from '@/lib/api';
 import Link from 'next/link';
 
 export default function AdminDashboard() {
   const { session, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'members' | 'sellers' | 'promoters' | 'orders' | 'donations' | 'steward-donations' | 'steward-activity' | 'platform-settings'>('members');
+  const [activeTab, setActiveTab] = useState<'members' | 'sellers' | 'promoters' | 'products' | 'events' | 'orders' | 'donations' | 'steward-donations' | 'steward-activity' | 'platform-settings'>('members');
   const [members, setMembers] = useState<MemberProfile[]>([]);
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [promoters, setPromoters] = useState<Promoter[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [donations, setDonations] = useState<any[]>([]);
   const [stewardDonations, setStewardDonations] = useState<any[]>([]);
@@ -52,22 +65,29 @@ export default function AdminDashboard() {
   const [platformSettings, setPlatformSettings] = useState<PlatformSetting[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<number | null>(null);
-  const [processingType, setProcessingType] = useState<'member' | 'seller' | 'promoter' | 'steward' | null>(null);
-  const [selectedItem, setSelectedItem] = useState<MemberProfile | Seller | Promoter | null>(null);
+  const [processingType, setProcessingType] = useState<'member' | 'seller' | 'promoter' | 'steward' | 'product' | 'event' | null>(null);
+  const [selectedItem, setSelectedItem] = useState<MemberProfile | Seller | Promoter | Product | Event | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [adminReason, setAdminReason] = useState('');
   const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [categories, setCategories] = useState<ProductCategory[]>([]);
+  const [eventTypes, setEventTypes] = useState<EventType[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push('/admin/login');
+      router.push('/');
     }
   }, [isLoading, isAuthenticated, router]);
 
   useEffect(() => {
     if (isAuthenticated && session) {
       loadData();
-      // Load chapters for displaying chapter names
+      // Load chapters, categories, and event types for dropdowns
       fetchChapters().then(setChapters).catch(console.error);
+      fetchProductCategories().then(setCategories).catch(console.error);
+      fetchEventTypes().then(setEventTypes).catch(console.error);
     }
   }, [isAuthenticated, session, activeTab]);
 
@@ -76,7 +96,7 @@ export default function AdminDashboard() {
     
     // Check if user is admin
     if ((session.user as any)?.role !== 'ADMIN') {
-      router.push('/admin/login');
+      router.push('/');
       return;
     }
     
@@ -103,6 +123,12 @@ export default function AdminDashboard() {
       } else if (activeTab === 'steward-activity') {
         const data = await fetchStewardActivity();
         setStewardActivity(data);
+      } else if (activeTab === 'products') {
+        const data = await adminFetchAllProducts();
+        setProducts(data);
+      } else if (activeTab === 'events') {
+        const data = await adminFetchAllEvents();
+        setEvents(data);
       } else if (activeTab === 'platform-settings') {
         const data = await fetchPlatformSettings();
         setPlatformSettings(data);
@@ -115,7 +141,7 @@ export default function AdminDashboard() {
           description: 'Please login again.',
           variant: 'destructive',
         });
-        router.push('/admin/login');
+        router.push('/');
       }
     } finally {
       setLoading(false);
@@ -267,7 +293,93 @@ export default function AdminDashboard() {
     return chapter?.name || `Chapter ID: ${chapterId}`;
   };
 
-  const openDetailModal = (item: MemberProfile | Seller | Promoter) => {
+  const handleUpdateProduct = async (productId: number, updates: any) => {
+    if (!session || !adminReason) {
+      toast({ title: 'Reason Required', description: 'Please provide a reason for the modification', variant: 'destructive' });
+      return;
+    }
+    
+    setProcessing(productId);
+    setProcessingType('product');
+    try {
+      await adminUpdateProduct(productId, { ...updates, reason: adminReason });
+      await loadData();
+      setIsEditModalOpen(false);
+      setAdminReason('');
+      toast({ title: 'Success', description: 'Product updated successfully' });
+    } catch (error) {
+      console.error('Error updating product:', error);
+      toast({ title: 'Error', description: 'Failed to update product', variant: 'destructive' });
+    } finally {
+      setProcessing(null);
+      setProcessingType(null);
+    }
+  };
+
+  const handleDeleteProduct = async (productId: number) => {
+    if (!session) return;
+    const reason = prompt('Please provide a reason for deleting this product:');
+    if (!reason) return;
+    
+    setProcessing(productId);
+    setProcessingType('product');
+    try {
+      await adminDeleteProduct(productId, reason);
+      await loadData();
+      toast({ title: 'Success', description: 'Product deleted (soft delete) successfully' });
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      toast({ title: 'Error', description: 'Failed to delete product', variant: 'destructive' });
+    } finally {
+      setProcessing(null);
+      setProcessingType(null);
+    }
+  };
+
+  const handleUpdateEvent = async (eventId: number, updates: any) => {
+    if (!session || !adminReason) {
+      toast({ title: 'Reason Required', description: 'Please provide a reason for the modification', variant: 'destructive' });
+      return;
+    }
+    
+    setProcessing(eventId);
+    setProcessingType('event');
+    try {
+      await adminUpdateEvent(eventId, { ...updates, reason: adminReason });
+      await loadData();
+      setIsEditModalOpen(false);
+      setAdminReason('');
+      toast({ title: 'Success', description: 'Event updated successfully' });
+    } catch (error) {
+      console.error('Error updating event:', error);
+      toast({ title: 'Error', description: 'Failed to update event', variant: 'destructive' });
+    } finally {
+      setProcessing(null);
+      setProcessingType(null);
+    }
+  };
+
+  const handleDeleteEvent = async (eventId: number) => {
+    if (!session) return;
+    const reason = prompt('Please provide a reason for cancelling this event:');
+    if (!reason) return;
+    
+    setProcessing(eventId);
+    setProcessingType('event');
+    try {
+      await adminDeleteEvent(eventId, reason);
+      await loadData();
+      toast({ title: 'Success', description: 'Event cancelled successfully' });
+    } catch (error) {
+      console.error('Error cancelling event:', error);
+      toast({ title: 'Error', description: 'Failed to cancel event', variant: 'destructive' });
+    } finally {
+      setProcessing(null);
+      setProcessingType(null);
+    }
+  };
+
+  const openDetailModal = (item: MemberProfile | Seller | Promoter | Product | Event) => {
     setSelectedItem(item);
     setIsModalOpen(true);
   };
@@ -359,6 +471,12 @@ export default function AdminDashboard() {
                 </TabsTrigger>
                 <TabsTrigger value="promoters" className="px-6 py-4 font-semibold data-[state=active]:border-b-2 data-[state=active]:border-crimson data-[state=active]:text-crimson data-[state=inactive]:text-midnight-navy/70">
                   Pending Promoters
+                </TabsTrigger>
+                <TabsTrigger value="products" className="px-6 py-4 font-semibold data-[state=active]:border-b-2 data-[state=active]:border-crimson data-[state=active]:text-crimson data-[state=inactive]:text-midnight-navy/70">
+                  Products
+                </TabsTrigger>
+                <TabsTrigger value="events" className="px-6 py-4 font-semibold data-[state=active]:border-b-2 data-[state=active]:border-crimson data-[state=active]:text-crimson data-[state=inactive]:text-midnight-navy/70">
+                  Events
                 </TabsTrigger>
                 <TabsTrigger value="orders" className="px-6 py-4 font-semibold data-[state=active]:border-b-2 data-[state=active]:border-crimson data-[state=active]:text-crimson data-[state=inactive]:text-midnight-navy/70">
                   Orders
@@ -552,6 +670,132 @@ export default function AdminDashboard() {
                       )}
                     </div>
                   </TabsContent>
+                  <TabsContent value="products" className="mt-0">
+                    <div className="space-y-4">
+                      {products.length === 0 ? (
+                        <p className="text-center py-8 text-midnight-navy/70">No products found</p>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full">
+                            <thead>
+                              <tr className="border-b">
+                                <th className="text-left py-2 font-semibold text-midnight-navy">ID</th>
+                                <th className="text-left py-2 font-semibold text-midnight-navy">Img</th>
+                                <th className="text-left py-2 font-semibold text-midnight-navy">Name</th>
+                                <th className="text-left py-2 font-semibold text-midnight-navy">Seller</th>
+                                <th className="text-left py-2 font-semibold text-midnight-navy">Price</th>
+                                <th className="text-left py-2 font-semibold text-midnight-navy">Status</th>
+                                <th className="text-left py-2 font-semibold text-midnight-navy">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {products.map((product) => (
+                                <tr key={product.id} className="border-b hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => openDetailModal(product)}>
+                                  <td className="py-3 text-sm">{product.id}</td>
+                                  <td className="py-3 text-sm">
+                                    {product.image_url ? (
+                                      <img src={product.image_url} alt="" className="w-10 h-10 rounded object-cover border" />
+                                    ) : (
+                                      <div className="w-10 h-10 rounded bg-gray-100 flex items-center justify-center text-[10px] text-gray-400">No img</div>
+                                    )}
+                                  </td>
+                                  <td className="py-3 text-sm font-medium">{product.name}</td>
+                                  <td className="py-3 text-sm text-gray-600">{product.seller_name || 'N/A'}</td>
+                                  <td className="py-3 text-sm">${(product.price_cents / 100).toFixed(2)}</td>
+                                  <td className="py-3 text-sm">
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                      product.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
+                                      product.status === 'ADMIN_DELETE' ? 'bg-red-100 text-red-800' :
+                                      'bg-gray-100 text-gray-800'
+                                    }`}>
+                                      {product.status}
+                                    </span>
+                                  </td>
+                                  <td className="py-3 text-sm flex space-x-3" onClick={(e) => e.stopPropagation()}>
+                                    <button
+                                      onClick={() => { setSelectedItem(product); setIsEditModalOpen(true); }}
+                                      className="text-crimson hover:text-crimson/80 transition font-medium"
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteProduct(product.id)}
+                                      className="text-midnight-navy/60 hover:text-crimson transition font-medium"
+                                    >
+                                      Delete
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="events" className="mt-0">
+                    <div className="space-y-4">
+                      {events.length === 0 ? (
+                        <p className="text-center py-8 text-midnight-navy/70">No events found</p>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full">
+                            <thead>
+                              <tr className="border-b">
+                                <th className="text-left py-2 font-semibold text-midnight-navy">ID</th>
+                                <th className="text-left py-2 font-semibold text-midnight-navy">Img</th>
+                                <th className="text-left py-2 font-semibold text-midnight-navy">Title</th>
+                                <th className="text-left py-2 font-semibold text-midnight-navy">Promoter</th>
+                                <th className="text-left py-2 font-semibold text-midnight-navy">Date</th>
+                                <th className="text-left py-2 font-semibold text-midnight-navy">Status</th>
+                                <th className="text-left py-2 font-semibold text-midnight-navy">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {events.map((event) => (
+                                <tr key={event.id} className="border-b hover:bg-gray-50 cursor-pointer transition-colors" onClick={() => openDetailModal(event)}>
+                                  <td className="py-3 text-sm">{event.id}</td>
+                                  <td className="py-3 text-sm">
+                                    {event.image_url ? (
+                                      <img src={event.image_url} alt="" className="w-10 h-10 rounded object-cover border" />
+                                    ) : (
+                                      <div className="w-10 h-10 rounded bg-gray-100 flex items-center justify-center text-[10px] text-gray-400">No img</div>
+                                    )}
+                                  </td>
+                                  <td className="py-3 text-sm font-medium">{event.title}</td>
+                                  <td className="py-3 text-sm text-gray-600">{event.promoter_name || 'N/A'}</td>
+                                  <td className="py-3 text-sm">{new Date(event.event_date).toLocaleDateString()}</td>
+                                  <td className="py-3 text-sm">
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                      event.status === 'ACTIVE' ? 'bg-green-100 text-green-800' :
+                                      event.status === 'CANCELLED' ? 'bg-red-100 text-red-800' :
+                                      'bg-gray-100 text-gray-800'
+                                    }`}>
+                                      {event.status}
+                                    </span>
+                                  </td>
+                                  <td className="py-3 text-sm flex space-x-3" onClick={(e) => e.stopPropagation()}>
+                                    <button
+                                      onClick={() => { setSelectedItem(event); setIsEditModalOpen(true); }}
+                                      className="text-crimson hover:text-crimson/80 transition font-medium"
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteEvent(event.id)}
+                                      className="text-midnight-navy/60 hover:text-crimson transition font-medium"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  </TabsContent>
                   <TabsContent value="orders" className="mt-0">
                     <div className="overflow-x-auto">
                 <table className="w-full">
@@ -741,32 +985,78 @@ export default function AdminDashboard() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-midnight-navy">
-              {activeTab === 'members' ? 'Member Application' : activeTab === 'sellers' ? 'Seller Application' : 'Promoter Application'}
+              {activeTab === 'members' ? 'Member Application' : 
+               activeTab === 'sellers' ? 'Seller Application' : 
+               activeTab === 'promoters' ? 'Promoter Application' :
+               activeTab === 'products' ? 'Product Details' :
+               activeTab === 'events' ? 'Event Details' : 'Details'}
             </DialogTitle>
           </DialogHeader>
           {selectedItem && (
             <div className="space-y-6">
-              {/* Common fields */}
-              {selectedItem.headshot_url && (
+              {/* Common fields with type checking */}
+              {('headshot_url' in selectedItem || 'store_logo_url' in selectedItem) && (
                 <div className="flex justify-center">
                   <img
-                    src={selectedItem.headshot_url}
-                    alt={selectedItem.name || 'Profile picture'}
-                    className="w-32 h-32 rounded-full object-cover border-4 border-frost-gray"
+                    src={(('headshot_url' in selectedItem ? selectedItem.headshot_url : 'store_logo_url' in selectedItem ? selectedItem.store_logo_url : '') as string) || ''}
+                    alt={('name' in selectedItem ? selectedItem.name : 'title' in selectedItem ? (selectedItem as any).title : 'Profile') || 'Profile picture'}
+                    className="w-32 h-32 rounded-full object-cover border-4 border-frost-gray shadow-md"
                   />
                 </div>
               )}
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-semibold text-gray-600">Name</label>
-                  <p className="text-lg">{selectedItem.name}</p>
+                  <label className="text-sm font-semibold text-gray-600 block">Name/Title</label>
+                  <p className="text-lg font-medium">{'name' in selectedItem ? selectedItem.name : 'title' in selectedItem ? (selectedItem as any).title : 'N/A'}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-semibold text-gray-600">Email</label>
-                  <p className="text-lg">{selectedItem.email}</p>
+                  <label className="text-sm font-semibold text-gray-600 block">Email/ID</label>
+                  <p className="text-lg font-medium">{'email' in selectedItem ? selectedItem.email : 'id' in selectedItem ? `ID: ${selectedItem.id}` : 'N/A'}</p>
                 </div>
               </div>
+
+              {/* Product Info */}
+              {'price_cents' in selectedItem && (
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                  <h4 className="font-bold text-midnight-navy mb-2 uppercase text-xs tracking-wider">Product Information</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-semibold text-gray-500 block">Price</label>
+                      <p className="text-base">${(selectedItem.price_cents / 100).toFixed(2)}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-gray-500 block">Status</label>
+                      <p className="text-base">{selectedItem.status}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <label className="text-xs font-semibold text-gray-500 block">Description</label>
+                      <p className="text-sm text-gray-700">{selectedItem.description || 'No description'}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Event Info */}
+              {'event_date' in selectedItem && (
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                  <h4 className="font-bold text-midnight-navy mb-2 uppercase text-xs tracking-wider">Event Information</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs font-semibold text-gray-500 block">Date</label>
+                      <p className="text-base">{new Date(selectedItem.event_date).toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-gray-500 block">Location</label>
+                      <p className="text-base">{selectedItem.location}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <label className="text-xs font-semibold text-gray-500 block">Description</label>
+                      <p className="text-sm text-gray-700">{selectedItem.description || 'No description'}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Member-specific fields */}
               {'membership_number' in selectedItem && selectedItem.membership_number && (
@@ -928,15 +1218,15 @@ export default function AdminDashboard() {
               )}
 
               {/* Social links */}
-              {selectedItem.social_links && Object.keys(selectedItem.social_links).length > 0 && (
+              {('social_links' in selectedItem) && (selectedItem as any).social_links && Object.keys((selectedItem as any).social_links).length > 0 && (
                 <div>
                   <label className="text-sm font-semibold text-gray-600">Social Links</label>
                   <div className="space-y-2 mt-2">
-                    {Object.entries(selectedItem.social_links).map(([platform, url]) => (
+                    {Object.entries((selectedItem as any).social_links).map(([platform, url]) => (
                       <div key={platform} className="flex items-center space-x-2">
                         <span className="font-medium capitalize">{platform}:</span>
-                        <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                          {url}
+                        <a href={url as string} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                          {url as string}
                         </a>
                       </div>
                     ))}
@@ -1012,7 +1302,271 @@ export default function AdminDashboard() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Edit Modal for Products and Events */}
+      <Dialog open={isEditModalOpen} onOpenChange={(open) => !open && setIsEditModalOpen(false)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-midnight-navy">
+              Edit {selectedItem && 'price_cents' in selectedItem ? 'Product' : 'Event'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {selectedItem && 'price_cents' in selectedItem && (
+              <>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-600 block">Product Name</label>
+                  <input
+                    type="text"
+                    defaultValue={selectedItem.name}
+                    id="edit-product-name"
+                    className="w-full border border-frost-gray rounded p-2 focus:ring-1 focus:ring-crimson outline-none"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-600 block">Description</label>
+                  <textarea
+                    defaultValue={selectedItem.description}
+                    id="edit-product-description"
+                    className="w-full border border-frost-gray rounded p-2 focus:ring-1 focus:ring-crimson outline-none min-h-[80px]"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-gray-600 block">Price (cents)</label>
+                    <input
+                      type="number"
+                      defaultValue={selectedItem.price_cents}
+                      id="edit-product-price"
+                      className="w-full border border-frost-gray rounded p-2 focus:ring-1 focus:ring-crimson outline-none"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-gray-600 block">Category</label>
+                    <select
+                      id="edit-product-category"
+                      defaultValue={selectedItem.category_id || ''}
+                      className="w-full border border-frost-gray rounded p-2 focus:ring-1 focus:ring-crimson outline-none"
+                    >
+                      <option value="">Select Category</option>
+                      {categories.map(cat => (
+                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2 py-1">
+                  <input
+                    type="checkbox"
+                    id="edit-product-kappa-branded"
+                    defaultChecked={selectedItem.is_kappa_branded}
+                    className="w-4 h-4 text-crimson border-frost-gray rounded focus:ring-crimson"
+                  />
+                  <label htmlFor="edit-product-kappa-branded" className="text-sm text-gray-700">Kappa Alpha Psi Branded</label>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-600 block">Product Photo</label>
+                  <div className="flex items-center space-x-4">
+                    {selectedItem.image_url && (
+                      <img src={selectedItem.image_url} alt="Current" className="w-16 h-16 rounded object-cover border" id="edit-product-image-preview" />
+                    )}
+                    <div className="flex-1">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          setIsUploading(true);
+                          try {
+                            const { url } = await adminUploadImage(file);
+                            const preview = document.getElementById('edit-product-image-preview') as HTMLImageElement;
+                            if (preview) preview.src = url;
+                            (document.getElementById('edit-product-image-url') as HTMLInputElement).value = url;
+                            toast({ title: 'Success', description: 'Image uploaded successfully' });
+                          } catch (err) {
+                            toast({ variant: 'destructive', title: 'Error', description: 'Failed to upload image' });
+                          } finally {
+                            setIsUploading(false);
+                          }
+                        }}
+                        className="text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-crimson/10 file:text-crimson hover:file:bg-crimson/20"
+                      />
+                      <input type="hidden" id="edit-product-image-url" defaultValue={selectedItem.image_url || ''} />
+                      {isUploading && <p className="text-xs text-crimson animate-pulse mt-1">Uploading...</p>}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+            
+            {selectedItem && 'event_date' in selectedItem && (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-gray-600 block">Event Title</label>
+                    <input
+                      type="text"
+                      defaultValue={selectedItem.title}
+                      id="edit-event-title"
+                      className="w-full border border-frost-gray rounded p-2 focus:ring-1 focus:ring-crimson outline-none"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-gray-600 block">Event Type</label>
+                    <select
+                      id="edit-event-type"
+                      defaultValue={selectedItem.event_type_id || ''}
+                      className="w-full border border-frost-gray rounded p-2 focus:ring-1 focus:ring-crimson outline-none"
+                    >
+                      <option value="">Select Type</option>
+                      {eventTypes.map(type => (
+                        <option key={type.id} value={type.id}>{type.description}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-600 block">Description</label>
+                  <textarea
+                    defaultValue={selectedItem.description || ''}
+                    id="edit-event-description"
+                    className="w-full border border-frost-gray rounded p-2 focus:ring-1 focus:ring-crimson outline-none min-h-[80px]"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-gray-600 block">Date</label>
+                    <input
+                      type="datetime-local"
+                      defaultValue={selectedItem.event_date ? new Date(selectedItem.event_date).toISOString().slice(0, 16) : ''}
+                      id="edit-event-date"
+                      className="w-full border border-frost-gray rounded p-2 focus:ring-1 focus:ring-crimson outline-none"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-gray-600 block">Ticket Price (cents)</label>
+                    <input
+                      type="number"
+                      defaultValue={selectedItem.ticket_price_cents}
+                      id="edit-event-price"
+                      className="w-full border border-frost-gray rounded p-2 focus:ring-1 focus:ring-crimson outline-none"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-600 block">Location</label>
+                  <input
+                    type="text"
+                    defaultValue={selectedItem.location}
+                    id="edit-event-location"
+                    className="w-full border border-frost-gray rounded p-2 focus:ring-1 focus:ring-crimson outline-none"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-gray-600 block">Event Photo</label>
+                  <div className="flex items-center space-x-4">
+                    {selectedItem.image_url && (
+                      <img src={selectedItem.image_url} alt="Current" className="w-16 h-16 rounded object-cover border" id="edit-event-image-preview" />
+                    )}
+                    <div className="flex-1">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          setIsUploading(true);
+                          try {
+                            const { url } = await adminUploadImage(file);
+                            const preview = document.getElementById('edit-event-image-preview') as HTMLImageElement;
+                            if (preview) preview.src = url;
+                            (document.getElementById('edit-event-image-url') as HTMLInputElement).value = url;
+                            toast({ title: 'Success', description: 'Image uploaded successfully' });
+                          } catch (err) {
+                            toast({ variant: 'destructive', title: 'Error', description: 'Failed to upload image' });
+                          } finally {
+                            setIsUploading(false);
+                          }
+                        }}
+                        className="text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-crimson/10 file:text-crimson hover:file:bg-crimson/20"
+                      />
+                      <input type="hidden" id="edit-event-image-url" defaultValue={selectedItem.image_url || ''} />
+                      {isUploading && <p className="text-xs text-crimson animate-pulse mt-1">Uploading...</p>}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-crimson block font-bold uppercase tracking-tight">Admin Reason for Modification *</label>
+              <textarea
+                value={adminReason}
+                onChange={(e) => setAdminReason(e.target.value)}
+                placeholder="Required for notifications"
+                className="w-full border-2 border-crimson/20 rounded-lg p-3 min-h-[100px] focus:border-crimson outline-none transition-colors"
+              />
+            </div>
+            
+            <div className="flex space-x-3 pt-4">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setIsEditModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 bg-crimson text-white hover:bg-crimson/90"
+                disabled={!adminReason || processing !== null || isUploading}
+                onClick={() => {
+                  if (!selectedItem) return;
+                  if ('price_cents' in selectedItem) {
+                    const name = (document.getElementById('edit-product-name') as HTMLInputElement).value;
+                    const description = (document.getElementById('edit-product-description') as HTMLTextAreaElement).value;
+                    const price_cents = parseInt((document.getElementById('edit-product-price') as HTMLInputElement).value);
+                    const category_id = (document.getElementById('edit-product-category') as HTMLSelectElement).value;
+                    const is_kappa_branded = (document.getElementById('edit-product-kappa-branded') as HTMLInputElement).checked;
+                    const image_url = (document.getElementById('edit-product-image-url') as HTMLInputElement).value;
+                    
+                    handleUpdateProduct(selectedItem.id, { 
+                      name, 
+                      description, 
+                      price_cents, 
+                      category_id: category_id ? parseInt(category_id) : null,
+                      is_kappa_branded,
+                      image_url: image_url || null
+                    });
+                  } else if ('event_date' in selectedItem) {
+                    const title = (document.getElementById('edit-event-title') as HTMLInputElement).value;
+                    const description = (document.getElementById('edit-event-description') as HTMLTextAreaElement).value;
+                    const event_date = (document.getElementById('edit-event-date') as HTMLInputElement).value;
+                    const ticket_price_cents = parseInt((document.getElementById('edit-event-price') as HTMLInputElement).value);
+                    const location = (document.getElementById('edit-event-location') as HTMLInputElement).value;
+                    const event_type_id = (document.getElementById('edit-event-type') as HTMLSelectElement).value;
+                    const image_url = (document.getElementById('edit-event-image-url') as HTMLInputElement).value;
+                    
+                    handleUpdateEvent(selectedItem.id, { 
+                      title, 
+                      description, 
+                      event_date: event_date ? new Date(event_date).toISOString() : null,
+                      ticket_price_cents,
+                      location,
+                      event_type_id: event_type_id ? parseInt(event_type_id) : null,
+                      image_url: image_url || null
+                    });
+                  }
+                }}
+              >
+                {processing !== null ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }
+
 

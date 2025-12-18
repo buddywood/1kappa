@@ -35,3 +35,95 @@ export async function notifyInterestedUsersForSeller(sellerId: number, sellerNam
   }
 }
 
+/**
+ * Notify user when admin modifies their product
+ */
+export async function notifyProductModified(
+  userEmail: string,
+  productName: string,
+  adminReason: string
+): Promise<void> {
+  try {
+    await createNotification({
+      user_email: userEmail,
+      type: 'ADMIN_ACTION',
+      title: 'Product Modified by Admin',
+      message: `Your product "${productName}" has been modified by an administrator. Reason: ${adminReason}`,
+      related_product_id: null,
+    });
+    console.log(`✅ Created notification for ${userEmail} about product modification`);
+  } catch (error) {
+    console.error(`❌ Error creating product modified notification for ${userEmail}:`, error);
+    // Don't throw - notification failure shouldn't break the modification process
+  }
+}
+
+/**
+ * Notify user when admin deletes their product
+ */
+export async function notifyProductDeleted(
+  userEmail: string,
+  productName: string,
+  adminReason: string
+): Promise<void> {
+  try {
+    await createNotification({
+      user_email: userEmail,
+      type: 'ADMIN_ACTION',
+      title: 'Product Removed by Admin',
+      message: `Your product "${productName}" has been removed by an administrator. Reason: ${adminReason}`,
+      related_product_id: null,
+    });
+    console.log(`✅ Created notification for ${userEmail} about product deletion`);
+  } catch (error) {
+    console.error(`❌ Error creating product deleted notification for ${userEmail}:`, error);
+    // Don't throw - notification failure shouldn't break the deletion process
+  }
+}
+
+/**
+ * Notify user when admin modifies their event
+ */
+export async function notifyEventModified(
+  userEmail: string,
+  eventTitle: string,
+  adminReason: string
+): Promise<void> {
+  try {
+    await createNotification({
+      user_email: userEmail,
+      type: 'ADMIN_ACTION',
+      title: 'Event Modified by Admin',
+      message: `Your event "${eventTitle}" has been modified by an administrator. Reason: ${adminReason}`,
+      related_product_id: null,
+    });
+    console.log(`✅ Created notification for ${userEmail} about event modification`);
+  } catch (error) {
+    console.error(`❌ Error creating event modified notification for ${userEmail}:`, error);
+    // Don't throw - notification failure shouldn't break the modification process
+  }
+}
+
+/**
+ * Notify user when admin cancels their event
+ */
+export async function notifyEventDeleted(
+  userEmail: string,
+  eventTitle: string,
+  adminReason: string
+): Promise<void> {
+  try {
+    await createNotification({
+      user_email: userEmail,
+      type: 'ADMIN_ACTION',
+      title: 'Event Cancelled by Admin',
+      message: `Your event "${eventTitle}" has been cancelled by an administrator. Reason: ${adminReason}`,
+      related_product_id: null,
+    });
+    console.log(`✅ Created notification for ${userEmail} about event cancellation`);
+  } catch (error) {
+    console.error(`❌ Error creating event deleted notification for ${userEmail}:`, error);
+    // Don't throw - notification failure shouldn't break the deletion process
+  }
+}
+

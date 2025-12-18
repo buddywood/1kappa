@@ -228,10 +228,10 @@ function LoginPageContent() {
             // GUEST users with 'COGNITO_CONFIRMED' status don't need member onboarding
             // They can access the site directly
             if (
-              userRole === "GUEST" &&
-              onboardingStatus === "COGNITO_CONFIRMED"
+              userRole === "ADMIN" ||
+              (userRole === "GUEST" && onboardingStatus === "COGNITO_CONFIRMED")
             ) {
-              router.push("/");
+              router.push(userRole === "ADMIN" ? "/admin" : "/");
             } else if (
               onboardingStatus &&
               onboardingStatus !== "ONBOARDING_FINISHED"

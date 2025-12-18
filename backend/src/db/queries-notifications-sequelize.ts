@@ -6,7 +6,7 @@ import { Notification as NotificationModel } from './models';
 export interface Notification {
   id: number;
   user_email: string;
-  type: 'PURCHASE_BLOCKED' | 'ITEM_AVAILABLE' | 'ORDER_CONFIRMED' | 'ORDER_SHIPPED';
+  type: 'PURCHASE_BLOCKED' | 'ITEM_AVAILABLE' | 'ORDER_CONFIRMED' | 'ORDER_SHIPPED' | 'ADMIN_ACTION';
   title: string;
   message: string;
   related_product_id: number | null;
@@ -18,7 +18,7 @@ export interface Notification {
 
 export async function createNotification(notification: {
   user_email: string;
-  type: 'PURCHASE_BLOCKED' | 'ITEM_AVAILABLE' | 'ORDER_CONFIRMED' | 'ORDER_SHIPPED';
+  type: 'PURCHASE_BLOCKED' | 'ITEM_AVAILABLE' | 'ORDER_CONFIRMED' | 'ORDER_SHIPPED' | 'ADMIN_ACTION';
   title: string;
   message: string;
   related_product_id?: number | null;

@@ -749,3 +749,496 @@ The 1Kappa System
     // Don't throw - email failure shouldn't break the application submission
   }
 }
+
+/**
+ * Send email notification when admin modifies a product
+ */
+export async function sendProductModifiedEmail(
+  ownerEmail: string,
+  ownerName: string,
+  productName: string,
+  adminReason: string
+): Promise<void> {
+  const subject = "Your Product Has Been Modified - 1Kappa";
+  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+
+  const htmlBody = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Product Modified</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background-color: #1a1a2e; padding: 30px; text-align: center;">
+          <img src="${getLogoUrl()}" alt="1Kappa Logo" style="max-width: 300px; height: auto; margin-bottom: 20px;" />
+          <h1 style="color: #dc143c; margin: 0; font-size: 28px;">Product Modified</h1>
+        </div>
+        
+        <div style="background-color: #f9f9f9; padding: 30px;">
+          <p style="font-size: 16px; margin-top: 0;">Hello ${ownerName},</p>
+          
+          <p style="font-size: 16px;">
+            An administrator has made changes to your product listing: <strong>"${productName}"</strong>
+          </p>
+          
+          <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0;">
+            <p style="font-size: 14px; margin: 0; color: #856404;">
+              <strong>Admin's Reason:</strong><br>
+              ${adminReason}
+            </p>
+          </div>
+          
+          <p style="font-size: 16px;">
+            Please review the changes to your product listing. If you have any questions or concerns, please contact our support team.
+          </p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${frontendUrl}/seller-dashboard" 
+               style="background-color: #dc143c; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+              View Your Products
+            </a>
+          </div>
+          
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #dc143c;">
+            <p style="font-size: 14px; color: #666; margin: 0;">
+              Best regards,<br>
+              The 1Kappa Team
+            </p>
+          </div>
+        </div>
+        
+        <div style="background-color: #1a1a2e; padding: 20px; text-align: center;">
+          <p style="color: #fff; font-size: 12px; margin: 0;">
+            © ${new Date().getFullYear()} 1Kappa. All rights reserved.
+          </p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const textBody = `
+Product Modified - 1Kappa
+
+Hello ${ownerName},
+
+An administrator has made changes to your product listing: "${productName}"
+
+Admin's Reason:
+${adminReason}
+
+Please review the changes to your product listing. If you have any questions or concerns, please contact our support team.
+
+View Your Products: ${frontendUrl}/seller-dashboard
+
+Best regards,
+The 1Kappa Team
+
+© ${new Date().getFullYear()} 1Kappa. All rights reserved.
+  `;
+
+  try {
+    const command = new SendEmailCommand({
+      Source: FROM_EMAIL,
+      Destination: {
+        ToAddresses: [ownerEmail],
+      },
+      Message: {
+        Subject: {
+          Data: subject,
+          Charset: "UTF-8",
+        },
+        Body: {
+          Html: {
+            Data: htmlBody,
+            Charset: "UTF-8",
+          },
+          Text: {
+            Data: textBody,
+            Charset: "UTF-8",
+          },
+        },
+      },
+    });
+
+    await sesClient.send(command);
+    console.log(`✅ Product modified email sent successfully to ${ownerEmail}`);
+  } catch (error) {
+    console.error(
+      `❌ Error sending product modified email to ${ownerEmail}:`,
+      error
+    );
+    // Don't throw - email failure shouldn't break the modification process
+  }
+}
+
+/**
+ * Send email notification when admin deletes a product
+ */
+export async function sendProductDeletedEmail(
+  ownerEmail: string,
+  ownerName: string,
+  productName: string,
+  adminReason: string
+): Promise<void> {
+  const subject = "Your Product Has Been Removed - 1Kappa";
+  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+
+  const htmlBody = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Product Removed</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background-color: #1a1a2e; padding: 30px; text-align: center;">
+          <img src="${getLogoUrl()}" alt="1Kappa Logo" style="max-width: 300px; height: auto; margin-bottom: 20px;" />
+          <h1 style="color: #dc143c; margin: 0; font-size: 28px;">Product Removed</h1>
+        </div>
+        
+        <div style="background-color: #f9f9f9; padding: 30px;">
+          <p style="font-size: 16px; margin-top: 0;">Hello ${ownerName},</p>
+          
+          <p style="font-size: 16px;">
+            An administrator has removed your product listing: <strong>"${productName}"</strong>
+          </p>
+          
+          <div style="background-color: #f8d7da; border-left: 4px solid #dc3545; padding: 15px; margin: 20px 0;">
+            <p style="font-size: 14px; margin: 0; color: #721c24;">
+              <strong>Admin's Reason:</strong><br>
+              ${adminReason}
+            </p>
+          </div>
+          
+          <p style="font-size: 16px;">
+            This product is no longer visible to buyers. If you believe this was done in error or have questions, please contact our support team.
+          </p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${frontendUrl}/contact" 
+               style="background-color: #dc143c; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+              Contact Support
+            </a>
+          </div>
+          
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #dc143c;">
+            <p style="font-size: 14px; color: #666; margin: 0;">
+              Best regards,<br>
+              The 1Kappa Team
+            </p>
+          </div>
+        </div>
+        
+        <div style="background-color: #1a1a2e; padding: 20px; text-align: center;">
+          <p style="color: #fff; font-size: 12px; margin: 0;">
+            © ${new Date().getFullYear()} 1Kappa. All rights reserved.
+          </p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const textBody = `
+Product Removed - 1Kappa
+
+Hello ${ownerName},
+
+An administrator has removed your product listing: "${productName}"
+
+Admin's Reason:
+${adminReason}
+
+This product is no longer visible to buyers. If you believe this was done in error or have questions, please contact our support team.
+
+Contact Support: ${frontendUrl}/contact
+
+Best regards,
+The 1Kappa Team
+
+© ${new Date().getFullYear()} 1Kappa. All rights reserved.
+  `;
+
+  try {
+    const command = new SendEmailCommand({
+      Source: FROM_EMAIL,
+      Destination: {
+        ToAddresses: [ownerEmail],
+      },
+      Message: {
+        Subject: {
+          Data: subject,
+          Charset: "UTF-8",
+        },
+        Body: {
+          Html: {
+            Data: htmlBody,
+            Charset: "UTF-8",
+          },
+          Text: {
+            Data: textBody,
+            Charset: "UTF-8",
+          },
+        },
+      },
+    });
+
+    await sesClient.send(command);
+    console.log(`✅ Product deleted email sent successfully to ${ownerEmail}`);
+  } catch (error) {
+    console.error(
+      `❌ Error sending product deleted email to ${ownerEmail}:`,
+      error
+    );
+    // Don't throw - email failure shouldn't break the deletion process
+  }
+}
+
+/**
+ * Send email notification when admin modifies an event
+ */
+export async function sendEventModifiedEmail(
+  ownerEmail: string,
+  ownerName: string,
+  eventTitle: string,
+  adminReason: string
+): Promise<void> {
+  const subject = "Your Event Has Been Modified - 1Kappa";
+  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+
+  const htmlBody = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Event Modified</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background-color: #1a1a2e; padding: 30px; text-align: center;">
+          <img src="${getLogoUrl()}" alt="1Kappa Logo" style="max-width: 300px; height: auto; margin-bottom: 20px;" />
+          <h1 style="color: #dc143c; margin: 0; font-size: 28px;">Event Modified</h1>
+        </div>
+        
+        <div style="background-color: #f9f9f9; padding: 30px;">
+          <p style="font-size: 16px; margin-top: 0;">Hello ${ownerName},</p>
+          
+          <p style="font-size: 16px;">
+            An administrator has made changes to your event: <strong>"${eventTitle}"</strong>
+          </p>
+          
+          <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0;">
+            <p style="font-size: 14px; margin: 0; color: #856404;">
+              <strong>Admin's Reason:</strong><br>
+              ${adminReason}
+            </p>
+          </div>
+          
+          <p style="font-size: 16px;">
+            Please review the changes to your event. If you have any questions or concerns, please contact our support team.
+          </p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${frontendUrl}/promoter-dashboard/events" 
+               style="background-color: #dc143c; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+              View Your Events
+            </a>
+          </div>
+          
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #dc143c;">
+            <p style="font-size: 14px; color: #666; margin: 0;">
+              Best regards,<br>
+              The 1Kappa Team
+            </p>
+          </div>
+        </div>
+        
+        <div style="background-color: #1a1a2e; padding: 20px; text-align: center;">
+          <p style="color: #fff; font-size: 12px; margin: 0;">
+            © ${new Date().getFullYear()} 1Kappa. All rights reserved.
+          </p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const textBody = `
+Event Modified - 1Kappa
+
+Hello ${ownerName},
+
+An administrator has made changes to your event: "${eventTitle}"
+
+Admin's Reason:
+${adminReason}
+
+Please review the changes to your event. If you have any questions or concerns, please contact our support team.
+
+View Your Events: ${frontendUrl}/promoter-dashboard/events
+
+Best regards,
+The 1Kappa Team
+
+© ${new Date().getFullYear()} 1Kappa. All rights reserved.
+  `;
+
+  try {
+    const command = new SendEmailCommand({
+      Source: FROM_EMAIL,
+      Destination: {
+        ToAddresses: [ownerEmail],
+      },
+      Message: {
+        Subject: {
+          Data: subject,
+          Charset: "UTF-8",
+        },
+        Body: {
+          Html: {
+            Data: htmlBody,
+            Charset: "UTF-8",
+          },
+          Text: {
+            Data: textBody,
+            Charset: "UTF-8",
+          },
+        },
+      },
+    });
+
+    await sesClient.send(command);
+    console.log(`✅ Event modified email sent successfully to ${ownerEmail}`);
+  } catch (error) {
+    console.error(
+      `❌ Error sending event modified email to ${ownerEmail}:`,
+      error
+    );
+    // Don't throw - email failure shouldn't break the modification process
+  }
+}
+
+/**
+ * Send email notification when admin cancels an event
+ */
+export async function sendEventDeletedEmail(
+  ownerEmail: string,
+  ownerName: string,
+  eventTitle: string,
+  adminReason: string
+): Promise<void> {
+  const subject = "Your Event Has Been Cancelled - 1Kappa";
+  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+
+  const htmlBody = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Event Cancelled</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background-color: #1a1a2e; padding: 30px; text-align: center;">
+          <img src="${getLogoUrl()}" alt="1Kappa Logo" style="max-width: 300px; height: auto; margin-bottom: 20px;" />
+          <h1 style="color: #dc143c; margin: 0; font-size: 28px;">Event Cancelled</h1>
+        </div>
+        
+        <div style="background-color: #f9f9f9; padding: 30px;">
+          <p style="font-size: 16px; margin-top: 0;">Hello ${ownerName},</p>
+          
+          <p style="font-size: 16px;">
+            An administrator has cancelled your event: <strong>"${eventTitle}"</strong>
+          </p>
+          
+          <div style="background-color: #f8d7da; border-left: 4px solid #dc3545; padding: 15px; margin: 20px 0;">
+            <p style="font-size: 14px; margin: 0; color: #721c24;">
+              <strong>Admin's Reason:</strong><br>
+              ${adminReason}
+            </p>
+          </div>
+          
+          <p style="font-size: 16px;">
+            This event is no longer visible to members. If you believe this was done in error or have questions, please contact our support team.
+          </p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${frontendUrl}/contact" 
+               style="background-color: #dc143c; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+              Contact Support
+            </a>
+          </div>
+          
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #dc143c;">
+            <p style="font-size: 14px; color: #666; margin: 0;">
+              Best regards,<br>
+              The 1Kappa Team
+            </p>
+          </div>
+        </div>
+        
+        <div style="background-color: #1a1a2e; padding: 20px; text-align: center;">
+          <p style="color: #fff; font-size: 12px; margin: 0;">
+            © ${new Date().getFullYear()} 1Kappa. All rights reserved.
+          </p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const textBody = `
+Event Cancelled - 1Kappa
+
+Hello ${ownerName},
+
+An administrator has cancelled your event: "${eventTitle}"
+
+Admin's Reason:
+${adminReason}
+
+This event is no longer visible to members. If you believe this was done in error or have questions, please contact our support team.
+
+Contact Support: ${frontendUrl}/contact
+
+Best regards,
+The 1Kappa Team
+
+© ${new Date().getFullYear()} 1Kappa. All rights reserved.
+  `;
+
+  try {
+    const command = new SendEmailCommand({
+      Source: FROM_EMAIL,
+      Destination: {
+        ToAddresses: [ownerEmail],
+      },
+      Message: {
+        Subject: {
+          Data: subject,
+          Charset: "UTF-8",
+        },
+        Body: {
+          Html: {
+            Data: htmlBody,
+            Charset: "UTF-8",
+          },
+          Text: {
+            Data: textBody,
+            Charset: "UTF-8",
+          },
+        },
+      },
+    });
+
+    await sesClient.send(command);
+    console.log(`✅ Event deleted email sent successfully to ${ownerEmail}`);
+  } catch (error) {
+    console.error(
+      `❌ Error sending event deleted email to ${ownerEmail}:`,
+      error
+    );
+    // Don't throw - email failure shouldn't break the deletion process
+  }
+}
+

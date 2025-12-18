@@ -589,7 +589,7 @@ export async function getActiveProducts(): Promise<ProductType[]> {
      LEFT JOIN users u_st ON u_st.email = m.email OR u_st.cognito_sub = m.cognito_sub
      LEFT JOIN stewards st ON st.user_id = u_st.id AND st.status = 'APPROVED'
      LEFT JOIN promoters pr ON s.email = pr.email AND pr.status = 'APPROVED'
-     WHERE s.status = 'APPROVED'
+     WHERE s.status = 'APPROVED' AND p.status = 'ACTIVE'
      ORDER BY p.created_at DESC`,
     { type: QueryTypes.SELECT }
   );
@@ -632,7 +632,7 @@ export async function getProductsBySeller(
      LEFT JOIN users u_st ON u_st.email = m.email OR u_st.cognito_sub = m.cognito_sub
      LEFT JOIN stewards st ON st.user_id = u_st.id AND st.status = 'APPROVED'
      LEFT JOIN promoters pr ON s.email = pr.email AND pr.status = 'APPROVED'
-     WHERE p.seller_id = :sellerId
+     WHERE p.seller_id = :sellerId AND p.status IN ('ACTIVE', 'PENDING')
      ORDER BY p.created_at DESC`,
     {
       replacements: { sellerId },
@@ -656,10 +656,12 @@ export async function updateProduct(
   id: number,
   updates: {
     name?: string;
-    description?: string;
+    description?: string | null;
     price_cents?: number;
-    image_url?: string;
+    image_url?: string | null;
     category_id?: number | null;
+    is_kappa_branded?: boolean;
+    status?: 'ACTIVE' | 'INACTIVE' | 'ADMIN_DELETE' | 'PENDING' | 'SOLD' | 'SHIPPED' | 'CLOSED';
   }
 ): Promise<ProductType | null> {
   const product = await Product.findByPk(id);
@@ -672,11 +674,107 @@ export async function updateProduct(
     product.price_cents = updates.price_cents;
   if (updates.image_url !== undefined) product.image_url = updates.image_url;
   if (updates.category_id !== undefined)
-    product.category_id = updates.category_id || null;
+    product.category_id = updates.category_id;
+  if (updates.is_kappa_branded !== undefined)
+    product.is_kappa_branded = updates.is_kappa_branded;
+  if (updates.status !== undefined) product.status = updates.status;
 
   await product.save();
   return product.toJSON() as ProductType;
 }
+
+export async function updateProductStatus(
+  id: number,
+  status: 'ACTIVE' | 'INACTIVE' | 'ADMIN_DELETE' | 'PENDING' | 'SOLD' | 'SHIPPED' | 'CLOSED'
+): Promise<ProductType | null> {
+  const product = await Product.findByPk(id);
+  if (!product) return null;
+
+  product.status = status;
+  await product.save();
+  return product.toJSON() as ProductType;
+}
+
+export async function deleteProduct(
+  productId: number
+): Promise<ProductType | null> {
+  const product = await Product.findByPk(productId);
+  if (!product) return null;
+
+  product.status = 'ADMIN_DELETE';
+  await product.save();
+  return product.toJSON() as ProductType;
+}
+
+export async function getAllProducts(): Promise<ProductType[]> {
+  // Get all products regardless of status (for admin view)
+  const result = await sequelize.query(
+    `SELECT p.*, 
+            s.name as seller_name, 
+            s.business_name as seller_business_name, 
+            s.status as seller_status, 
+            s.stripe_account_id as seller_stripe_account_id,
+            m.id as seller_fraternity_member_id,
+            m.initiated_chapter_id as seller_initiated_chapter_id,
+            m.initiated_season as seller_initiated_season,
+            m.initiated_year as seller_initiated_year,
+            s.sponsoring_chapter_id as seller_sponsoring_chapter_id,
+            s.email as seller_email,
+            CASE WHEN m.id IS NOT NULL THEN true ELSE false END as is_fraternity_member,
+            CASE WHEN s.status = 'APPROVED' THEN true ELSE false END as is_seller,
+            CASE WHEN st.id IS NOT NULL THEN true ELSE false END as is_steward,
+            CASE WHEN pr.id IS NOT NULL THEN true ELSE false END as is_promoter
+     FROM products p
+     JOIN sellers s ON p.seller_id = s.id
+     LEFT JOIN fraternity_members m ON s.email = m.email
+     LEFT JOIN users u_st ON u_st.email = m.email OR u_st.cognito_sub = m.cognito_sub
+     LEFT JOIN stewards st ON st.user_id = u_st.id AND st.status = 'APPROVED'
+     LEFT JOIN promoters pr ON s.email = pr.email AND pr.status = 'APPROVED'
+     ORDER BY p.created_at DESC`,
+    { type: QueryTypes.SELECT }
+  );
+
+  // Load attributes and images for all products
+  const productsWithAttributes = await Promise.all(
+    (result as any[]).map(async (product: any) => {
+      const attributes = await getProductAttributeValues(product.id);
+      const images = await getProductImages(product.id);
+      return { ...product, attributes, images };
+    })
+  );
+
+  return productsWithAttributes as ProductType[];
+}
+
+export async function getProductWithOwnerInfo(
+  productId: number
+): Promise<(ProductType & { owner_email: string; owner_name: string }) | null> {
+  const result = await sequelize.query(
+    `SELECT p.*, 
+            s.name as owner_name,
+            s.email as owner_email,
+            s.business_name as seller_business_name
+     FROM products p
+     JOIN sellers s ON p.seller_id = s.id
+     WHERE p.id = :productId`,
+    {
+      replacements: { productId },
+      type: QueryTypes.SELECT,
+    }
+  );
+
+  if ((result as any[]).length === 0) return null;
+
+  const product = result[0] as any;
+  const attributes = await getProductAttributeValues(productId);
+  const images = await getProductImages(productId);
+
+  return { ...product, attributes, images } as ProductType & {
+    owner_email: string;
+    owner_name: string;
+  };
+}
+
 
 // Product Attribute Value queries
 export async function getProductAttributeValues(
@@ -1104,9 +1202,9 @@ export async function updateEvent(
     city?: string | null;
     state?: string | null;
     image_url?: string | null;
-    sponsored_chapter_id?: number;
-    event_type_id?: number;
-    event_audience_type_id?: number;
+    sponsored_chapter_id?: number | null;
+    event_type_id?: number | null;
+    event_audience_type_id?: number | null;
     all_day?: boolean;
     duration_minutes?: number | null;
     event_link?: string | null;
@@ -1118,20 +1216,9 @@ export async function updateEvent(
       | "FAILED"
       | "REFUNDED";
     ticket_price_cents?: number;
-    dress_codes?: (
-      | "business"
-      | "business_casual"
-      | "formal"
-      | "semi_formal"
-      | "kappa_casual"
-      | "greek_encouraged"
-      | "greek_required"
-      | "outdoor"
-      | "athletic"
-      | "comfortable"
-      | "all_white"
-    )[];
+    dress_codes?: string[];
     dress_code_notes?: string | null;
+    status?: "ACTIVE" | "CLOSED" | "CANCELLED";
   }
 ): Promise<EventTypeType> {
   const event = await Event.findByPk(eventId);
@@ -1165,6 +1252,8 @@ export async function updateEvent(
     event.is_featured = updates.is_featured;
   if (updates.featured_payment_status !== undefined)
     event.featured_payment_status = updates.featured_payment_status;
+  if (updates.status !== undefined)
+    event.status = updates.status;
 
   await event.save();
   return event.toJSON() as EventTypeType;
@@ -1180,6 +1269,59 @@ export async function updateEventStatus(
   await event.save();
   return event.toJSON() as EventTypeType;
 }
+
+export async function deleteEvent(
+  eventId: number
+): Promise<EventTypeType> {
+  const event = await Event.findByPk(eventId);
+  if (!event) throw new Error(`Event with ID ${eventId} not found`);
+  event.status = 'CANCELLED';
+  await event.save();
+  return event.toJSON() as EventTypeType;
+}
+
+export async function getAllEventsForAdmin(): Promise<EventTypeType[]> {
+  // Get all events regardless of status (for admin view)
+  const result = await sequelize.query(
+    `SELECT e.*, 
+            p.name as promoter_name, 
+            p.status as promoter_status,
+            eat.description as event_audience_type_description
+     FROM events e
+     JOIN promoters p ON e.promoter_id = p.id
+     LEFT JOIN event_audience_types eat ON e.event_audience_type_id = eat.id
+     ORDER BY e.event_date DESC`,
+    { type: QueryTypes.SELECT }
+  );
+  return result as EventTypeType[];
+}
+
+export async function getEventWithOwnerInfo(
+  eventId: number
+): Promise<(EventTypeType & { owner_email: string; owner_name: string }) | null> {
+  const result = await sequelize.query(
+    `SELECT e.*,
+            p.name as owner_name,
+            p.email as owner_email,
+            eat.description as event_audience_type_description
+     FROM events e
+     JOIN promoters p ON e.promoter_id = p.id
+     LEFT JOIN event_audience_types eat ON e.event_audience_type_id = eat.id
+     WHERE e.id = :eventId`,
+    {
+      replacements: { eventId },
+      type: QueryTypes.SELECT,
+    }
+  );
+
+  if ((result as any[]).length === 0) return null;
+
+  return result[0] as EventTypeType & {
+    owner_email: string;
+    owner_name: string;
+  };
+}
+
 
 // User queries
 export async function createUser(user: {

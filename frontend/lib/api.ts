@@ -115,6 +115,7 @@ export interface Product {
   seller_initiated_year?: number | null;
   seller_status?: "PENDING" | "APPROVED" | "REJECTED";
   seller_stripe_account_id?: string | null;
+  status?: 'ACTIVE' | 'INACTIVE' | 'ADMIN_DELETE' | 'PENDING' | 'SOLD' | 'SHIPPED' | 'CLOSED';
   is_fraternity_member?: boolean;
   is_seller?: boolean;
   is_promoter?: boolean;
@@ -1029,6 +1030,7 @@ export async function getAuthHeaders(): Promise<HeadersInit> {
   // Other users need 'ONBOARDING_FINISHED' status
   const isAllowed =
     onboardingStatus === "ONBOARDING_FINISHED" ||
+    userRole === "ADMIN" ||
     (userRole === "GUEST" && onboardingStatus === "COGNITO_CONFIRMED");
 
   if (!isAllowed) {
@@ -1254,6 +1256,125 @@ export async function updatePromoterStatus(
   if (!res.ok) throw new Error("Failed to update promoter status");
   return res.json();
 }
+
+// Admin product functions
+export async function adminFetchAllProducts(): Promise<Product[]> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/admin/products`, { headers });
+  if (!res.ok) throw new Error("Failed to fetch admin products");
+  return res.json();
+}
+
+export async function adminFetchProduct(productId: number): Promise<Product & { owner_email: string; owner_name: string }> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/admin/products/${productId}`, { headers });
+  if (!res.ok) throw new Error("Failed to fetch admin product details");
+  return res.json();
+}
+
+export async function adminUpdateProduct(
+  productId: number,
+  updates: Partial<Product> & { reason: string }
+): Promise<Product> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/admin/products/${productId}`, {
+    method: "PUT",
+    headers,
+    body: JSON.stringify(updates),
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || "Failed to update product");
+  }
+  return res.json();
+}
+
+export async function adminDeleteProduct(
+  productId: number,
+  reason: string
+): Promise<void> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/admin/products/${productId}`, {
+    method: "DELETE",
+    headers,
+    body: JSON.stringify({ reason }),
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || "Failed to delete product");
+  }
+}
+
+// Admin event functions
+export async function adminFetchAllEvents(): Promise<Event[]> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/admin/events`, { headers });
+  if (!res.ok) throw new Error("Failed to fetch admin events");
+  return res.json();
+}
+
+export async function adminFetchEvent(eventId: number): Promise<Event & { owner_email: string; owner_name: string }> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/admin/events/${eventId}`, { headers });
+  if (!res.ok) throw new Error("Failed to fetch admin event details");
+  return res.json();
+}
+
+export async function adminUpdateEvent(
+  eventId: number,
+  updates: any & { reason: string }
+): Promise<Event> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/admin/events/${eventId}`, {
+    method: "PUT",
+    headers,
+    body: JSON.stringify(updates),
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || "Failed to update event");
+  }
+  return res.json();
+}
+
+export async function adminDeleteEvent(
+  eventId: number,
+  reason: string
+): Promise<void> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/admin/events/${eventId}`, {
+    method: "DELETE",
+    headers,
+    body: JSON.stringify({ reason }),
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || "Failed to delete event");
+  }
+}
+
+export async function adminUploadImage(file: File): Promise<{ url: string }> {
+  const headers = await getAuthHeaders();
+  // Remove Content-Type header to let browser set it with boundary for FormData
+  const { "Content-Type": _, ...otherHeaders } = headers as any;
+  
+  const formData = new FormData();
+  formData.append("image", file);
+
+  const res = await fetch(`${API_URL}/api/admin/upload`, {
+    method: "POST",
+    headers: otherHeaders,
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || "Failed to upload image");
+  }
+
+  return res.json();
+}
+
 
 export async function fetchEvents(
   includeAll: boolean = true

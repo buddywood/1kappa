@@ -16,6 +16,7 @@ export function useAuth() {
   const isAuthenticated = status === 'authenticated' && 
                           session?.user && 
                           (onboardingStatus === 'ONBOARDING_FINISHED' ||
+                           userRole === 'ADMIN' ||
                            (userRole === 'GUEST' && onboardingStatus === 'COGNITO_CONFIRMED'));
   
   return {
@@ -39,6 +40,7 @@ export function isFullyAuthenticated(session: any): boolean {
   const userRole = (session.user as any)?.role;
   
   return onboardingStatus === 'ONBOARDING_FINISHED' ||
+         userRole === 'ADMIN' ||
          (userRole === 'GUEST' && onboardingStatus === 'COGNITO_CONFIRMED');
 }
 

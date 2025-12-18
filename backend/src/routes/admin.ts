@@ -1,5 +1,7 @@
 import { Router, Request, Response } from "express";
 import type { Router as ExpressRouter } from "express";
+import multer from "multer";
+import { uploadToS3 } from "../services/s3";
 import {
   getPendingSellers,
   updateSellerStatus,
@@ -40,6 +42,13 @@ const router: ExpressRouter = Router();
 // Use Cognito authentication middleware
 router.use(authenticate);
 router.use(requireAdmin);
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+});
 
 const approveSellerSchema = z.object({
   status: z.enum(["APPROVED", "REJECTED"]),
@@ -515,4 +524,298 @@ router.put("/platform-settings/:key", async (req: Request, res: Response) => {
   }
 });
 
+// ============================================================================
+// ADMIN COMMON ROUTES
+// ============================================================================
+
+// Admin image upload
+router.post("/upload", upload.single("image"), async (req: Request, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No image file provided" });
+    }
+
+    const uploadResult = await uploadToS3(
+      req.file.buffer,
+      req.file.originalname,
+      req.file.mimetype,
+      "admin-uploads"
+    );
+
+    res.json({ url: uploadResult.url });
+  } catch (error) {
+    console.error("Error uploading image:", error);
+    res.status(500).json({ error: "Failed to upload image" });
+  }
+});
+
+// ============================================================================
+// ADMIN PRODUCT MANAGEMENT ROUTES
+// ============================================================================
+
+const updateProductSchema = z.object({
+  name: z.string().optional(),
+  description: z.string().optional(),
+  price_cents: z.number().int().positive().optional(),
+  image_url: z.string().optional().nullable(),
+  category_id: z.number().int().optional().nullable(),
+  is_kappa_branded: z.boolean().optional(),
+  status: z.enum(['ACTIVE', 'INACTIVE', 'ADMIN_DELETE', 'PENDING', 'SOLD', 'SHIPPED', 'CLOSED']).optional(),
+  reason: z.string().min(1, "Reason is required for admin modifications"),
+});
+
+const deleteProductSchema = z.object({
+  reason: z.string().min(1, "Reason is required for deletion"),
+});
+
+// Get all products (admin view)
+router.get("/products", async (req: Request, res: Response) => {
+  try {
+    const { getAllProducts } = await import("../db/queries-sequelize");
+    const products = await getAllProducts();
+    res.json(products);
+  } catch (error) {
+    console.error("Error fetching all products:", error);
+    res.status(500).json({ error: "Failed to fetch products" });
+  }
+});
+
+// Get specific product by ID
+router.get("/products/:id", async (req: Request, res: Response) => {
+  try {
+    const productId = parseInt(req.params.id);
+    const { getProductWithOwnerInfo } = await import("../db/queries-sequelize");
+    const product = await getProductWithOwnerInfo(productId);
+    
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+    
+    res.json(product);
+  } catch (error) {
+    console.error("Error fetching product:", error);
+    res.status(500).json({ error: "Failed to fetch product" });
+  }
+});
+
+// Update product
+router.put("/products/:id", async (req: Request, res: Response) => {
+  try {
+    const productId = parseInt(req.params.id);
+    const validatedData = updateProductSchema.parse(req.body);
+    const { reason, ...updates } = validatedData;
+    
+    const { getProductWithOwnerInfo, updateProduct } = await import("../db/queries-sequelize");
+    const { sendProductModifiedEmail } = await import("../services/email");
+    const { notifyProductModified } = await import("../services/notifications");
+    
+    // Get product with owner info before update
+    const productBefore = await getProductWithOwnerInfo(productId);
+    if (!productBefore) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+    
+    // Update product
+    const updatedProduct = await updateProduct(productId, updates);
+    if (!updatedProduct) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+    
+    // Send notifications and email
+    await Promise.all([
+      notifyProductModified(productBefore.owner_email, productBefore.name, reason),
+      sendProductModifiedEmail(productBefore.owner_email, productBefore.owner_name, productBefore.name, reason)
+    ]);
+    
+    console.log(`✅ Admin updated product ${productId}: ${productBefore.name}`);
+    res.json(updatedProduct);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+    console.error("Error updating product:", error);
+    res.status(500).json({ error: "Failed to update product" });
+  }
+});
+
+// Delete product (soft delete)
+router.delete("/products/:id", async (req: Request, res: Response) => {
+  try {
+    const productId = parseInt(req.params.id);
+    const validatedData = deleteProductSchema.parse(req.body);
+    const { reason } = validatedData;
+    
+    const { getProductWithOwnerInfo, deleteProduct } = await import("../db/queries-sequelize");
+    const { sendProductDeletedEmail } = await import("../services/email");
+    const { notifyProductDeleted } = await import("../services/notifications");
+    
+    // Get product with owner info before deletion
+    const product = await getProductWithOwnerInfo(productId);
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+    
+    // Soft delete product
+    const deletedProduct = await deleteProduct(productId);
+    if (!deletedProduct) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+    
+    // Send notifications and email
+    await Promise.all([
+      notifyProductDeleted(product.owner_email, product.name, reason),
+      sendProductDeletedEmail(product.owner_email, product.owner_name, product.name, reason)
+    ]);
+    
+    console.log(`✅ Admin deleted product ${productId}: ${product.name}`);
+    res.json({ message: "Product deleted successfully", product: deletedProduct });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+    console.error("Error deleting product:", error);
+    res.status(500).json({ error: "Failed to delete product" });
+  }
+});
+
+// ============================================================================
+// ADMIN EVENT MANAGEMENT ROUTES
+// ============================================================================
+
+const updateEventSchema = z.object({
+  title: z.string().optional(),
+  description: z.string().optional(),
+  event_date: z.string().optional(), // Handled manually in route
+  location: z.string().optional(),
+  city: z.string().optional().nullable(),
+  state: z.string().optional().nullable(),
+  image_url: z.string().optional().nullable(),
+  sponsored_chapter_id: z.number().int().optional().nullable(),
+  event_type_id: z.number().int().optional().nullable(),
+  event_audience_type_id: z.number().int().optional().nullable(),
+  all_day: z.boolean().optional(),
+  duration_minutes: z.number().int().optional().nullable(),
+  event_link: z.string().optional().nullable(),
+  is_featured: z.boolean().optional(),
+  ticket_price_cents: z.number().int().optional(),
+  dress_codes: z.array(z.string()).optional(),
+  dress_code_notes: z.string().optional().nullable(),
+  reason: z.string().min(1, "Reason is required for admin modifications"),
+});
+
+const deleteEventSchema = z.object({
+  reason: z.string().min(1, "Reason is required for cancellation"),
+});
+
+// Get all events (admin view)
+router.get("/events", async (req: Request, res: Response) => {
+  try {
+    const { getAllEventsForAdmin } = await import("../db/queries-sequelize");
+    const events = await getAllEventsForAdmin();
+    res.json(events);
+  } catch (error) {
+    console.error("Error fetching all events:", error);
+    res.status(500).json({ error: "Failed to fetch events" });
+  }
+});
+
+// Get specific event by ID
+router.get("/events/:id", async (req: Request, res: Response) => {
+  try {
+    const eventId = parseInt(req.params.id);
+    const { getEventWithOwnerInfo } = await import("../db/queries-sequelize");
+    const event = await getEventWithOwnerInfo(eventId);
+    
+    if (!event) {
+      return res.status(404).json({ error: "Event not found" });
+    }
+    
+    res.json(event);
+  } catch (error) {
+    console.error("Error fetching event:", error);
+    res.status(500).json({ error: "Failed to fetch event" });
+  }
+});
+
+// Update event
+router.put("/events/:id", async (req: Request, res: Response) => {
+  try {
+    const eventId = parseInt(req.params.id);
+    const validatedData = updateEventSchema.parse(req.body);
+    const { reason, event_date, ...otherUpdates } = validatedData;
+    
+    // Convert event_date string to Date if provided
+    const updates: any = { ...otherUpdates };
+    if (event_date) {
+      updates.event_date = new Date(event_date);
+    }
+    
+    const { getEventWithOwnerInfo, updateEvent } = await import("../db/queries-sequelize");
+    const { sendEventModifiedEmail } = await import("../services/email");
+    const { notifyEventModified } = await import("../services/notifications");
+    
+    // Get event with owner info before update
+    const eventBefore = await getEventWithOwnerInfo(eventId);
+    if (!eventBefore) {
+      return res.status(404).json({ error: "Event not found" });
+    }
+    
+    // Update event
+    const updatedEvent = await updateEvent(eventId, updates);
+    
+    // Send notifications and email
+    await Promise.all([
+      notifyEventModified(eventBefore.owner_email, eventBefore.title, reason),
+      sendEventModifiedEmail(eventBefore.owner_email, eventBefore.owner_name, eventBefore.title, reason)
+    ]);
+    
+    console.log(`✅ Admin updated event ${eventId}: ${eventBefore.title}`);
+    res.json(updatedEvent);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+    console.error("Error updating event:", error);
+    res.status(500).json({ error: "Failed to update event" });
+  }
+});
+
+// Delete event (soft delete - set status to CANCELLED)
+router.delete("/events/:id", async (req: Request, res: Response) => {
+  try {
+    const eventId = parseInt(req.params.id);
+    const validatedData = deleteEventSchema.parse(req.body);
+    const { reason } = validatedData;
+    
+    const { getEventWithOwnerInfo, deleteEvent } = await import("../db/queries-sequelize");
+    const { sendEventDeletedEmail } = await import("../services/email");
+    const { notifyEventDeleted } = await import("../services/notifications");
+    
+    // Get event with owner info before deletion
+    const event = await getEventWithOwnerInfo(eventId);
+    if (!event) {
+      return res.status(404).json({ error: "Event not found" });
+    }
+    
+    // Soft delete event (set status to CANCELLED)
+    const deletedEvent = await deleteEvent(eventId);
+    
+    // Send notifications and email
+    await Promise.all([
+      notifyEventDeleted(event.owner_email, event.title, reason),
+      sendEventDeletedEmail(event.owner_email, event.owner_name, event.title, reason)
+    ]);
+    
+    console.log(`✅ Admin cancelled event ${eventId}: ${event.title}`);
+    res.json({ message: "Event cancelled successfully", event: deletedEvent });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+    console.error("Error cancelling event:", error);
+    res.status(500).json({ error: "Failed to cancel event" });
+  }
+});
+
 export default router;
+

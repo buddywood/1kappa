@@ -66,6 +66,13 @@ export class Product extends BaseModel {
   is_kappa_branded!: boolean;
 
   @Column({
+    type: DataType.ENUM('ACTIVE', 'INACTIVE', 'ADMIN_DELETE', 'PENDING', 'SOLD', 'SHIPPED', 'CLOSED'),
+    allowNull: false,
+    defaultValue: 'ACTIVE'
+  })
+  status!: 'ACTIVE' | 'INACTIVE' | 'ADMIN_DELETE' | 'PENDING' | 'SOLD' | 'SHIPPED' | 'CLOSED';
+
+  @Column({
     type: DataType.DATE,
     defaultValue: DataType.NOW
   })

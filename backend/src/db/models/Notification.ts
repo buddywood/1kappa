@@ -23,10 +23,10 @@ export class Notification extends BaseModel {
   user_email!: string;
 
   @Column({
-    type: DataType.ENUM('PURCHASE_BLOCKED', 'ITEM_AVAILABLE', 'ORDER_CONFIRMED', 'ORDER_SHIPPED'),
+    type: DataType.ENUM('PURCHASE_BLOCKED', 'ITEM_AVAILABLE', 'ORDER_CONFIRMED', 'ORDER_SHIPPED', 'ADMIN_ACTION'),
     allowNull: false
   })
-  type!: 'PURCHASE_BLOCKED' | 'ITEM_AVAILABLE' | 'ORDER_CONFIRMED' | 'ORDER_SHIPPED';
+  type!: 'PURCHASE_BLOCKED' | 'ITEM_AVAILABLE' | 'ORDER_CONFIRMED' | 'ORDER_SHIPPED' | 'ADMIN_ACTION';
 
   @Column({
     type: DataType.STRING(255),
