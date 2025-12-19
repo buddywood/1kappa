@@ -322,7 +322,7 @@ export default function SellerDashboardScreen({
               <Text style={styles.viewAllText}>View All</Text>
             </TouchableOpacity>
           </View>
-          <FormCard style={styles.payoutCard}>
+          <FormCard className="mt-0">
             <View style={styles.payoutRow}>
               <View>
                 <Text style={styles.payoutLabel}>Total Payouts</Text>
@@ -362,7 +362,7 @@ export default function SellerDashboardScreen({
             </TouchableOpacity>
           </View>
           {products.length === 0 ? (
-            <FormCard style={styles.emptyCard}>
+            <FormCard className="items-center py-8">
               <Ionicons
                 name="cube-outline"
                 size={48}

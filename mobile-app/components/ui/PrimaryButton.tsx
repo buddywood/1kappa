@@ -1,7 +1,7 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
-import { COLORS } from '../../constants/theme';
-import { SHADOW } from '../../constants/theme';
+import { ViewStyle } from 'react-native';
+import { Button } from './button';
+import { cn } from '~/lib/utils';
 
 interface PrimaryButtonProps {
   title: string;
@@ -10,6 +10,7 @@ interface PrimaryButtonProps {
   loadingText?: string;
   disabled?: boolean;
   style?: ViewStyle;
+  className?: string;
 }
 
 export default function PrimaryButton({
@@ -19,43 +20,25 @@ export default function PrimaryButton({
   loadingText,
   disabled = false,
   style,
+  className,
 }: PrimaryButtonProps) {
-  const displayText = loading && loadingText ? loadingText : title;
-  
   return (
-    <TouchableOpacity
-      style={[
-        styles.button,
-        (loading || disabled) && styles.buttonDisabled,
-        style,
-      ]}
+    <Button
+      variant="default"
       onPress={onPress}
-      disabled={loading || disabled}
-      activeOpacity={0.85}
-    >
-      <Text style={styles.buttonText}>
-        {displayText}
-      </Text>
-    </TouchableOpacity>
+      disabled={disabled}
+      loading={loading}
+      label={loading && loadingText ? loadingText : title}
+      className={cn("h-auto", className)}
+      // Overriding base button styles to match the original PrimaryButton's look
+      style={[{
+        borderRadius: 14,
+        paddingVertical: 15,
+        backgroundColor: '#9B111E', // Matching COLORS.crimson
+      }, style]}
+      labelClasses="text-white text-[17px] font-bold tracking-[0.3px]"
+    />
   );
 }
 
-const styles = StyleSheet.create({
-  button: {
-    backgroundColor: COLORS.crimson,
-    borderRadius: 14,
-    paddingVertical: 15,
-    alignItems: 'center',
-    ...SHADOW.button,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: COLORS.white,
-    fontSize: 17,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
-});
 

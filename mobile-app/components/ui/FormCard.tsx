@@ -1,13 +1,12 @@
 import React, { useEffect, useRef } from "react";
-import { View, StyleSheet, ViewStyle, Animated, Text } from "react-native";
-import { COLORS, SHADOW, SPACING, RADII } from "../../constants/theme";
+import { View, Animated, Text, StyleProp, ViewStyle } from "react-native";
+import { cn } from "~/lib/utils";
 
 interface FormCardProps {
   children: React.ReactNode;
-  style?: ViewStyle | ViewStyle[];
+  className?: string;
+  style?: StyleProp<ViewStyle>;
   variant?: "elevated" | "flat" | "bordered";
-  padding?: number;
-  borderRadius?: number;
   animated?: boolean;
   headerTitle?: string;
   headerSubtitle?: string;
@@ -15,10 +14,9 @@ interface FormCardProps {
 
 export default function FormCard({
   children,
+  className,
   style,
   variant = "elevated",
-  padding = SPACING.xl,
-  borderRadius = RADII.lg,
   animated = false,
   headerTitle,
   headerSubtitle,
@@ -41,53 +39,42 @@ export default function FormCard({
         }),
       ]).start();
     }
-  }, [animated]);
+  }, [animated, fade, slide]);
 
-  const variantStyle =
-    variant === "flat"
-      ? {}
-      : variant === "bordered"
-      ? { borderWidth: 1, borderColor: COLORS.frostGray }
-      : SHADOW.card;
+  const variantClasses = {
+    elevated: "shadow-md",
+    flat: "",
+    bordered: "border border-border",
+  };
 
   return (
     <Animated.View
+      className={cn(
+        "bg-card rounded-2xl p-6 mx-2 mt-4",
+        variantClasses[variant],
+        className
+      )}
       style={[
-        styles.card,
-        variantStyle,
-        { padding, borderRadius },
-        animated && { opacity: fade, transform: [{ translateY: slide }] },
+        animated
+          ? {
+              opacity: fade,
+              transform: [{ translateY: slide }],
+            }
+          : undefined,
         style,
       ]}
     >
-      {headerTitle && <Text style={styles.headerTitle}>{headerTitle}</Text>}
+      {headerTitle && (
+        <Text className="text-xl font-bold text-card-foreground mb-2">
+          {headerTitle}
+        </Text>
+      )}
       {headerSubtitle && (
-        <Text style={styles.headerSubtitle}>{headerSubtitle}</Text>
+        <Text className="text-sm text-muted-foreground mb-4">
+          {headerSubtitle}
+        </Text>
       )}
       {children}
     </Animated.View>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: COLORS.white,
-    // padding and borderRadius handled via props
-    // padding: SPACING.xl,
-    // borderRadius: 16,
-    ...SHADOW.card,
-    marginHorizontal: SPACING.sm,
-    marginTop: SPACING.md,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: COLORS.midnightNavy,
-    marginBottom: SPACING.sm,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: COLORS.midnightNavy + "AA",
-    marginBottom: SPACING.md,
-  },
-});

@@ -1,16 +1,18 @@
-import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ViewStyle, TextInputProps } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { COLORS, FONT, SHADOW, SPACING } from '../../constants/theme';
+import React from "react";
+import { View, Text, TouchableOpacity, type TextInputProps } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { Input } from "./input";
+import { cn } from "~/lib/utils";
 
-interface PasswordFieldProps extends Omit<TextInputProps, 'style' | 'secureTextEntry'> {
+interface PasswordFieldProps
+  extends Omit<TextInputProps, "style" | "secureTextEntry"> {
   label: string;
   value: string;
   onChangeText: (text: string) => void;
   showPassword: boolean;
   onToggleVisibility: () => void;
   error?: string;
-  containerStyle?: ViewStyle;
+  className?: string;
 }
 
 export default function PasswordField({
@@ -20,75 +22,40 @@ export default function PasswordField({
   showPassword,
   onToggleVisibility,
   error,
-  containerStyle,
+  className,
   placeholder,
   ...textInputProps
 }: PasswordFieldProps) {
   return (
-    <View style={[styles.container, containerStyle]}>
-      <Text style={styles.label}>{label}</Text>
-      <View style={styles.passwordContainer}>
-        <TextInput
-          style={styles.passwordInput}
+    <View className={cn("mb-6", className)}>
+      <Text className="text-base font-medium text-foreground mb-2">
+        {label}
+      </Text>
+      <View className="relative">
+        <Input
           placeholder={placeholder}
-          placeholderTextColor={COLORS.midnightNavy + '50'}
           value={value}
           onChangeText={onChangeText}
           secureTextEntry={!showPassword}
+          error={!!error}
+          className="pr-12"
           {...textInputProps}
         />
         <TouchableOpacity
           onPress={onToggleVisibility}
-          style={styles.passwordIcon}
+          className="absolute right-0 top-0 h-14 w-12 items-center justify-center"
           activeOpacity={0.7}
         >
           <Ionicons
-            name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+            name={showPassword ? "eye-off-outline" : "eye-outline"}
             size={24}
-            color={COLORS.midnightNavy + '80'}
+            color="hsl(var(--muted-foreground))"
           />
         </TouchableOpacity>
       </View>
       {error && (
-        <Text style={styles.errorText}>{error}</Text>
+        <Text className="text-xs text-destructive mt-1.5">{error}</Text>
       )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: SPACING.lg,
-  },
-  label: {
-    ...FONT.label,
-    color: COLORS.midnightNavy,
-    marginBottom: SPACING.sm,
-  },
-  passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.white,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: COLORS.frostGray + 'AA',
-    ...SHADOW.input,
-  },
-  passwordInput: {
-    flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: SPACING.lg,
-    ...FONT.body,
-    color: COLORS.midnightNavy,
-  },
-  passwordIcon: {
-    padding: SPACING.lg,
-    paddingLeft: SPACING.sm,
-  },
-  errorText: {
-    fontSize: 12,
-    color: '#DC2626',
-    marginTop: SPACING.xs,
-  },
-});
-

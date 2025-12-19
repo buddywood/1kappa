@@ -1,13 +1,14 @@
-import React from 'react';
-import { View, Text, TextInput, StyleSheet, ViewStyle, TextInputProps } from 'react-native';
-import { COLORS, FONT, SHADOW, SPACING } from '../../constants/theme';
+import React from "react";
+import { View, Text, type TextInputProps } from "react-native";
+import { Input } from "./input";
+import { cn } from "~/lib/utils";
 
-interface TextFieldProps extends Omit<TextInputProps, 'style'> {
+interface TextFieldProps extends Omit<TextInputProps, "style"> {
   label: string;
   value: string;
   onChangeText: (text: string) => void;
   error?: string;
-  containerStyle?: ViewStyle;
+  className?: string;
 }
 
 export default function TextField({
@@ -15,51 +16,25 @@ export default function TextField({
   value,
   onChangeText,
   error,
-  containerStyle,
+  className,
   placeholder,
   ...textInputProps
 }: TextFieldProps) {
   return (
-    <View style={[styles.container, containerStyle]}>
-      <Text style={styles.label}>{label}</Text>
-      <TextInput
-        style={styles.input}
+    <View className={cn("mb-6", className)}>
+      <Text className="text-base font-medium text-foreground mb-2">
+        {label}
+      </Text>
+      <Input
         placeholder={placeholder}
-        placeholderTextColor={COLORS.midnightNavy + '50'}
         value={value}
         onChangeText={onChangeText}
+        error={!!error}
         {...textInputProps}
       />
       {error && (
-        <Text style={styles.errorText}>{error}</Text>
+        <Text className="text-xs text-destructive mt-1.5">{error}</Text>
       )}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: SPACING.lg,
-  },
-  label: {
-    ...FONT.label,
-    color: COLORS.midnightNavy,
-    marginBottom: SPACING.sm,
-  },
-  input: {
-    backgroundColor: COLORS.white,
-    borderRadius: 14,
-    padding: SPACING.lg,
-    ...FONT.body,
-    color: COLORS.midnightNavy,
-    borderWidth: 1,
-    borderColor: COLORS.frostGray + 'AA',
-    ...SHADOW.input,
-  },
-  errorText: {
-    fontSize: 12,
-    color: '#DC2626',
-    marginTop: SPACING.xs,
-  },
-});
-

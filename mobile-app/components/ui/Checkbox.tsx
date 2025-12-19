@@ -1,69 +1,38 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, RADII, SPACING, SHADOW } from '../../constants/theme';
+import { cn } from '~/lib/utils';
 
 interface CheckboxProps {
   checked: boolean;
   onPress: () => void;
   label?: string;
+  className?: string;
 }
 
-export default function Checkbox({ checked, onPress, label }: CheckboxProps) {
+export default function Checkbox({ checked, onPress, label, className }: CheckboxProps) {
   return (
     <TouchableOpacity
-      style={styles.container}
+      className={cn("flex-row items-center", className)}
       onPress={onPress}
       activeOpacity={0.7}
     >
       <View
-        style={[
-          styles.checkbox,
-          checked && styles.checkboxChecked,
-        ]}
+        className={cn(
+          "h-6 w-6 items-center justify-center rounded-md border-2 border-primary mr-2",
+          checked ? "bg-primary" : "bg-transparent"
+        )}
       >
         {checked && (
           <Ionicons
             name="checkmark"
-            size={18}
-            color={COLORS.white}
+            size={16}
+            color="white"
           />
         )}
       </View>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && <Text className="text-sm font-medium text-foreground opacity-80">{label}</Text>}
     </TouchableOpacity>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: RADII.sm,
-    borderWidth: 2,
-    borderColor: COLORS.crimson,
-    backgroundColor: 'transparent',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: SPACING.sm,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 1 },
-    elevation: 1,
-  },
-  checkboxChecked: {
-    backgroundColor: COLORS.midnightNavy,
-    borderColor: COLORS.midnightNavy,
-  },
-  label: {
-    fontSize: 14,
-    color: COLORS.midnightNavy,
-    opacity: 0.8,
-  },
-});
 

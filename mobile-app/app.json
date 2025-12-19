@@ -30,7 +30,9 @@
           },
           "imageWidth": 300
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker",
+      "expo-web-browser"
     ],
     "ios": {
       "supportsTablet": true,
