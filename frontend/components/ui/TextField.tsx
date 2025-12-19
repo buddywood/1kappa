@@ -20,7 +20,7 @@ const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(
         </Label>
         <Input
           id={inputId}
-          ref={ref}
+          ref={ref as any}
           className={cn(
             "text-midnight-navy",
             error && "border-red-500 focus-visible:ring-red-500",

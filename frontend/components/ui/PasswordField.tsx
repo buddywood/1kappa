@@ -24,7 +24,7 @@ const PasswordField = React.forwardRef<HTMLInputElement, PasswordFieldProps>(
           <Input
             id={inputId}
             type={showPassword ? "text" : "password"}
-            ref={ref}
+            ref={ref as any}
             className={cn(
               "text-midnight-navy pr-10",
               error && "border-red-500 focus-visible:ring-red-500",
