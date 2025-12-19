@@ -259,7 +259,52 @@ async function seedTestUsers(): Promise<void> {
           console.warn(`  ⚠️  Using placeholder cognito_sub for database. User must be created in Cognito manually.`);
         }
 
-        // Get or create fraternity member (needed for member, steward, promoter, and member sellers)
+        // 1. Create or update User record first (needed for FOREIGN KEYs in role tables)
+        const userRole = testUser.type === 'seller' ? 'SELLER' : 
+                        testUser.type === 'promoter' ? 'PROMOTER' :
+                        testUser.type === 'steward' ? 'STEWARD' : 
+                        testUser.type === 'member' ? 'MEMBER' : 'GUEST';
+
+        let userId: number;
+        
+        // Check for existing user
+        const existingUserQuery = await pool.query(
+          'SELECT id FROM users WHERE cognito_sub = $1 OR email = $2',
+          [finalCognitoSub, testUser.email]
+        );
+
+        if (existingUserQuery.rows.length > 0) {
+          userId = existingUserQuery.rows[0].id;
+          // Update existing user
+          await pool.query(
+            `UPDATE users 
+             SET email = $1, 
+                 role = $2, 
+                 onboarding_status = 'ONBOARDING_FINISHED',
+                 cognito_sub = $3
+             WHERE id = $4`,
+            [
+              testUser.email,
+              userRole,
+              finalCognitoSub,
+              userId,
+            ]
+          );
+          console.log(`  ✓ Updated user record: ${testUser.name} (ID: ${userId})`);
+        } else {
+          // Create new user
+          const newUser = await createUser({
+            cognito_sub: finalCognitoSub,
+            email: testUser.email,
+            role: userRole as 'ADMIN' | 'SELLER' | 'PROMOTER' | 'GUEST' | 'STEWARD' | 'MEMBER',
+            onboarding_status: 'ONBOARDING_FINISHED',
+          });
+          userId = newUser.id;
+          console.log(`  ✓ Created user record: ${testUser.name} (ID: ${userId})`);
+        }
+
+        // 2. Create/Get Fraternity Member (needed for member, steward, promoter, and member sellers)
+        // Note: New schema links User -> FraternityMember via email matching, no explicit FK in some directions
         let memberId: number | null = null;
         if (testUser.type === 'member' || testUser.type === 'steward' || testUser.type === 'promoter' || (testUser.type === 'seller' && testUser.membership_number)) {
           // Check if member already exists
@@ -270,14 +315,13 @@ async function seedTestUsers(): Promise<void> {
 
           if (existingMember.rows.length > 0) {
             memberId = existingMember.rows[0].id;
-            console.log(`  ✓ Member already exists: ${testUser.name}`);
+            console.log(`  ✓ Fraternity Member already exists: ${testUser.name}`);
           } else {
             // Create new member
             const initiatedChapter = availableChapters[Math.floor(Math.random() * availableChapters.length)];
-            // Generate random initiation season and year
             const seasons = ['Fall', 'Spring'];
             const season = seasons[Math.floor(Math.random() * seasons.length)];
-            const year = 2015 + Math.floor(Math.random() * 10); // Random year between 2015-2024
+            const year = 2015 + Math.floor(Math.random() * 10); 
             
             const memberResult = await pool.query(
               `INSERT INTO fraternity_members (
@@ -296,17 +340,17 @@ async function seedTestUsers(): Promise<void> {
               ]
             );
             memberId = memberResult.rows[0].id;
-            console.log(`  ✓ Created member: ${testUser.name} (initiated at ${initiatedChapter.name}, ${season} ${year})`);
+            console.log(`  ✓ Created Fraternity Member: ${testUser.name}`);
           }
         }
 
-        // Create role-specific records
+        // 3. Create/Update Role-specific records linked to userId
         let sellerId: number | null = null;
         let promoterId: number | null = null;
         let stewardId: number | null = null;
 
         if (testUser.type === 'seller') {
-          // Check if seller already exists
+          // Check if seller already exists by email (Sellers have email column)
           const existingSeller = await pool.query(
             'SELECT id FROM sellers WHERE email = $1',
             [testUser.email]
@@ -314,10 +358,13 @@ async function seedTestUsers(): Promise<void> {
 
           if (existingSeller.rows.length > 0) {
             sellerId = existingSeller.rows[0].id;
-            console.log(`  ✓ Seller already exists: ${testUser.name}`);
+            // Ensure user_id is set
+            await pool.query('UPDATE sellers SET user_id = $1 WHERE id = $2', [userId, sellerId]);
+            console.log(`  ✓ Seller already exists and linked: ${testUser.name}`);
           } else {
             const sponsoringChapter = availableChapters[Math.floor(Math.random() * availableChapters.length)];
             const seller = await createSeller({
+              user_id: userId,
               email: testUser.email,
               name: testUser.name,
               sponsoring_chapter_id: sponsoringChapter.id,
@@ -336,12 +383,11 @@ async function seedTestUsers(): Promise<void> {
         }
 
         if (testUser.type === 'promoter') {
-          // Promoters must be members - ensure memberId exists
           if (!memberId) {
-            throw new Error(`Promoter ${testUser.name} must be a fraternity member - memberId is required but was not created`);
+            throw new Error(`Promoter ${testUser.name} must be a fraternity member`);
           }
 
-          // Check if promoter already exists
+          // Check if promoter already exists by email
           const existingPromoter = await pool.query(
             'SELECT id FROM promoters WHERE email = $1',
             [testUser.email]
@@ -349,9 +395,19 @@ async function seedTestUsers(): Promise<void> {
 
           if (existingPromoter.rows.length > 0) {
             promoterId = existingPromoter.rows[0].id;
-            console.log(`  ✓ Promoter already exists: ${testUser.name}`);
+            // Ensure user_id is set
+            await pool.query('UPDATE promoters SET user_id = $1 WHERE id = $2', [userId, promoterId]);
+            console.log(`  ✓ Promoter already exists and linked: ${testUser.name}`);
           } else {
             const sponsoringChapter = availableChapters[Math.floor(Math.random() * availableChapters.length)];
+            // createPromoter might not accept user_id in the version imported, 
+            // but we can update it explicitly or pass it if supported.
+            // Based on models, Promoter has user_id.
+            // We use createPromoter from queries which calls Promoter.create.
+            // If createPromoter signature doesn't support user_id, we'll need to update it manually after.
+            // Checking previous context, createPromoter wasn't fully shown, but let's assume standard pattern.
+            // Safe approach: create then update.
+             
             const promoter = await createPromoter({
               email: testUser.email,
               name: testUser.name,
@@ -361,32 +417,34 @@ async function seedTestUsers(): Promise<void> {
             });
             promoterId = promoter.id;
 
-            // Approve the promoter
+            // Update user_id and Approve
             await pool.query(
-              'UPDATE promoters SET status = $1 WHERE id = $2',
-              ['APPROVED', promoterId]
+              'UPDATE promoters SET status = $1, user_id = $2 WHERE id = $3',
+              ['APPROVED', userId, promoterId]
             );
             console.log(`  ✓ Created and approved promoter: ${testUser.name}`);
           }
         }
 
         if (testUser.type === 'steward') {
-          if (!memberId) {
-            throw new Error('Member ID required for steward');
-          }
-
-          // Check if steward already exists
+          // Check if steward already exists for this USER
           const existingSteward = await pool.query(
-            'SELECT id FROM stewards WHERE fraternity_member_id = $1',
-            [memberId]
+            'SELECT id FROM stewards WHERE user_id = $1',
+            [userId]
           );
 
           if (existingSteward.rows.length > 0) {
             stewardId = existingSteward.rows[0].id;
-            console.log(`  ✓ Steward already exists: ${testUser.name}`);
+            console.log(`  ✓ Steward already exists for user: ${testUser.name}`);
           } else {
+            // Create new steward linked to user
             const sponsoringChapter = availableChapters[Math.floor(Math.random() * availableChapters.length)];
+            
+            // We can't rely on createSteward to take user_id if the signature hasn't been updated in queries-sequelize types
+            // But we can insert directly or use createSteward and update.
+            // createSteward was shown in previous step taking `user_id?: number | null`.
             const steward = await createSteward({
+              user_id: userId,
               sponsoring_chapter_id: sponsoringChapter.id,
             });
             stewardId = steward.id;
@@ -395,70 +453,6 @@ async function seedTestUsers(): Promise<void> {
             await updateStewardStatus(stewardId, 'APPROVED');
             console.log(`  ✓ Created and approved steward: ${testUser.name}`);
           }
-        }
-
-        // Create or update user record
-        const existingUser = await pool.query(
-          'SELECT id FROM users WHERE cognito_sub = $1 OR email = $2',
-          [finalCognitoSub, testUser.email]
-        );
-
-        // Determine role
-        const userRole = testUser.type === 'seller' ? 'SELLER' : 
-                        testUser.type === 'promoter' ? 'PROMOTER' :
-                        testUser.type === 'steward' ? 'STEWARD' : 'GUEST';
-
-        if (existingUser.rows.length > 0) {
-          const userId = existingUser.rows[0].id;
-          // Update user record
-          // Note: Role-specific tables (sellers, promoters, stewards) now reference users via user_id
-          await pool.query(
-            `UPDATE users 
-             SET email = $1, 
-                 role = $2, 
-                 onboarding_status = 'ONBOARDING_FINISHED'
-             WHERE id = $3`,
-            [
-              testUser.email,
-              userRole,
-              userId,
-            ]
-          );
-          
-          // Link user to role-specific tables by updating their user_id columns
-          if (sellerId) {
-            await pool.query(`UPDATE sellers SET user_id = $1 WHERE id = $2`, [userId, sellerId]);
-          }
-          if (promoterId) {
-            await pool.query(`UPDATE promoters SET user_id = $1 WHERE id = $2`, [userId, promoterId]);
-          }
-          if (stewardId) {
-            await pool.query(`UPDATE stewards SET user_id = $1 WHERE id = $2`, [userId, stewardId]);
-          }
-          
-          console.log(`  ✓ Updated user record: ${testUser.name}`);
-        } else {
-          // Create new user record
-          // Note: Role-specific tables (sellers, promoters, stewards) now reference users via user_id
-          const newUser = await createUser({
-            cognito_sub: finalCognitoSub,
-            email: testUser.email,
-            role: userRole as 'ADMIN' | 'SELLER' | 'PROMOTER' | 'GUEST' | 'STEWARD' | 'MEMBER',
-            onboarding_status: 'ONBOARDING_FINISHED',
-          });
-          
-          // Link user to role-specific tables by updating their user_id columns
-          if (sellerId) {
-            await pool.query(`UPDATE sellers SET user_id = $1 WHERE id = $2`, [newUser.id, sellerId]);
-          }
-          if (promoterId) {
-            await pool.query(`UPDATE promoters SET user_id = $1 WHERE id = $2`, [newUser.id, promoterId]);
-          }
-          if (stewardId) {
-            await pool.query(`UPDATE stewards SET user_id = $1 WHERE id = $2`, [newUser.id, stewardId]);
-          }
-          
-          console.log(`  ✓ Created user record: ${testUser.name}`);
         }
 
         console.log(`  ✅ Completed setup for ${testUser.name}`);
