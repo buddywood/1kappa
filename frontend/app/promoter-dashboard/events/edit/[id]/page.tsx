@@ -181,19 +181,49 @@ export default function EditEventPage() {
     loadData();
   }, [eventId, router]);
 
+  const [isDragging, setIsDragging] = useState(false);
+
+  const processFile = (file: File) => {
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Image must be less than 5MB");
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      setError("File must be an image");
+      return;
+    }
+
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        setError("Image must be less than 5MB");
-        return;
-      }
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      processFile(file);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      processFile(e.dataTransfer.files[0]);
     }
   };
 
@@ -433,10 +463,23 @@ export default function EditEventPage() {
                 </div>
               ) : null}
               {!imagePreview && (
-                <label className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-frost-gray dark:border-gray-700 rounded-lg cursor-pointer hover:bg-cream/50 dark:hover:bg-gray-800/50 transition">
+                <label
+                  className={`flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-lg cursor-pointer transition ${
+                    isDragging
+                      ? "border-crimson bg-crimson/5 dark:bg-crimson/10"
+                      : "border-frost-gray dark:border-gray-700 hover:bg-cream/50 dark:hover:bg-gray-800/50"
+                  }`}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
                   <div className="flex flex-col items-center justify-center pt-5 pb-6">
                     <svg
-                      className="w-10 h-10 mb-3 text-midnight-navy/40 dark:text-gray-500"
+                      className={`w-10 h-10 mb-3 ${
+                        isDragging
+                          ? "text-crimson"
+                          : "text-midnight-navy/40 dark:text-gray-500"
+                      }`}
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"

@@ -50,7 +50,7 @@ export async function shareEvent(event: Event) {
   const eventUrl = `${FRONTEND_URL}/event/${event.id}`;
   const shareData = {
     title: event.title,
-    text: `Check out this event: ${event.title}`,
+    text: `Join me at ${event.title}! I found this on 1Kappa—check it out: ${eventUrl}`,
     url: eventUrl,
   };
 
@@ -82,14 +82,15 @@ export async function shareEvent(event: Event) {
  */
 export function generateSocialShareUrls(event: Event) {
   const eventUrl = `${FRONTEND_URL}/event/${event.id}`;
-  const text = encodeURIComponent(`${event.title} - ${eventUrl}`);
+  const shareText = `Join me at ${event.title}! I found this on 1Kappa—check it out: ${eventUrl}`;
+  const encodedText = encodeURIComponent(shareText);
   const url = encodeURIComponent(eventUrl);
 
   return {
     facebook: `https://www.facebook.com/sharer/sharer.php?u=${url}`,
-    twitter: `https://twitter.com/intent/tweet?text=${text}&url=${url}`,
+    twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(`Join me at ${event.title}! I found this on 1Kappa—check it out:`)}&url=${url}`,
     linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${url}`,
-    email: `mailto:?subject=${encodeURIComponent(event.title)}&body=${encodeURIComponent(`Check out this event: ${event.title}\n${eventUrl}`)}`,
+    email: `mailto:?subject=${encodeURIComponent(event.title)}&body=${encodedText}`,
   };
 }
 

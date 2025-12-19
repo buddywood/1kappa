@@ -69,7 +69,7 @@ export async function addToCalendar(event: Event, calendarType: 'google' | 'appl
  */
 export async function shareEvent(event: Event) {
   const eventUrl = `${WEB_URL}/event/${event.id}`;
-  const shareMessage = `Check out this event: ${event.title}\n${eventUrl}`;
+  const shareMessage = `Join me at ${event.title}! I found this on 1Kappa—check it out: ${eventUrl}`;
 
   try {
     await Share.open({
@@ -90,7 +90,7 @@ export async function shareEvent(event: Event) {
  */
 export function generateSocialShareUrls(event: Event) {
   const eventUrl = `${WEB_URL}/event/${event.id}`;
-  const text = encodeURIComponent(`${event.title} - ${eventUrl}`);
+  const text = encodeURIComponent(`Join me at ${event.title}! I found this on 1Kappa—check it out: ${eventUrl}`);
   const url = encodeURIComponent(eventUrl);
 
   return {

@@ -40,6 +40,7 @@ import {
   Copy,
   X,
   Edit,
+  Eye,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
@@ -54,6 +55,7 @@ export default function EventPage() {
   const [error, setError] = useState("");
   const [isRSVPModalOpen, setIsRSVPModalOpen] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showFlyerModal, setShowFlyerModal] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -594,6 +596,14 @@ export default function EventPage() {
                     <Share2 className="w-4 h-4 mr-2" />
                     Share
                   </Button>
+                  <Button
+                    onClick={() => setShowFlyerModal(true)}
+                    variant="outline"
+                    className="w-full border-2 border-midnight-navy text-midnight-navy py-3 rounded-lg font-semibold hover:bg-midnight-navy/10 transition flex items-center justify-center"
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    View Flyer
+                  </Button>
                 </>
               ) : (
                 // Non-promoter: Share, Add to Calendar, Message Promoter (disabled)
@@ -604,6 +614,14 @@ export default function EventPage() {
                   >
                     <Share2 className="w-4 h-4 mr-2" />
                     Share
+                  </Button>
+                  <Button
+                    onClick={() => setShowFlyerModal(true)}
+                    variant="outline"
+                    className="w-full border-2 border-midnight-navy text-midnight-navy py-3 rounded-lg font-semibold hover:bg-midnight-navy/10 transition flex items-center justify-center"
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    View Flyer
                   </Button>
                   <Button
                     onClick={() => setShowCalendarModal(true)}
@@ -859,6 +877,29 @@ export default function EventPage() {
               <Calendar className="w-5 h-5 mr-3 text-crimson" />
               Outlook Calendar
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Flyer Modal */}
+      <Dialog open={showFlyerModal} onOpenChange={setShowFlyerModal}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden p-0 bg-transparent border-none shadow-none flex items-center justify-center">
+          <div className="relative w-full h-[80vh] bg-transparent">
+            {event.image_url && (
+              <Image
+                src={getEventFullSizeUrl(event.image_url) || event.image_url}
+                alt={event.title}
+                fill
+                className="object-contain"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
+              />
+            )}
+            <button
+              onClick={() => setShowFlyerModal(false)}
+              className="absolute top-4 right-4 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 transition"
+            >
+              <X className="w-6 h-6" />
+            </button>
           </div>
         </DialogContent>
       </Dialog>
