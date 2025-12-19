@@ -37,6 +37,7 @@ NEXT_PUBLIC_API_URL=http://localhost:3001
 NEXTAUTH_SECRET=your-secret-key
 NEXTAUTH_URL=http://localhost:3000
 ADMIN_KEY=your-admin-key
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your-google-maps-api-key (optional)
 ```
 
 **Backend** (`backend/.env`):

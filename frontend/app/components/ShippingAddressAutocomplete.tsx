@@ -91,13 +91,22 @@ export default function ShippingAddressAutocomplete({
     script.async = true;
     script.defer = true;
     script.onload = () => {
-      if (window.google && window.google.maps && window.google.maps.places) {
-        setIsScriptLoaded(true);
-        setIsLoading(false);
-      } else {
-        console.error('Google Maps script loaded but Places API not available.');
-        setIsLoading(false);
-      }
+      // Wait for Places library to be fully loaded (it may load asynchronously)
+      let attempts = 0;
+      const maxAttempts = 50; // 5 seconds max wait
+      const checkPlaces = setInterval(() => {
+        attempts++;
+        if (window.google && window.google.maps && window.google.maps.places) {
+          setIsScriptLoaded(true);
+          setIsLoading(false);
+          clearInterval(checkPlaces);
+        } else if (attempts >= maxAttempts) {
+          // Only log error if we've waited long enough
+          console.error('Google Maps script loaded but Places API not available after 5 seconds. Make sure both "Maps JavaScript API" and "Places API (New)" are enabled in Google Cloud Console.');
+          setIsLoading(false);
+          clearInterval(checkPlaces);
+        }
+      }, 100); // Check every 100ms
     };
     script.onerror = () => {
       console.error('Failed to load Google Maps script.');
@@ -131,27 +140,8 @@ export default function ShippingAddressAutocomplete({
     }
 
     try {
-      // Initialize autocomplete with address type restriction
-      const autocomplete = new window.google.maps.places.Autocomplete(
-        streetInputRef.current,
-        {
-          types: ['address'], // Restrict to addresses only
-          fields: ['address_components', 'formatted_address'],
-        }
-      );
-
-      autocompleteRef.current = autocomplete;
-      isInitializedRef.current = true;
-
-      // Handle place selection
-      autocomplete.addListener('place_changed', () => {
-        const place = autocomplete.getPlace();
-
-        if (!place.address_components) {
-          return;
-        }
-
-        // Parse address components
+      // Helper function to parse address components
+      const parseAddressComponents = (place: any): AddressComponents => {
         const components: AddressComponents = {
           street: '',
           city: '',
@@ -160,33 +150,77 @@ export default function ShippingAddressAutocomplete({
           country: 'US',
         };
 
-        place.address_components.forEach((component: any) => {
+        const addressComponents = place.addressComponents || place.address_components;
+        if (!addressComponents) return components;
+
+        addressComponents.forEach((component: any) => {
           const types = component.types;
 
           if (types.includes('street_number')) {
-            components.street = component.long_name + ' ';
+            components.street = component.longName || component.long_name + ' ';
           }
           if (types.includes('route')) {
-            components.street += component.long_name;
+            components.street += component.longName || component.long_name;
           }
           if (types.includes('locality')) {
-            components.city = component.long_name;
+            components.city = component.longName || component.long_name;
           }
           if (types.includes('administrative_area_level_1')) {
-            components.state = component.short_name; // Use short name for state (e.g., "CA")
+            components.state = component.shortName || component.short_name;
           }
           if (types.includes('postal_code')) {
-            components.zip = component.long_name;
+            components.zip = component.longName || component.long_name;
           }
           if (types.includes('country')) {
-            components.country = component.short_name; // Use short name (e.g., "US")
+            components.country = component.shortName || component.short_name;
           }
         });
 
-        // Update the address state
-        const callbacks = callbacksRef.current;
-        callbacks.onAddressChange(components);
-      });
+        return components;
+      };
+
+      // Try the new PlaceAutocompleteElement API first
+      if (window.google.maps.places && window.google.maps.places.PlaceAutocompleteElement) {
+        const autocompleteElement = new window.google.maps.places.PlaceAutocompleteElement({
+          requestedResultTypes: ['GEOCODE'],
+          fields: ['address_components', 'formatted_address'],
+        });
+
+        autocompleteElement.input = streetInputRef.current;
+
+        autocompleteElement.addEventListener('gmp-placeselect', (event: any) => {
+          const place = event.detail.place;
+          const components = parseAddressComponents(place);
+          const callbacks = callbacksRef.current;
+          callbacks.onAddressChange(components);
+        });
+
+        autocompleteRef.current = autocompleteElement;
+        isInitializedRef.current = true;
+        console.log('PlaceAutocompleteElement initialized for ShippingAddress');
+      } else {
+        // Fallback to legacy API
+        const autocomplete = new window.google.maps.places.Autocomplete(
+          streetInputRef.current,
+          {
+            types: ['address'],
+            fields: ['address_components', 'formatted_address'],
+          }
+        );
+
+        autocomplete.addListener('place_changed', () => {
+          const place = autocomplete.getPlace();
+          if (place.address_components) {
+            const components = parseAddressComponents(place);
+            const callbacks = callbacksRef.current;
+            callbacks.onAddressChange(components);
+          }
+        });
+
+        autocompleteRef.current = autocomplete;
+        isInitializedRef.current = true;
+        console.log('Legacy Autocomplete initialized for ShippingAddress');
+      }
     } catch (error) {
       console.error('Error initializing Google Places Autocomplete:', error);
     }

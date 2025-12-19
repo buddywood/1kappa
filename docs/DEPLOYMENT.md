@@ -12,6 +12,7 @@
    - `NEXTAUTH_SECRET` - Generate with: `openssl rand -base64 32`
    - `NEXTAUTH_URL` - Your frontend URL (e.g., `https://1kappa.com`)
    - `ADMIN_KEY` - Your admin authentication key
+   - `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` - Google Maps API key for address autocomplete (optional but recommended)
 
 3. **Deploy**
    - Vercel will automatically deploy on push to main branch

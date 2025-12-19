@@ -98,15 +98,22 @@ export default function AddressFieldAutocomplete({
     script.async = true;
     script.defer = true;
     script.onload = () => {
-      if (window.google && window.google.maps && window.google.maps.places) {
-        setIsScriptLoaded(true);
-        setIsLoading(false);
-      } else {
-        console.error(
-          "Google Maps script loaded but Places API not available."
-        );
-        setIsLoading(false);
-      }
+      // Wait for Places library to be fully loaded (it may load asynchronously)
+      let attempts = 0;
+      const maxAttempts = 50; // 5 seconds max wait
+      const checkPlaces = setInterval(() => {
+        attempts++;
+        if (window.google && window.google.maps && window.google.maps.places) {
+          setIsScriptLoaded(true);
+          setIsLoading(false);
+          clearInterval(checkPlaces);
+        } else if (attempts >= maxAttempts) {
+          // Only log error if we've waited long enough
+          console.error('Google Maps script loaded but Places API not available after 5 seconds. Make sure both "Maps JavaScript API" and "Places API (New)" are enabled in Google Cloud Console.');
+          setIsLoading(false);
+          clearInterval(checkPlaces);
+        }
+      }, 100); // Check every 100ms
     };
     script.onerror = () => {
       console.error("Failed to load Google Maps script.");
@@ -140,31 +147,50 @@ export default function AddressFieldAutocomplete({
     }
 
     try {
-      // Initialize autocomplete with address type restriction
-      const autocomplete = new window.google.maps.places.Autocomplete(
-        addressInputRef.current,
-        {
-          types: ["address"], // Restrict to addresses only
-          fields: ["formatted_address", "address_components"],
-        }
-      );
+      // Try the new PlaceAutocompleteElement API first
+      if (window.google.maps.places && window.google.maps.places.PlaceAutocompleteElement) {
+        const autocompleteElement = new window.google.maps.places.PlaceAutocompleteElement({
+          requestedResultTypes: ['GEOCODE'],
+          fields: ['formatted_address', 'address_components'],
+        });
 
-      autocompleteRef.current = autocomplete;
-      isInitializedRef.current = true;
+        autocompleteElement.input = addressInputRef.current;
 
-      // Handle place selection
-      autocomplete.addListener("place_changed", () => {
-        const place = autocomplete.getPlace();
+        autocompleteElement.addEventListener('gmp-placeselect', (event: any) => {
+          const place = event.detail.place;
+          const formattedAddress = place.formattedAddress || place.formatted_address;
+          
+          if (formattedAddress) {
+            const callbacks = callbacksRef.current;
+            callbacks.onChange(formattedAddress);
+          }
+        });
 
-        if (!place.formatted_address) {
-          console.warn("No formatted address available for the selected place");
-          return;
-        }
+        autocompleteRef.current = autocompleteElement;
+        isInitializedRef.current = true;
+        console.log('PlaceAutocompleteElement initialized for AddressField');
+      } else {
+        // Fallback to legacy API
+        const autocomplete = new window.google.maps.places.Autocomplete(
+          addressInputRef.current,
+          {
+            types: ["address"],
+            fields: ["formatted_address", "address_components"],
+          }
+        );
 
-        // Update address field with formatted address
-        const callbacks = callbacksRef.current;
-        callbacks.onChange(place.formatted_address);
-      });
+        autocomplete.addListener("place_changed", () => {
+          const place = autocomplete.getPlace();
+          if (place.formatted_address) {
+            const callbacks = callbacksRef.current;
+            callbacks.onChange(place.formatted_address);
+          }
+        });
+
+        autocompleteRef.current = autocomplete;
+        isInitializedRef.current = true;
+        console.log('Legacy Autocomplete initialized for AddressField');
+      }
     } catch (error) {
       console.error("Error initializing Google Places Autocomplete:", error);
     }
