@@ -1,9 +1,10 @@
-import { Table, Column, Model, DataType, BelongsTo, ForeignKey } from 'sequelize-typescript';
+import { Table, Column, Model, DataType, BelongsTo, ForeignKey, BelongsToMany } from 'sequelize-typescript';
 import { BaseModel } from './BaseModel';
 import { Promoter } from './Promoter';
 import { Chapter } from './Chapter';
 import { EventType } from './EventType';
 import { EventAudienceType } from './EventAudienceType';
+import { EventAffiliatedChapter } from './EventAffiliatedChapter';
 
 @Table({
   tableName: 'events',
@@ -201,8 +202,12 @@ export class Event extends BaseModel {
   @BelongsTo(() => EventType, 'event_type_id')
   eventType?: EventType;
 
+
   @BelongsTo(() => EventAudienceType, 'event_audience_type_id')
   eventAudienceType?: EventAudienceType;
+
+  @BelongsToMany(() => Chapter, () => EventAffiliatedChapter)
+  affiliatedChapters?: Chapter[];
 }
 
 

@@ -26,6 +26,7 @@ import { PlatformSetting } from './PlatformSetting';
 import { StewardListing } from './StewardListing';
 import { StewardListingImage } from './StewardListingImage';
 import { StewardClaim } from './StewardClaim';
+import { EventAffiliatedChapter } from './EventAffiliatedChapter';
 
 /**
  * Initialize all model associations
@@ -227,6 +228,7 @@ export {
   PlatformSetting,
   StewardListing,
   StewardListingImage,
-  StewardClaim
+  StewardClaim,
+  EventAffiliatedChapter
 };
 

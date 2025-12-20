@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from "react-native";
 import { COLORS } from "../lib/constants";
 
 interface VerificationBadgeProps {
-  type: "brother" | "sponsored-chapter" | "initiated-chapter" | "seller";
+  type: "brother" | "sponsored-chapter" | "affiliated-chapter" | "initiated-chapter" | "seller";
   chapterName?: string | null;
   season?: string | null;
   year?: number | null;
@@ -33,8 +33,21 @@ export default function VerificationBadge({
           style={[styles.diamondIcon, { backgroundColor: COLORS.crimson }]}
         />
         <Text style={[styles.badgeText, styles.sponsoredText]}>
-          Support the <Text style={styles.chapterNameBold}>{chapterName}</Text>{" "}
+          Supports the <Text style={styles.chapterNameBold}>{chapterName}</Text>{" "}
           chapter
+        </Text>
+      </View>
+    );
+  }
+
+  if (type === "affiliated-chapter" && chapterName) {
+    return (
+      <View style={[styles.badge, styles.sponsoredBadge]}>
+        <View
+          style={[styles.diamondIcon, { backgroundColor: COLORS.crimson }]}
+        />
+        <Text style={[styles.badgeText, styles.sponsoredText]}>
+          Brought to you by <Text style={styles.chapterNameBold}>{chapterName}</Text>
         </Text>
       </View>
     );

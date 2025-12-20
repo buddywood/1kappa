@@ -191,6 +191,7 @@ export interface Event {
   status: "ACTIVE" | "CLOSED" | "CANCELLED";
   created_at: Date;
   updated_at: Date;
+  affiliated_chapters?: Chapter[];
 }
 
 export interface EventType {

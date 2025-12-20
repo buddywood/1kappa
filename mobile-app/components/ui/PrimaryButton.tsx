@@ -37,6 +37,7 @@ export default function PrimaryButton({
         backgroundColor: '#9B111E', // Matching COLORS.crimson
       }, style]}
       labelClasses="text-white text-[17px] font-bold tracking-[0.3px]"
+      labelStyle={{ color: 'white' }}
     />
   );
 }

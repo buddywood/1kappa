@@ -66,6 +66,7 @@ const eventSchema = z.object({
     )
     .min(1),
   dress_code_notes: z.string().optional().nullable(),
+  affiliated_chapter_ids: z.array(z.number().int().positive()).optional(),
 });
 
 // Alias for backward compatibility
@@ -146,6 +147,23 @@ router.post(
           return ["business_casual"];
         })(),
         dress_code_notes: req.body.dress_code_notes || undefined,
+        affiliated_chapter_ids: (() => {
+          if (req.body.affiliated_chapter_ids) {
+            if (Array.isArray(req.body.affiliated_chapter_ids)) {
+              return req.body.affiliated_chapter_ids.map((id: any) =>
+                parseInt(id)
+              );
+            }
+            return [parseInt(req.body.affiliated_chapter_ids)];
+          }
+          if (req.body["affiliated_chapter_ids[]"]) {
+            const ids = req.body["affiliated_chapter_ids[]"];
+            return (Array.isArray(ids) ? ids : [ids]).map((id: any) =>
+              parseInt(id)
+            );
+          }
+          return undefined;
+        })(),
       });
 
       // Upload image to S3 if provided
@@ -192,6 +210,7 @@ router.post(
         ticket_price_cents: body.ticket_price_cents || 0,
         dress_codes: body.dress_codes,
         dress_code_notes: body.dress_code_notes ?? undefined,
+        affiliated_chapter_ids: body.affiliated_chapter_ids,
       });
 
       // If event is featured, create Stripe checkout session
@@ -518,6 +537,23 @@ router.put(
           return ["business_casual"];
         })(),
         dress_code_notes: req.body.dress_code_notes || undefined,
+        affiliated_chapter_ids: (() => {
+          if (req.body.affiliated_chapter_ids) {
+            if (Array.isArray(req.body.affiliated_chapter_ids)) {
+              return req.body.affiliated_chapter_ids.map((id: any) =>
+                parseInt(id)
+              );
+            }
+            return [parseInt(req.body.affiliated_chapter_ids)];
+          }
+          if (req.body["affiliated_chapter_ids[]"]) {
+            const ids = req.body["affiliated_chapter_ids[]"];
+            return (Array.isArray(ids) ? ids : [ids]).map((id: any) =>
+              parseInt(id)
+            );
+          }
+          return undefined;
+        })(),
       });
 
       // Upload image to S3 if provided
@@ -606,6 +642,7 @@ router.put(
         ticket_price_cents: body.ticket_price_cents || 0,
         dress_codes: body.dress_codes,
         dress_code_notes: body.dress_code_notes ?? null,
+        affiliated_chapter_ids: body.affiliated_chapter_ids,
       });
 
       return res.status(200).json({

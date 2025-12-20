@@ -5,6 +5,9 @@
     "baseUrl": ".",
     "paths": {
       "~/*": ["./*"]
-    }
-  }
+    },
+    "types": ["nativewind/types", "node"],
+    "skipLibCheck": true
+  },
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "nativewind-env.d.ts"]
 }

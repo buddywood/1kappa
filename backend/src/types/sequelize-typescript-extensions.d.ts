@@ -19,6 +19,7 @@ declare module "sequelize-typescript" {
   export const HasMany: AnyDecorator;
   export const HasOne: AnyDecorator;
   export const ForeignKey: AnyDecorator;
+  export const BelongsToMany: AnyDecorator;
 
   export const DataType: {
     [key: string]: any;

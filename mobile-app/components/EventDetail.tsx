@@ -292,10 +292,19 @@ export default function EventDetail({
 
             {/* Badges: Sponsored Chapter and Event Type */}
             <View style={styles.badgesContainer}>
-              {sponsoringChapterName && (
+              {/* Affiliated Chapters: Brought to you by */}
+              {event.affiliated_chapters && event.affiliated_chapters.length > 0 && (
+                <VerificationBadge
+                  type="affiliated-chapter"
+                  chapterName={event.affiliated_chapters.map((c) => c.name).join(", ")}
+                />
+              )}
+              
+              {/* Promoter Sponsoring Chapter: Supports */}
+              {event.promoter_sponsoring_chapter_id && (
                 <VerificationBadge
                   type="sponsored-chapter"
-                  chapterName={sponsoringChapterName}
+                  chapterName={getChapterName(event.promoter_sponsoring_chapter_id)}
                 />
               )}
               {event.event_type_id &&

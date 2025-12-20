@@ -1,5 +1,5 @@
 interface VerificationBadgeProps {
-  type: "brother" | "sponsored-chapter" | "initiated-chapter" | "seller";
+  type: "brother" | "sponsored-chapter" | "affiliated-chapter" | "initiated-chapter" | "seller";
   chapterName?: string | null;
   season?: string | null;
   year?: number | null;
@@ -50,6 +50,28 @@ export default function VerificationBadge({
         </svg>
         <span>
           Supports the <span className="font-bold">{chapterName}</span> chapter
+        </span>
+      </div>
+    );
+  }
+
+  if (type === "affiliated-chapter" && chapterName) {
+    return (
+      <div
+        className={`inline-flex items-center gap-1.5 bg-crimson/15 text-crimson px-2.5 py-1 rounded-full text-xs font-semibold border border-crimson/25 ${className}`}
+      >
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 12 12"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          className="flex-shrink-0"
+        >
+          <path d="M6 0 L12 6 L6 12 L0 6 Z" fill="currentColor" />
+        </svg>
+        <span>
+          Brought to you by <span className="font-bold">{chapterName}</span>
         </span>
       </div>
     );

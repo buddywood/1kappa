@@ -1,5 +1,7 @@
-import { Table, Column, Model, DataType, HasMany } from 'sequelize-typescript';
+import { Table, Column, Model, DataType, HasMany, BelongsToMany } from 'sequelize-typescript';
 import { BaseModel } from './BaseModel';
+import { Event } from './Event';
+import { EventAffiliatedChapter } from './EventAffiliatedChapter';
 
 @Table({
   tableName: 'chapters',
@@ -83,6 +85,8 @@ export class Chapter extends BaseModel {
   updated_at!: Date;
 
   // Associations will be defined in index.ts
+  @BelongsToMany(() => Event, () => EventAffiliatedChapter)
+  events?: Event[];
 }
 
 

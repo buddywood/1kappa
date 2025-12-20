@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { SUPPORT_URL } from '@/lib/constants';
+import AppStoreButtons from './AppStoreButtons';
 
 export default function Footer() {
   return (
@@ -8,6 +9,10 @@ export default function Footer() {
       <p className="mt-1">Connected by the Bond.</p>
       <p className="mt-4">© 2025 1Kappa – All Rights Reserved</p>
       <div className="mt-6 pt-6 border-t border-frost-gray dark:border-gray-900 max-w-2xl mx-auto">
+        <div className="mb-8">
+          <p className="text-sm font-semibold mb-3 tracking-wide text-midnight-navy/80 dark:text-gray-300">GET THE APP</p>
+          <AppStoreButtons />
+        </div>
         <div className="flex flex-wrap justify-center gap-4 mb-4">
           <Link 
             href="/terms" 

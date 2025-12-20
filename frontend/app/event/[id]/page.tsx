@@ -290,12 +290,22 @@ export default function EventPage() {
             <h1 className="text-3xl font-display font-bold text-midnight-navy dark:text-gray-100 mb-3">
               {event.title}
             </h1>
-            {/* Badges: Sponsored Chapter */}
+            {/* Badges: Affiliated Chapters */}
+            {/* Badges: Affiliated Chapters & Promoter Sponsor */}
             <div className="flex flex-wrap items-center gap-2">
-              {sponsoringChapterName && (
+              {/* Event Affiliated Chapters: Brought to you by */}
+              {event.affiliated_chapters && event.affiliated_chapters.length > 0 && (
+                <VerificationBadge
+                  type="affiliated-chapter"
+                  chapterName={event.affiliated_chapters.map((c) => c.name).join(", ")}
+                />
+              )}
+              
+              {/* Promoter Sponsoring Chapter: Supports */}
+              {event.promoter_sponsoring_chapter_id && (
                 <VerificationBadge
                   type="sponsored-chapter"
-                  chapterName={sponsoringChapterName}
+                  chapterName={getChapterName(event.promoter_sponsoring_chapter_id)}
                 />
               )}
             </div>

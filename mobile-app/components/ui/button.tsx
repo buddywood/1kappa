@@ -50,7 +50,9 @@ interface ButtonProps
     VariantProps<typeof buttonVariants> {
   label?: string;
   labelClasses?: string;
+  labelStyle?: any; // Add labelStyle prop
   loading?: boolean;
+  className?: string;
 }
 
 function Button({
@@ -59,6 +61,7 @@ function Button({
   size,
   label,
   labelClasses,
+  labelStyle, // Destructure labelStyle
   loading,
   children,
   ...props
@@ -83,6 +86,7 @@ function Button({
               className={cn(
                 buttonTextVariants({ variant, className: labelClasses })
               )}
+              style={labelStyle} // Apply labelStyle
             >
               {label}
             </Text>

@@ -25,6 +25,7 @@ import {
   Profession,
   FraternityMember,
   Favorite as FavoriteModel,
+  EventAffiliatedChapter,
 } from "./models";
 import {
   Chapter as ChapterType,
@@ -1080,6 +1081,7 @@ export async function createEvent(event: {
   )[];
   dress_code_notes?: string;
   status?: "ACTIVE" | "CLOSED" | "CANCELLED";
+  affiliated_chapter_ids?: number[];
 }): Promise<EventTypeType> {
   const newEvent = await Event.create({
     promoter_id: event.promoter_id,
@@ -1104,6 +1106,16 @@ export async function createEvent(event: {
     dress_code_notes: event.dress_code_notes || null,
     status: event.status || "ACTIVE",
   });
+
+  if (event.affiliated_chapter_ids && event.affiliated_chapter_ids.length > 0) {
+    await EventAffiliatedChapter.bulkCreate(
+      event.affiliated_chapter_ids.map((chapterId) => ({
+        event_id: newEvent.id,
+        chapter_id: chapterId,
+      }))
+    );
+  }
+
   return newEvent.toJSON() as EventTypeType;
 }
 
@@ -1136,7 +1148,22 @@ export async function getEventById(id: number): Promise<EventTypeType | null> {
       type: QueryTypes.SELECT,
     }
   );
-  return (result[0] as EventTypeType) || null;
+  
+  const event = (result[0] as EventTypeType) || null;
+  
+  if (event) {
+    const affiliatedChapters = await EventAffiliatedChapter.findAll({
+      where: { event_id: id },
+      include: [Chapter],
+    });
+    
+    event.affiliated_chapters = affiliatedChapters.map(ac => 
+      // @ts-ignore - ac.chapter is populated by include
+      ac.chapter ? (ac.chapter.toJSON() as ChapterType) : null
+    ).filter(c => c !== null) as ChapterType[];
+  }
+  
+  return event;
 }
 
 export async function getActiveEvents(): Promise<EventTypeType[]> {
@@ -1219,6 +1246,7 @@ export async function updateEvent(
     dress_codes?: string[];
     dress_code_notes?: string | null;
     status?: "ACTIVE" | "CLOSED" | "CANCELLED";
+    affiliated_chapter_ids?: number[];
   }
 ): Promise<EventTypeType> {
   const event = await Event.findByPk(eventId);
@@ -1256,6 +1284,21 @@ export async function updateEvent(
     event.status = updates.status;
 
   await event.save();
+
+  if (updates.affiliated_chapter_ids !== undefined) {
+    // Sync affiliated chapters: remove all existing and add new
+    await EventAffiliatedChapter.destroy({ where: { event_id: eventId } });
+    
+    if (updates.affiliated_chapter_ids.length > 0) {
+      await EventAffiliatedChapter.bulkCreate(
+        updates.affiliated_chapter_ids.map((chapterId) => ({
+          event_id: eventId,
+          chapter_id: chapterId,
+        }))
+      );
+    }
+  }
+
   return event.toJSON() as EventTypeType;
 }
 

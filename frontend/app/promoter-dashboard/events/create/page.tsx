@@ -15,7 +15,7 @@ import {
   type EventType,
   type EventAudienceType,
 } from "@/lib/api";
-import SearchableSelect from "../../../components/SearchableSelect";
+import MultiSearchableSelect from "../../../components/MultiSearchableSelect";
 import { SkeletonLoader } from "../../../components/SkeletonLoader";
 import AddressAutocomplete from "../../../components/AddressAutocomplete";
 import { Button } from "@/components/ui/button";
@@ -40,9 +40,7 @@ export default function CreateEventPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [selectedChapterId, setSelectedChapterId] = useState<number | null>(
-    null
-  );
+  const [affiliatedChapterIds, setAffiliatedChapterIds] = useState<number[]>([]);
   const [selectedEventTypeId, setSelectedEventTypeId] = useState<number | null>(
     null
   );
@@ -94,7 +92,7 @@ export default function CreateEventPage() {
 
         // Pre-select the promoter's sponsoring chapter if available
         if (promoterData.sponsoring_chapter_id) {
-          setSelectedChapterId(promoterData.sponsoring_chapter_id);
+          setAffiliatedChapterIds([promoterData.sponsoring_chapter_id]);
         }
       } catch (err: any) {
         console.error("Error loading data:", err);
@@ -199,8 +197,8 @@ export default function CreateEventPage() {
         throw new Error("Event audience type is required");
       }
 
-      if (!selectedChapterId) {
-        throw new Error("Sponsored chapter is required");
+      if (affiliatedChapterIds.length === 0) {
+        throw new Error("At least one affiliated chapter is required");
       }
 
       const formDataToSend = new FormData();
@@ -224,10 +222,16 @@ export default function CreateEventPage() {
         formDataToSend.append("is_featured", "true");
       }
 
+      // Use the first affiliated chapter as the primary sponsored chapter for backward compatibility
       formDataToSend.append(
         "sponsoring_chapter_id",
-        selectedChapterId.toString()
+        affiliatedChapterIds[0].toString()
       );
+
+      // Append all affiliated chapters
+      affiliatedChapterIds.forEach((id) => {
+        formDataToSend.append("affiliated_chapter_ids[]", id.toString());
+      });
 
       formDataToSend.append("event_type_id", selectedEventTypeId!.toString());
 
@@ -601,7 +605,7 @@ export default function CreateEventPage() {
           {/* Sponsored Chapter */}
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <Label htmlFor="chapter">Sponsored Chapter *</Label>
+              <Label htmlFor="chapter">Affiliated Chapters *</Label>
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -614,28 +618,26 @@ export default function CreateEventPage() {
                     </button>
                   </TooltipTrigger>
                   <TooltipContent className="max-w-xs">
-                    <p className="font-semibold mb-1">Sponsored Chapter</p>
+                    <p className="font-semibold mb-1">Affiliated Chapters</p>
                     <p className="text-sm">
-                      Select the chapter that will benefit from funds collected
-                      at this event. All proceeds from ticket sales and event
-                      fees will be directed to support the selected chapter's
-                      programs and initiatives.
+                      Select one or more chapters affiliated with this event. 
+                      The first selected chapter will be marked as the primary sponsor.
                     </p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </div>
-            <SearchableSelect
+            <MultiSearchableSelect
               options={chapters.map((chapter) => ({
                 id: chapter.id,
                 label: chapter.name,
-                value: chapter.id.toString(),
+                value: chapter.id,
               }))}
-              value={selectedChapterId ? selectedChapterId.toString() : ""}
+              value={affiliatedChapterIds}
               onChange={(value) =>
-                setSelectedChapterId(value ? parseInt(value) : null)
+                setAffiliatedChapterIds(value.map(v => typeof v === 'string' ? parseInt(v) : v))
               }
-              placeholder="Select a chapter"
+              placeholder="Select chapters"
               className="mt-2"
             />
           </div>

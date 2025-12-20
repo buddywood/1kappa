@@ -224,6 +224,7 @@ export interface Event {
   is_steward?: boolean;
   is_seller?: boolean;
   event_audience_type_description?: string | null;
+  affiliated_chapters?: Chapter[];
 }
 
 export interface EventType {
