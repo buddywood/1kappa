@@ -1,0 +1,68 @@
+name: Mobile App Build (1Kappa)
+
+on:
+  push:
+    branches:
+      - main
+      - development
+
+jobs:
+  mobile-quality:
+    name: Mobile Quality (Typecheck)
+    runs-on: ubuntu-latest
+    # Quality checks are fast, so we run them on every push to relevant branches
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: './package-lock.json'
+
+      - name: Install dependencies
+        working-directory: ./mobile-app
+        run: npm install
+
+      - name: TypeScript type check
+        working-directory: ./mobile-app
+        run: npm run typecheck
+
+  mobile-build:
+    name: Build Mobile App
+    needs: mobile-quality
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development')
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: './package-lock.json'
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        working-directory: ./mobile-app
+        run: npm install
+
+      - name: Build on Development (Preview Profile)
+        if: github.ref == 'refs/heads/development'
+        working-directory: ./mobile-app
+        run: eas build --profile preview --platform all --non-interactive
+
+      - name: Build on Main (Production Profile)
+        if: github.ref == 'refs/heads/main'
+        working-directory: ./mobile-app
+        run: eas build --profile production --platform all --non-interactive
