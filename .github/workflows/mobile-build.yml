@@ -1,4 +1,4 @@
-name: Mobile App Build (1Kappa)
+name: Mobile App Build
 
 on:
   push:

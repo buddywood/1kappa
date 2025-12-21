@@ -1,4 +1,4 @@
-name: CI → Lint → Test → Migrate → Preview/Prod Deploy (1Kappa)
+name: Web App build and deploy
 
 on:
   push:

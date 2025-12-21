@@ -28,6 +28,9 @@
       }
     },
     "production": {
+      "env": {
+        "SENTRY_AUTH_TOKEN": "SENTRY_AUTH_TOKEN"
+      },
       "distribution": "store",
       "ios": {
         "simulator": false,
