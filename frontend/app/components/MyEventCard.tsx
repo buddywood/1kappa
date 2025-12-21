@@ -86,6 +86,12 @@ export default function MyEventCard({ event, chapterName, onClose }: MyEventCard
                   </span>
                 </div>
               )}
+              {event.is_recurring && (
+                <div className="bg-midnight-navy/90 backdrop-blur-sm rounded-full px-2.5 py-1.5 flex items-center gap-1 shadow-md">
+                   <Calendar className="w-3 h-3 text-white" />
+                   <span className="text-white text-[10px] font-bold uppercase tracking-tight">Recurring</span>
+                </div>
+              )}
               <button
                 onClick={(e) => {
                   e.preventDefault();

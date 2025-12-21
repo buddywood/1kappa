@@ -189,8 +189,13 @@ export interface Event {
   )[];
   dress_code_notes: string | null;
   status: "ACTIVE" | "CLOSED" | "CANCELLED";
+  is_recurring: boolean;
+  recurrence_rule: string | null;
+  recurrence_end_date: Date | null;
   created_at: Date;
   updated_at: Date;
+  event_type_description?: string | null;
+  event_audience_type_description?: string | null;
   affiliated_chapters?: Chapter[];
 }
 

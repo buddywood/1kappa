@@ -111,6 +111,9 @@ export interface Event {
   )[];
   dress_code_notes: string | null;
   status: "ACTIVE" | "CLOSED" | "CANCELLED";
+  is_recurring?: boolean;
+  recurrence_rule?: string | null;
+  recurrence_end_date?: string | null;
   promoter_name?: string;
   promoter_email?: string;
   promoter_fraternity_member_id?: number | null;
@@ -124,6 +127,7 @@ export interface Event {
   is_steward?: boolean;
   is_seller?: boolean;
   event_audience_type_description?: string | null;
+  event_type_description?: string | null;
   affiliated_chapters?: Chapter[];
 }
 
@@ -1132,6 +1136,112 @@ export async function deleteNotification(
     }
   } catch (error) {
     console.error("Error deleting notification:", error);
+    throw error;
+  }
+}
+
+/**
+ * Save an event
+ */
+export async function saveEvent(token: string, eventId: number): Promise<void> {
+  try {
+    const res = await authenticatedFetch(
+      `${API_URL}/api/saved-events/${eventId}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.error || "Failed to save event");
+    }
+  } catch (error) {
+    console.error("Error saving event:", error);
+    throw error;
+  }
+}
+
+/**
+ * Unsave an event
+ */
+export async function unsaveEvent(
+  token: string,
+  eventId: number
+): Promise<void> {
+  try {
+    const res = await authenticatedFetch(
+      `${API_URL}/api/saved-events/${eventId}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.error || "Failed to unsave event");
+    }
+  } catch (error) {
+    console.error("Error unsaving event:", error);
+    throw error;
+  }
+}
+
+/**
+ * Check if an event is saved
+ */
+export async function checkEventSaved(
+  token: string,
+  eventId: number
+): Promise<boolean> {
+  try {
+    const res = await authenticatedFetch(
+      `${API_URL}/api/saved-events/check/${eventId}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!res.ok) {
+      return false;
+    }
+
+    const data = await res.json();
+    return data.saved || false;
+  } catch (error) {
+    console.error("Error checking saved status:", error);
+    return false;
+  }
+}
+
+/**
+ * Get all saved events for the current user
+ */
+export async function fetchSavedEvents(token: string): Promise<Event[]> {
+  try {
+    const res = await authenticatedFetch(`${API_URL}/api/saved-events`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error("Failed to fetch saved events");
+    }
+
+    return res.json();
+  } catch (error) {
+    console.error("Error fetching saved events:", error);
     throw error;
   }
 }

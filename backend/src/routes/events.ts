@@ -48,6 +48,9 @@ const eventSchema = z.object({
   event_link: z.string().url().optional().nullable(),
   is_featured: z.boolean().optional(),
   ticket_price_cents: z.number().int().min(0).optional(),
+  is_recurring: z.boolean().optional(),
+  recurrence_rule: z.string().optional().nullable(),
+  recurrence_end_date: z.string().optional().nullable(),
   dress_codes: z
     .array(
       z.enum([
@@ -147,6 +150,9 @@ router.post(
           return ["business_casual"];
         })(),
         dress_code_notes: req.body.dress_code_notes || undefined,
+        is_recurring: req.body.is_recurring === "true" || req.body.is_recurring === true,
+        recurrence_rule: req.body.recurrence_rule || undefined,
+        recurrence_end_date: req.body.recurrence_end_date || undefined,
         affiliated_chapter_ids: (() => {
           if (req.body.affiliated_chapter_ids) {
             if (Array.isArray(req.body.affiliated_chapter_ids)) {
@@ -210,6 +216,9 @@ router.post(
         ticket_price_cents: body.ticket_price_cents || 0,
         dress_codes: body.dress_codes,
         dress_code_notes: body.dress_code_notes ?? undefined,
+        is_recurring: body.is_recurring ?? false,
+        recurrence_rule: body.recurrence_rule ?? undefined,
+        recurrence_end_date: body.recurrence_end_date ? new Date(body.recurrence_end_date) : undefined,
         affiliated_chapter_ids: body.affiliated_chapter_ids,
       });
 
@@ -321,12 +330,14 @@ router.get("/upcoming", async (req: Request, res: Response) => {
         p.sponsoring_chapter_id as promoter_sponsoring_chapter_id,
         c.name as chapter_name,
         eat.description as event_audience_type_description,
+        et.description as event_type_description,
         CASE WHEN m.id IS NOT NULL THEN true ELSE false END as is_fraternity_member
       FROM events e
       JOIN promoters p ON e.promoter_id = p.id
       LEFT JOIN fraternity_members m ON p.email = m.email
       LEFT JOIN chapters c ON e.sponsored_chapter_id = c.id
       LEFT JOIN event_audience_types eat ON e.event_audience_type_id = eat.id
+      LEFT JOIN event_types et ON e.event_type_id = et.id
       WHERE p.status = 'APPROVED' AND e.status = 'ACTIVE' AND e.event_date >= NOW()
       ORDER BY e.event_date ASC
       LIMIT 5`
@@ -537,6 +548,9 @@ router.put(
           return ["business_casual"];
         })(),
         dress_code_notes: req.body.dress_code_notes || undefined,
+        is_recurring: req.body.is_recurring === "true" || req.body.is_recurring === true,
+        recurrence_rule: req.body.recurrence_rule || undefined,
+        recurrence_end_date: req.body.recurrence_end_date || undefined,
         affiliated_chapter_ids: (() => {
           if (req.body.affiliated_chapter_ids) {
             if (Array.isArray(req.body.affiliated_chapter_ids)) {
@@ -625,11 +639,11 @@ router.put(
       // Update event
       const updatedEvent = await updateEvent(eventId, {
         title: body.title,
-        description: body.description || null,
+        description: body.description ?? null,
         event_date: new Date(body.event_date),
         location: body.location,
-        city: city,
-        state: state,
+        city: city || null,
+        state: state || null,
         image_url: imageUrl !== undefined ? imageUrl : existingEvent.image_url,
         sponsored_chapter_id: body.sponsored_chapter_id,
         event_type_id: body.event_type_id,
@@ -637,11 +651,14 @@ router.put(
         all_day: body.all_day ?? false,
         duration_minutes: body.duration_minutes ?? null,
         event_link: body.event_link ?? null,
+        is_recurring: body.is_recurring ?? false,
+        recurrence_rule: body.recurrence_rule ?? null,
+        recurrence_end_date: body.recurrence_end_date ? new Date(body.recurrence_end_date) : null,
         is_featured: body.is_featured ?? false,
         featured_payment_status: featuredPaymentStatus,
         ticket_price_cents: body.ticket_price_cents || 0,
         dress_codes: body.dress_codes,
-        dress_code_notes: body.dress_code_notes ?? null,
+        dress_code_notes: body.dress_code_notes || null,
         affiliated_chapter_ids: body.affiliated_chapter_ids,
       });
 

@@ -211,6 +211,9 @@ export interface Event {
   )[];
   dress_code_notes: string | null;
   status: "ACTIVE" | "CLOSED" | "CANCELLED";
+  is_recurring?: boolean;
+  recurrence_rule?: string | null;
+  recurrence_end_date?: string | null;
   promoter_name?: string;
   promoter_email?: string;
   promoter_fraternity_member_id?: number | null;
@@ -224,6 +227,7 @@ export interface Event {
   is_steward?: boolean;
   is_seller?: boolean;
   event_audience_type_description?: string | null;
+  event_type_description?: string | null;
   affiliated_chapters?: Chapter[];
 }
 
@@ -809,6 +813,62 @@ export async function getFavoriteProducts(
     const errorData = await res.json().catch(() => ({}));
     const errorMessage = errorData.error || "Failed to fetch favorite products";
     throw new Error(errorMessage);
+  }
+
+  return res.json();
+}
+
+// Saved Events API
+export async function saveEvent(eventId: number): Promise<void> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/saved-events/${eventId}`, {
+    method: "POST",
+    headers,
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    const errorMessage = errorData.error || "Failed to save event";
+    throw new Error(errorMessage);
+  }
+}
+
+export async function unsaveEvent(eventId: number): Promise<void> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/saved-events/${eventId}`, {
+    method: "DELETE",
+    headers,
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    const errorMessage = errorData.error || "Failed to unsave event";
+    throw new Error(errorMessage);
+  }
+}
+
+export async function checkEventSaved(eventId: number): Promise<boolean> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/saved-events/check/${eventId}`, {
+    headers,
+  });
+
+  if (!res.ok) {
+    return false;
+  }
+
+  const data = await res.json();
+  return data.saved || false;
+}
+
+export async function fetchSavedEvents(): Promise<Event[]> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_URL}/api/saved-events`, {
+    headers,
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch saved events");
   }
 
   return res.json();

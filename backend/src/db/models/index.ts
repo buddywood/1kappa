@@ -27,6 +27,7 @@ import { StewardListing } from './StewardListing';
 import { StewardListingImage } from './StewardListingImage';
 import { StewardClaim } from './StewardClaim';
 import { EventAffiliatedChapter } from './EventAffiliatedChapter';
+import { SavedEvent } from './SavedEvent';
 
 /**
  * Initialize all model associations
@@ -132,6 +133,12 @@ Product.hasMany(Favorite, {
   as: 'favorites'
 });
 
+// Event associations
+Event.hasMany(SavedEvent, {
+  foreignKey: 'event_id',
+  as: 'savedEvents'
+});
+
 // User associations
 User.hasMany(Order, {
   foreignKey: 'user_id',
@@ -229,6 +236,7 @@ export {
   StewardListing,
   StewardListingImage,
   StewardClaim,
-  EventAffiliatedChapter
+  EventAffiliatedChapter,
+  SavedEvent
 };
 

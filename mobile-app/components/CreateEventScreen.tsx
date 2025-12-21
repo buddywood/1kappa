@@ -77,6 +77,13 @@ export default function CreateEventScreen({
     time.setHours(18, 0, 0, 0); // Default to 6:00 PM
     return time;
   });
+  const [showRecurrenceFrequencyPicker, setShowRecurrenceFrequencyPicker] = useState(false);
+  const [showRecurrenceEndDatePicker, setShowRecurrenceEndDatePicker] = useState(false);
+  const [selectedRecurrenceEndDate, setSelectedRecurrenceEndDate] = useState<Date>(() => {
+    const nextMonth = new Date();
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    return nextMonth;
+  });
 
   const dressCodeOptions = [
     {
@@ -163,6 +170,9 @@ export default function CreateEventScreen({
     ticket_price: "",
     dress_codes: ["business_casual"],
     dress_code_notes: "",
+    is_recurring: false,
+    recurrence_frequency: "weekly",
+    recurrence_end_date: "",
   });
 
   useEffect(() => {
@@ -268,7 +278,6 @@ export default function CreateEventScreen({
     setError(null);
 
     try {
-      // Combine date and time
       const eventDateTime =
         formData.event_date && formData.event_time
           ? `${formData.event_date}T${formData.event_time}:00`
@@ -281,6 +290,31 @@ export default function CreateEventScreen({
       formDataToSend.append("description", formData.description || "");
       formDataToSend.append("event_date", eventDateTime);
       formDataToSend.append("location", formData.location);
+
+      if (formData.is_recurring) {
+        formDataToSend.append("is_recurring", "true");
+        
+        // Generate RRULE
+        const { RRule } = require("rrule");
+        let freq;
+        switch (formData.recurrence_frequency) {
+          case "daily": freq = RRule.DAILY; break;
+          case "weekly": freq = RRule.WEEKLY; break;
+          case "monthly": freq = RRule.MONTHLY; break;
+          default: freq = RRule.WEEKLY;
+        }
+        
+        const rule = new RRule({
+          freq,
+          dtstart: new Date(eventDateTime),
+          until: formData.recurrence_end_date ? new Date(formData.recurrence_end_date) : undefined,
+        });
+        
+        formDataToSend.append("recurrence_rule", rule.toString());
+        if (formData.recurrence_end_date) {
+          formDataToSend.append("recurrence_end_date", formData.recurrence_end_date);
+        }
+      }
 
       if (formData.city) {
         formDataToSend.append("city", formData.city);
@@ -962,6 +996,95 @@ export default function CreateEventScreen({
           </TouchableOpacity>
         </View>
 
+        {/* Recurring Event */}
+        <View style={styles.section}>
+          <TouchableOpacity
+            style={styles.checkboxContainer}
+            onPress={() =>
+              setFormData({ ...formData, is_recurring: !formData.is_recurring })
+            }
+            activeOpacity={0.7}
+          >
+            <View
+              style={[
+                styles.checkbox,
+                formData.is_recurring && styles.checkboxChecked,
+              ]}
+            >
+              {formData.is_recurring && (
+                <Ionicons name="checkmark" size={16} color={COLORS.white} />
+              )}
+            </View>
+            <Text style={styles.checkboxLabel}>Recurring Event</Text>
+          </TouchableOpacity>
+        </View>
+
+        {formData.is_recurring && (
+          <>
+            {/* Recurrence Frequency */}
+            <View style={styles.section}>
+              <Text style={styles.label}>Frequency</Text>
+              <TouchableOpacity
+                style={[
+                  styles.input,
+                  {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  },
+                ]}
+                onPress={() => setShowRecurrenceFrequencyPicker(true)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.inputText}>
+                  {formData.recurrence_frequency.charAt(0).toUpperCase() + formData.recurrence_frequency.slice(1)}
+                </Text>
+                <Ionicons
+                  name="chevron-down"
+                  size={20}
+                  color={COLORS.midnightNavy}
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* Recurrence End Date */}
+            <View style={styles.section}>
+              <Text style={styles.label}>End Date (Optional)</Text>
+              <TouchableOpacity
+                style={[
+                  styles.input,
+                  {
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  },
+                ]}
+                onPress={() => setShowRecurrenceEndDatePicker(true)}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={
+                    formData.recurrence_end_date ? styles.inputText : styles.placeholderText
+                  }
+                >
+                  {formData.recurrence_end_date
+                    ? new Date(formData.recurrence_end_date).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })
+                    : "Forever (or until 90 days)"}
+                </Text>
+                <Ionicons
+                  name="calendar-outline"
+                  size={20}
+                  color={COLORS.midnightNavy}
+                />
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
+
         {/* Duration (only show if not all day) */}
         {!formData.all_day && (
           <View style={styles.row}>
@@ -1441,6 +1564,117 @@ export default function CreateEventScreen({
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Recurrence Frequency Picker Modal */}
+      <Modal
+        visible={showRecurrenceFrequencyPicker}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowRecurrenceFrequencyPicker(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Frequency</Text>
+              <TouchableOpacity
+                onPress={() => setShowRecurrenceFrequencyPicker(false)}
+                style={styles.modalCloseButton}
+              >
+                <Ionicons name="close" size={24} color={COLORS.midnightNavy} />
+              </TouchableOpacity>
+            </View>
+            {["daily", "weekly", "monthly"].map((freq) => (
+              <TouchableOpacity
+                key={freq}
+                style={[
+                  styles.chapterItem,
+                  formData.recurrence_frequency === freq && styles.chapterItemSelected,
+                ]}
+                onPress={() => {
+                  setFormData({ ...formData, recurrence_frequency: freq });
+                  setShowRecurrenceFrequencyPicker(false);
+                }}
+              >
+                <Text
+                  style={[
+                    styles.chapterItemText,
+                    formData.recurrence_frequency === freq && styles.chapterItemTextSelected,
+                  ]}
+                >
+                  {freq.charAt(0).toUpperCase() + freq.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Recurrence End Date Picker */}
+      {showRecurrenceEndDatePicker && (
+        <>
+          {Platform.OS === "ios" && (
+            <Modal
+              visible={showRecurrenceEndDatePicker}
+              transparent={true}
+              animationType="slide"
+              onRequestClose={() => setShowRecurrenceEndDatePicker(false)}
+            >
+              <View style={styles.modalOverlay}>
+                <View style={styles.modalContent}>
+                  <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>Select End Date</Text>
+                    <TouchableOpacity
+                      onPress={() => setShowRecurrenceEndDatePicker(false)}
+                      style={styles.modalCloseButton}
+                    >
+                      <Ionicons name="close" size={24} color={COLORS.midnightNavy} />
+                    </TouchableOpacity>
+                  </View>
+                  <DateTimePicker
+                    value={selectedRecurrenceEndDate}
+                    mode="date"
+                    display="spinner"
+                    onChange={(event: any, date?: Date) => {
+                      if (date) {
+                        setSelectedRecurrenceEndDate(date);
+                        setFormData({
+                          ...formData,
+                          recurrence_end_date: date.toISOString().split("T")[0],
+                        });
+                      }
+                    }}
+                    minimumDate={new Date()}
+                  />
+                  <TouchableOpacity
+                    style={styles.modalConfirmButton}
+                    onPress={() => setShowRecurrenceEndDatePicker(false)}
+                  >
+                    <Text style={styles.modalConfirmButtonText}>Done</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
+          )}
+          {Platform.OS === "android" && (
+            <DateTimePicker
+              value={selectedRecurrenceEndDate}
+              mode="date"
+              display="default"
+              onChange={(event: any, date?: Date) => {
+                setShowRecurrenceEndDatePicker(false);
+                if (date && event.type !== "dismissed") {
+                  setSelectedRecurrenceEndDate(date);
+                  setFormData({
+                    ...formData,
+                    recurrence_end_date: date.toISOString().split("T")[0],
+                  });
+                }
+              }}
+              minimumDate={new Date()}
+            />
+          )}
+        </>
+      )}
     </View>
   );
 }

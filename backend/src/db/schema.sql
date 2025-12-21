@@ -255,6 +255,9 @@ CREATE TABLE IF NOT EXISTS events (
   ),
   dress_code_notes TEXT,
   status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'CLOSED', 'CANCELLED')),
+  is_recurring BOOLEAN NOT NULL DEFAULT false,
+  recurrence_rule TEXT,
+  recurrence_end_date TIMESTAMP,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

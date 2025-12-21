@@ -255,6 +255,7 @@ export default StyleSheet.create({
     left: 12,
     right: 12,
     bottom: 12,
+    paddingRight: 80, // Make room for event type badge
   },
   eventTitle: {
     fontSize: 18,
@@ -332,5 +333,22 @@ export default StyleSheet.create({
     color: COLORS.crimson,
     fontWeight: "600",
     opacity: 1,
+  },
+  eventTypeBadgeContainer: {
+    position: "absolute",
+    bottom: 14,
+    right: 12,
+    zIndex: 10,
+  },
+  eventTypeBadgePill: {
+    backgroundColor: COLORS.auroraGold,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+  },
+  eventTypeBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: COLORS.midnightNavy,
   },
 });

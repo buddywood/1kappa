@@ -10,6 +10,8 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../lib/constants";
 import { getEventThumbnailUrl } from "../lib/imageUtils";
+import { useAuth } from "../lib/auth";
+import { saveEvent, unsaveEvent, checkEventSaved } from "../lib/api";
 import styles from "./EventsScreenStyles";
 
 const { width } = Dimensions.get("window");
@@ -30,16 +32,26 @@ export default function EventCard({
   distanceMiles,
 }: EventCardProps) {
   const [imageLoading, setImageLoading] = useState(true);
+  const [isSaved, setIsSaved] = useState(false);
+  const { token, isAuthenticated } = useAuth();
   const shimmerAnim = useRef(new Animated.Value(0)).current;
   const date = new Date(event.event_date);
   const month = date.toLocaleString("en-US", { month: "short" }).toUpperCase();
   const day = date.getDate();
 
-  // Reset image loading state when event changes
+  // Reset image loading state and save state when event changes
   useEffect(() => {
     setImageLoading(true);
     shimmerAnim.setValue(0);
-  }, [event.id, event.image_url]);
+    
+    if (isAuthenticated && token) {
+      checkEventSaved(token, event.id)
+        .then(setIsSaved)
+        .catch(console.error);
+    } else {
+      setIsSaved(false);
+    }
+  }, [event.id, event.image_url, token, isAuthenticated]);
 
   // Shimmer animation for skeleton loader
   useEffect(() => {
@@ -57,6 +69,25 @@ export default function EventCard({
       shimmerAnim.setValue(0);
     }
   }, [imageLoading, event.image_url, shimmerAnim]);
+
+  const handleSaveToggle = async () => {
+    if (!isAuthenticated || !token) {
+      // Unauthenticated users cannot bookmark
+      return;
+    }
+
+    try {
+      if (isSaved) {
+        await unsaveEvent(token, event.id);
+        setIsSaved(false);
+      } else {
+        await saveEvent(token, event.id);
+        setIsSaved(true);
+      }
+    } catch (error) {
+      console.error("Error toggling event save:", error);
+    }
+  };
 
   return (
     <TouchableOpacity
@@ -109,9 +140,23 @@ export default function EventCard({
         <View style={styles.eventImageOverlay} />
 
         <View style={styles.eventTopRow}>
-          <View style={styles.eventDateBadge}>
-            <Text style={styles.eventDateMonth}>{month}</Text>
-            <Text style={styles.eventDateDay}>{day}</Text>
+          <View style={{ flex: 1 }}>
+            <View style={styles.eventDateBadge}>
+              <Text style={styles.eventDateMonth}>{month}</Text>
+              <Text style={styles.eventDateDay}>{day}</Text>
+            </View>
+            {event.is_recurring && (
+              <View style={[styles.eventTagPill, { 
+                marginTop: 4, 
+                backgroundColor: COLORS.crimson, 
+                borderColor: 'transparent',
+                width: 52,
+                justifyContent: 'center',
+                paddingHorizontal: 0
+              }]}>
+                <Text style={[styles.eventTagText, { color: COLORS.white, fontSize: 8, fontWeight: 'bold' }]}>RECURRING</Text>
+              </View>
+            )}
           </View>
 
           <View style={{ flexDirection: "row", gap: 8 }}>
@@ -129,13 +174,13 @@ export default function EventCard({
             )}
 
             <TouchableOpacity
-              onPress={() => console.log("Bookmark", event.title)}
-              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              onPress={handleSaveToggle}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <Ionicons
-                name="bookmark-outline"
-                size={18}
-                color={COLORS.white}
+                name={isSaved ? "bookmark" : "bookmark-outline"}
+                size={20}
+                color={isSaved ? COLORS.crimson : COLORS.white}
               />
             </TouchableOpacity>
           </View>
@@ -151,6 +196,16 @@ export default function EventCard({
             </Text>
           )}
         </View>
+
+        {event.event_type_description && (
+          <View style={styles.eventTypeBadgeContainer}>
+            <View style={styles.eventTypeBadgePill}>
+              <Text style={styles.eventTypeBadgeText}>
+                {event.event_type_description}
+              </Text>
+            </View>
+          </View>
+        )}
       </View>
 
       <View style={styles.eventContent}>

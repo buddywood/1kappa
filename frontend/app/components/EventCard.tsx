@@ -6,6 +6,8 @@ import Link from 'next/link';
 import type { Event } from '@/lib/api';
 import { getEventThumbnailUrl } from '@/lib/imageUtils';
 import RSVPModal from './RSVPModal';
+import { saveEvent, unsaveEvent, checkEventSaved } from '@/lib/api';
+import { useSession } from 'next-auth/react';
 
 interface EventCardProps {
   event: Event;
@@ -15,6 +17,8 @@ interface EventCardProps {
 export default function EventCard({ event, chapterName }: EventCardProps) {
   const [isRSVPModalOpen, setIsRSVPModalOpen] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
+  const [isSaved, setIsSaved] = useState(false);
+  const { data: session } = useSession();
   const shimmerRef = useRef<HTMLDivElement>(null);
 
   const date = new Date(event.event_date);
@@ -51,6 +55,37 @@ export default function EventCard({ event, chapterName }: EventCardProps) {
   useEffect(() => {
     setImageLoading(true);
   }, [event.id, event.image_url]);
+
+  // Check if event is saved
+  useEffect(() => {
+    if (session?.user) {
+      checkEventSaved(event.id)
+        .then(setIsSaved)
+        .catch(console.error);
+    }
+  }, [event.id, session]);
+
+  const handleSaveToggle = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!session?.user) {
+      // Pattern: Ignore if unauthenticated
+      return;
+    }
+
+    try {
+      if (isSaved) {
+        await unsaveEvent(event.id);
+        setIsSaved(false);
+      } else {
+        await saveEvent(event.id);
+        setIsSaved(true);
+      }
+    } catch (error) {
+      console.error('Error toggling event save:', error);
+    }
+  };
 
   return (
     <>
@@ -94,15 +129,25 @@ export default function EventCard({ event, chapterName }: EventCardProps) {
             {/* Dark Overlay */}
             <div className="absolute inset-0 bg-black/35" />
 
-            {/* Top Row: Date Badge (left) + Price Badge & Bookmark (right) */}
+            {/* Top Row: Date Badge (left) + Price Badge, Recurring Badge & Bookmark (right) */}
             <div className="absolute top-3 left-3 right-3 flex justify-between items-start z-10">
-              {/* Date Badge */}
-              <div className="w-[52px] rounded-xl bg-white text-center py-1">
-                <div className="text-[11px] font-bold text-midnight-navy leading-tight">{month}</div>
-                <div className="text-lg font-extrabold text-midnight-navy leading-none">{day}</div>
+              {/* Left Side: Date Badge & Recurring Tag */}
+              <div className="flex flex-col gap-2">
+                {/* Date Badge */}
+                <div className="w-[52px] rounded-xl bg-white text-center py-1">
+                  <div className="text-[11px] font-bold text-midnight-navy leading-tight">{month}</div>
+                  <div className="text-lg font-extrabold text-midnight-navy leading-none">{day}</div>
+                </div>
+
+                {/* Recurring Badge */}
+                {event.is_recurring && (
+                  <div className="w-[52px] rounded-lg bg-crimson/90 text-center py-0.5 shadow-sm backdrop-blur-sm">
+                    <div className="text-[8px] font-bold text-white uppercase tracking-tighter leading-tight">Recurring</div>
+                  </div>
+                )}
               </div>
 
-              {/* Price Badge & Bookmark */}
+              {/* Right Side: Price Badge & Bookmark */}
               <div className="flex items-center gap-2">
                 {event.ticket_price_cents > 0 && (
                   <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-crimson">
@@ -117,14 +162,18 @@ export default function EventCard({ event, chapterName }: EventCardProps) {
 
                 {/* Bookmark */}
                 <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log('Bookmark', event.title);
-                  }}
-                  className="p-1.5 text-white hover:text-crimson transition-colors"
+                  onClick={handleSaveToggle}
+                  className={`p-1.5 transition-colors ${
+                    isSaved ? 'text-crimson' : 'text-white hover:text-crimson'
+                  }`}
+                  aria-label={isSaved ? "Unsave event" : "Save event"}
                 >
-                  <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg 
+                    className="w-4.5 h-4.5" 
+                    fill={isSaved ? "currentColor" : "none"} 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                   </svg>
                 </button>
@@ -132,14 +181,24 @@ export default function EventCard({ event, chapterName }: EventCardProps) {
             </div>
 
             {/* Bottom Overlay: Title + Chapter */}
-            <div className="absolute bottom-3 left-3 right-3 z-10">
-              <h3 className="text-lg font-extrabold text-white mb-1 line-clamp-2 drop-shadow-lg">
-                {event.title}
-              </h3>
-              {event.chapter_name && (
-                <p className="text-[13px] text-white/90 line-clamp-1 drop-shadow-md">
-                  {event.chapter_name}
-                </p>
+            <div className="absolute bottom-3 left-3 right-3 z-10 flex items-end justify-between gap-4">
+              <div className="flex-1">
+                <h3 className="text-lg font-extrabold text-white mb-1 line-clamp-2 drop-shadow-lg">
+                  {event.title}
+                </h3>
+                {event.chapter_name && (
+                  <p className="text-[13px] text-white/90 line-clamp-1 drop-shadow-md">
+                    {event.chapter_name}
+                  </p>
+                )}
+              </div>
+
+              {event.event_type_description && (
+                <div className="px-2.5 py-1 rounded-full bg-aurora-gold shadow-sm shrink-0 mb-1">
+                  <span className="text-[11px] font-bold text-midnight-navy">
+                    {event.event_type_description}
+                  </span>
+                </div>
               )}
             </div>
           </div>

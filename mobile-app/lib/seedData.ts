@@ -34,6 +34,7 @@ export const SEED_EVENTS: Event[] = [
     promoter_name: "Chicago Alumni Chapter",
     chapter_name: "Chicago Alumni",
     event_audience_type_description: "Public",
+    event_type_description: "In Person",
   },
   {
     id: 1002,
@@ -61,6 +62,7 @@ export const SEED_EVENTS: Event[] = [
     promoter_name: "Atlanta Alumni Chapter",
     chapter_name: "Atlanta Alumni",
     event_audience_type_description: "Public",
+    event_type_description: "In Person",
   },
   {
     id: 1003,
@@ -88,6 +90,7 @@ export const SEED_EVENTS: Event[] = [
     promoter_name: "Houston Alumni Chapter",
     chapter_name: "Houston Alumni",
     event_audience_type_description: "Public",
+    event_type_description: "In Person",
   },
 ];
 

@@ -64,6 +64,9 @@ export default function CreateEventPage() {
     ticket_price: "",
     dress_codes: ["business_casual"],
     dress_code_notes: "",
+    is_recurring: false,
+    recurrence_frequency: "weekly",
+    recurrence_end_date: "",
   });
 
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -272,6 +275,31 @@ export default function CreateEventPage() {
 
       if (imageFile) {
         formDataToSend.append("image", imageFile);
+      }
+
+      if (formData.is_recurring) {
+        formDataToSend.append("is_recurring", "true");
+        
+        // Generate RRULE
+        const { RRule } = await import("rrule");
+        let freq;
+        switch (formData.recurrence_frequency) {
+          case "daily": freq = RRule.DAILY; break;
+          case "weekly": freq = RRule.WEEKLY; break;
+          case "monthly": freq = RRule.MONTHLY; break;
+          default: freq = RRule.WEEKLY;
+        }
+        
+        const rule = new RRule({
+          freq,
+          dtstart: new Date(eventDateTime),
+          until: formData.recurrence_end_date ? new Date(formData.recurrence_end_date) : undefined,
+        });
+        
+        formDataToSend.append("recurrence_rule", rule.toString());
+        if (formData.recurrence_end_date) {
+          formDataToSend.append("recurrence_end_date", formData.recurrence_end_date);
+        }
       }
 
       const result = await createEvent(formDataToSend);
@@ -574,6 +602,66 @@ export default function CreateEventPage() {
               </div>
             </div>
           )}
+
+          {/* Recurrence */}
+          <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="is_recurring"
+                checked={formData.is_recurring}
+                onChange={(e) =>
+                  setFormData({ ...formData, is_recurring: e.target.checked })
+                }
+                className="h-4 w-4 rounded border-gray-300 text-crimson focus:ring-crimson"
+              />
+              <Label htmlFor="is_recurring" className="cursor-pointer font-semibold">
+                Recurring Event
+              </Label>
+            </div>
+
+            {formData.is_recurring && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-6 animate-in fade-in slide-in-from-left-2 transition-all">
+                <div>
+                  <Label htmlFor="recurrence_frequency">Frequency</Label>
+                  <select
+                    id="recurrence_frequency"
+                    value={formData.recurrence_frequency}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        recurrence_frequency: e.target.value as any,
+                      })
+                    }
+                    className="mt-2 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="recurrence_end_date">Ends On (Optional)</Label>
+                  <Input
+                    id="recurrence_end_date"
+                    type="date"
+                    value={formData.recurrence_end_date}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        recurrence_end_date: e.target.value,
+                      })
+                    }
+                    className="mt-2"
+                    min={formData.event_date || new Date().toISOString().split("T")[0]}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Leave empty for indefinite recurrence (up to 3 months display)
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Location with Google Places Autocomplete */}
           <AddressAutocomplete

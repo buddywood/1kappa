@@ -1,6 +1,14 @@
 import { Event } from './api';
 
-const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000';
+const getPublicFrontendUrl = () => {
+  if (process.env.NODE_ENV === 'production') {
+    return 'https://one-kappa.com';
+  }
+  // For development/preview, use the preview domain
+  return 'https://preview.one-kappa.com';
+};
+
+const FRONTEND_URL = process.env.NEXT_PUBLIC_FRONTEND_URL || getPublicFrontendUrl();
 
 /**
  * Generate calendar URLs for different calendar apps

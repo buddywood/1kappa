@@ -42,6 +42,7 @@ import { StewardListing } from './models/StewardListing';
 import { StewardListingImage } from './models/StewardListingImage';
 import { StewardClaim } from './models/StewardClaim';
 import { EventAffiliatedChapter } from './models/EventAffiliatedChapter';
+import { SavedEvent } from './models/SavedEvent';
 
 const sequelize = new Sequelize(databaseUrl, {
   dialect: 'postgres',
@@ -87,7 +88,8 @@ sequelize.addModels([
   StewardListing,
   StewardListingImage,
   StewardClaim,
-  EventAffiliatedChapter
+  EventAffiliatedChapter,
+  SavedEvent
 ]);
 
 // Initialize associations after models are registered

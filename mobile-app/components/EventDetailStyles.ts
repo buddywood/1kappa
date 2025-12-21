@@ -110,7 +110,7 @@ export const styles = StyleSheet.create({
   },
   eventTypePillContainer: {
     position: "absolute",
-    bottom: 16,
+    bottom: 21,
     right: 16,
   },
   eventTypePill: {

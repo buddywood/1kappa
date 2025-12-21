@@ -1,10 +1,11 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { COLORS } from "../lib/constants";
+import { formatList } from "../lib/listUtils";
 
 interface VerificationBadgeProps {
   type: "brother" | "sponsored-chapter" | "affiliated-chapter" | "initiated-chapter" | "seller";
-  chapterName?: string | null;
+  chapterName?: string | string[] | null;
   season?: string | null;
   year?: number | null;
 }
@@ -15,6 +16,14 @@ export default function VerificationBadge({
   season,
   year,
 }: VerificationBadgeProps) {
+  const chapterNames = Array.isArray(chapterName)
+    ? chapterName
+    : chapterName
+    ? [chapterName]
+    : [];
+  const formattedChapters = formatList(chapterNames);
+  const isMultiple = chapterNames.length > 1;
+
   if (type === "brother") {
     return (
       <View style={[styles.badge, styles.brotherBadge]}>
@@ -26,28 +35,28 @@ export default function VerificationBadge({
     );
   }
 
-  if (type === "sponsored-chapter" && chapterName) {
+  if (type === "sponsored-chapter" && formattedChapters) {
     return (
       <View style={[styles.badge, styles.sponsoredBadge]}>
         <View
           style={[styles.diamondIcon, { backgroundColor: COLORS.crimson }]}
         />
         <Text style={[styles.badgeText, styles.sponsoredText]}>
-          Supports the <Text style={styles.chapterNameBold}>{chapterName}</Text>{" "}
-          chapter
+          Supports the <Text style={styles.chapterNameBold}>{formattedChapters}</Text>{" "}
+          {isMultiple ? "chapters" : "chapter"}
         </Text>
       </View>
     );
   }
 
-  if (type === "affiliated-chapter" && chapterName) {
+  if (type === "affiliated-chapter" && formattedChapters) {
     return (
       <View style={[styles.badge, styles.sponsoredBadge]}>
         <View
           style={[styles.diamondIcon, { backgroundColor: COLORS.crimson }]}
         />
         <Text style={[styles.badgeText, styles.sponsoredText]}>
-          Brought to you by <Text style={styles.chapterNameBold}>{chapterName}</Text>
+          Brought to you by <Text style={styles.chapterNameBold}>{formattedChapters}</Text>
         </Text>
       </View>
     );

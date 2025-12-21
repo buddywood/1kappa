@@ -181,6 +181,25 @@ export class Event extends BaseModel {
   status!: 'ACTIVE' | 'CLOSED' | 'CANCELLED';
 
   @Column({
+    type: DataType.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
+  })
+  is_recurring!: boolean;
+
+  @Column({
+    type: DataType.TEXT,
+    allowNull: true
+  })
+  recurrence_rule!: string | null;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: true
+  })
+  recurrence_end_date!: Date | null;
+
+  @Column({
     type: DataType.DATE,
     defaultValue: DataType.NOW
   })

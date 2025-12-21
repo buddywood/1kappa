@@ -26,6 +26,7 @@ import {
   FraternityMember,
   Favorite as FavoriteModel,
   EventAffiliatedChapter,
+  SavedEvent as SavedEventModel,
 } from "./models";
 import {
   Chapter as ChapterType,
@@ -1081,6 +1082,9 @@ export async function createEvent(event: {
   )[];
   dress_code_notes?: string;
   status?: "ACTIVE" | "CLOSED" | "CANCELLED";
+  is_recurring?: boolean;
+  recurrence_rule?: string | null;
+  recurrence_end_date?: Date | null;
   affiliated_chapter_ids?: number[];
 }): Promise<EventTypeType> {
   const newEvent = await Event.create({
@@ -1098,6 +1102,9 @@ export async function createEvent(event: {
     all_day: event.all_day || false,
     duration_minutes: event.duration_minutes || null,
     event_link: event.event_link || null,
+    is_recurring: event.is_recurring || false,
+    recurrence_rule: event.recurrence_rule || null,
+    recurrence_end_date: event.recurrence_end_date || null,
     is_featured: event.is_featured || false,
     featured_payment_status: event.featured_payment_status || "UNPAID",
     stripe_payment_intent_id: event.stripe_payment_intent_id || null,
@@ -1131,6 +1138,7 @@ export async function getEventById(id: number): Promise<EventTypeType | null> {
             m.initiated_season as promoter_initiated_season,
             m.initiated_year as promoter_initiated_year,
             eat.description as event_audience_type_description,
+            et.description as event_type_description,
             CASE WHEN m.id IS NOT NULL THEN true ELSE false END as is_fraternity_member,
             CASE WHEN pr.status = 'APPROVED' THEN true ELSE false END as is_promoter,
             CASE WHEN st.id IS NOT NULL THEN true ELSE false END as is_steward,
@@ -1142,6 +1150,7 @@ export async function getEventById(id: number): Promise<EventTypeType | null> {
      LEFT JOIN stewards st ON st.user_id = u_st.id AND st.status = 'APPROVED'
      LEFT JOIN sellers s ON pr.email = s.email AND s.status = 'APPROVED'
      LEFT JOIN event_audience_types eat ON e.event_audience_type_id = eat.id
+     LEFT JOIN event_types et ON e.event_type_id = et.id
      WHERE e.id = :id`,
     {
       replacements: { id },
@@ -1166,21 +1175,36 @@ export async function getEventById(id: number): Promise<EventTypeType | null> {
   return event;
 }
 
+import { expandEvents } from "../lib/recurrence";
+
 export async function getActiveEvents(): Promise<EventTypeType[]> {
   // Use raw SQL for complex query
+  // We fetch both upcoming one-time events AND all active recurring events (even if they started in the past)
   const result = await sequelize.query(
     `SELECT e.*, 
             p.name as promoter_name, 
             p.status as promoter_status,
-            eat.description as event_audience_type_description
+            eat.description as event_audience_type_description,
+            et.description as event_type_description
      FROM events e
      JOIN promoters p ON e.promoter_id = p.id
      LEFT JOIN event_audience_types eat ON e.event_audience_type_id = eat.id
-     WHERE p.status = 'APPROVED' AND e.status = 'ACTIVE' AND e.event_date >= NOW()
+     LEFT JOIN event_types et ON e.event_type_id = et.id
+     WHERE p.status = 'APPROVED' 
+       AND e.status = 'ACTIVE' 
+       AND (
+         (e.is_recurring = false AND e.event_date >= NOW())
+         OR 
+         (e.is_recurring = true AND (e.recurrence_end_date IS NULL OR e.recurrence_end_date >= NOW()))
+       )
      ORDER BY e.event_date ASC`,
     { type: QueryTypes.SELECT }
   );
-  return result as EventTypeType[];
+
+  const rawEvents = result as EventTypeType[];
+  
+  // Expand recurring events for the next 90 days
+  return expandEvents(rawEvents);
 }
 
 export async function getAllEvents(): Promise<EventTypeType[]> {
@@ -1189,10 +1213,12 @@ export async function getAllEvents(): Promise<EventTypeType[]> {
     `SELECT e.*, 
             p.name as promoter_name, 
             p.status as promoter_status,
-            eat.description as event_audience_type_description
+            eat.description as event_audience_type_description,
+            et.description as event_type_description
      FROM events e
      JOIN promoters p ON e.promoter_id = p.id
      LEFT JOIN event_audience_types eat ON e.event_audience_type_id = eat.id
+     LEFT JOIN event_types et ON e.event_type_id = et.id
      WHERE p.status = 'APPROVED'
      ORDER BY e.event_date ASC`,
     { type: QueryTypes.SELECT }
@@ -1206,9 +1232,11 @@ export async function getEventsByPromoter(
   // Use raw SQL for complex query
   const result = await sequelize.query(
     `SELECT e.*, 
-            eat.description as event_audience_type_description
+            eat.description as event_audience_type_description,
+            et.description as event_type_description
      FROM events e
      LEFT JOIN event_audience_types eat ON e.event_audience_type_id = eat.id
+     LEFT JOIN event_types et ON e.event_type_id = et.id
      WHERE e.promoter_id = :promoterId 
      ORDER BY e.event_date DESC`,
     {
@@ -1246,6 +1274,9 @@ export async function updateEvent(
     dress_codes?: string[];
     dress_code_notes?: string | null;
     status?: "ACTIVE" | "CLOSED" | "CANCELLED";
+    is_recurring?: boolean;
+    recurrence_rule?: string | null;
+    recurrence_end_date?: Date | null;
     affiliated_chapter_ids?: number[];
   }
 ): Promise<EventTypeType> {
@@ -1276,6 +1307,12 @@ export async function updateEvent(
     event.dress_codes = updates.dress_codes;
   if (updates.dress_code_notes !== undefined)
     event.dress_code_notes = updates.dress_code_notes;
+  if (updates.is_recurring !== undefined)
+    event.is_recurring = updates.is_recurring;
+  if (updates.recurrence_rule !== undefined)
+    event.recurrence_rule = updates.recurrence_rule;
+  if (updates.recurrence_end_date !== undefined)
+    event.recurrence_end_date = updates.recurrence_end_date;
   if (updates.is_featured !== undefined)
     event.is_featured = updates.is_featured;
   if (updates.featured_payment_status !== undefined)
@@ -1329,10 +1366,12 @@ export async function getAllEventsForAdmin(): Promise<EventTypeType[]> {
     `SELECT e.*, 
             p.name as promoter_name, 
             p.status as promoter_status,
-            eat.description as event_audience_type_description
+            eat.description as event_audience_type_description,
+            et.description as event_type_description
      FROM events e
      JOIN promoters p ON e.promoter_id = p.id
      LEFT JOIN event_audience_types eat ON e.event_audience_type_id = eat.id
+     LEFT JOIN event_types et ON e.event_type_id = et.id
      ORDER BY e.event_date DESC`,
     { type: QueryTypes.SELECT }
   );
@@ -1346,10 +1385,12 @@ export async function getEventWithOwnerInfo(
     `SELECT e.*,
             p.name as owner_name,
             p.email as owner_email,
-            eat.description as event_audience_type_description
+            eat.description as event_audience_type_description,
+            et.description as event_type_description
      FROM events e
      JOIN promoters p ON e.promoter_id = p.id
      LEFT JOIN event_audience_types eat ON e.event_audience_type_id = eat.id
+     LEFT JOIN event_types et ON e.event_type_id = et.id
      WHERE e.id = :eventId`,
     {
       replacements: { eventId },
@@ -2032,6 +2073,73 @@ export async function getFavoriteProductsByUser(
     }
   );
   return result as ProductType[];
+}
+
+export async function addSavedEvent(
+  userEmail: string,
+  eventId: number
+): Promise<SavedEventModel | null> {
+  try {
+    const savedEvent = await SavedEventModel.create({
+      user_email: userEmail,
+      event_id: eventId,
+    });
+    return savedEvent;
+  } catch (error: any) {
+    if (error.name === "SequelizeUniqueConstraintError") {
+      return await SavedEventModel.findOne({
+        where: { user_email: userEmail, event_id: eventId },
+      });
+    }
+    throw error;
+  }
+}
+
+export async function removeSavedEvent(
+  userEmail: string,
+  eventId: number
+): Promise<boolean> {
+  const result = await SavedEventModel.destroy({
+    where: { user_email: userEmail, event_id: eventId },
+  });
+  return result > 0;
+}
+
+export async function isEventSaved(
+  userEmail: string,
+  eventId: number
+): Promise<boolean> {
+  const count = await SavedEventModel.count({
+    where: { user_email: userEmail, event_id: eventId },
+  });
+  return count > 0;
+}
+
+export async function getSavedEventsByUser(
+  userEmail: string
+): Promise<any[]> {
+  // Use raw SQL to get event details along with the saved status
+  const result = await sequelize.query(
+    `SELECT e.*, 
+            c.name as chapter_name,
+            et.description as event_type_description,
+            eat.description as event_audience_type_description,
+            p.name as promoter_name,
+            se.created_at as saved_at
+     FROM saved_events se
+     JOIN events e ON se.event_id = e.id
+     LEFT JOIN chapters c ON e.sponsored_chapter_id = c.id
+     LEFT JOIN event_types et ON e.event_type_id = et.id
+     LEFT JOIN event_audience_types eat ON e.event_audience_type_id = eat.id
+     LEFT JOIN promoters p ON e.promoter_id = p.id
+     WHERE se.user_email = :userEmail
+     ORDER BY se.created_at DESC`,
+    {
+      replacements: { userEmail },
+      type: QueryTypes.SELECT,
+    }
+  );
+  return result;
 }
 
 // Verification queries

@@ -1,6 +1,8 @@
+import { formatList } from "@/lib/listUtils";
+
 interface VerificationBadgeProps {
   type: "brother" | "sponsored-chapter" | "affiliated-chapter" | "initiated-chapter" | "seller";
-  chapterName?: string | null;
+  chapterName?: string | string[] | null;
   season?: string | null;
   year?: number | null;
   className?: string;
@@ -13,6 +15,14 @@ export default function VerificationBadge({
   year,
   className = "",
 }: VerificationBadgeProps) {
+  const chapterNames = Array.isArray(chapterName)
+    ? chapterName
+    : chapterName
+    ? [chapterName]
+    : [];
+  const formattedChapters = formatList(chapterNames);
+  const isMultiple = chapterNames.length > 1;
+
   if (type === "brother") {
     return (
       <div
@@ -33,7 +43,7 @@ export default function VerificationBadge({
     );
   }
 
-  if (type === "sponsored-chapter" && chapterName) {
+  if (type === "sponsored-chapter" && formattedChapters) {
     return (
       <div
         className={`inline-flex items-center gap-1.5 bg-crimson/15 text-crimson px-2.5 py-1 rounded-full text-xs font-semibold border border-crimson/25 ${className}`}
@@ -49,13 +59,14 @@ export default function VerificationBadge({
           <path d="M6 0 L12 6 L6 12 L0 6 Z" fill="currentColor" />
         </svg>
         <span>
-          Supports the <span className="font-bold">{chapterName}</span> chapter
+          Supports the <span className="font-bold">{formattedChapters}</span>{" "}
+          {isMultiple ? "chapters" : "chapter"}
         </span>
       </div>
     );
   }
 
-  if (type === "affiliated-chapter" && chapterName) {
+  if (type === "affiliated-chapter" && formattedChapters) {
     return (
       <div
         className={`inline-flex items-center gap-1.5 bg-crimson/15 text-crimson px-2.5 py-1 rounded-full text-xs font-semibold border border-crimson/25 ${className}`}
@@ -71,7 +82,7 @@ export default function VerificationBadge({
           <path d="M6 0 L12 6 L6 12 L0 6 Z" fill="currentColor" />
         </svg>
         <span>
-          Brought to you by <span className="font-bold">{chapterName}</span>
+          Brought to you by <span className="font-bold">{formattedChapters}</span>
         </span>
       </div>
     );

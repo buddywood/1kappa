@@ -30,6 +30,29 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   title: '1Kappa | One Brotherhood. Infinite Impact',
   description: 'A digital home for Kappa brothers worldwide. Community, Commerce, Culture, and Contribution. Shop authentic merchandise from verified fraternity members.',
+  metadataBase: new URL(process.env.NODE_ENV === 'production' ? 'https://one-kappa.com' : 'https://preview.one-kappa.com'),
+  openGraph: {
+    title: '1Kappa | One Brotherhood. Infinite Impact',
+    description: 'A digital home for Kappa brothers worldwide. Community, Commerce, Culture, and Contribution.',
+    url: '/',
+    siteName: '1Kappa',
+    images: [
+      {
+        url: '/og-image.png', // We should make sure this exists or use a fallback
+        width: 1200,
+        height: 630,
+        alt: '1Kappa - One Brotherhood. Infinite Impact',
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: '1Kappa | One Brotherhood. Infinite Impact',
+    description: 'A digital home for Kappa brothers worldwide.',
+    images: ['/og-image.png'],
+  },
   icons: {
     icon: [
       { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },

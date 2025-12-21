@@ -64,6 +64,7 @@ export default function EventDetail({
   const [imageLoading, setImageLoading] = useState(true);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showQRCode, setShowQRCode] = useState(false);
+  const [showFlyerModal, setShowFlyerModal] = useState(false);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const shimmerAnim = useRef(new Animated.Value(0)).current;
 
@@ -168,6 +169,14 @@ export default function EventDetail({
       all_white: "All White",
     };
     return dressCodeMap[code] || code;
+  };
+
+  const formatRecurrence = (ruleStr: string | null | undefined) => {
+    if (!ruleStr) return null;
+    if (ruleStr.includes("FREQ=DAILY")) return "Daily";
+    if (ruleStr.includes("FREQ=WEEKLY")) return "Weekly";
+    if (ruleStr.includes("FREQ=MONTHLY")) return "Monthly";
+    return "Recurring";
   };
 
   if (loading) {
@@ -284,42 +293,43 @@ export default function EventDetail({
             </View>
           )}
           <View style={styles.fullImageGradient} />
+
+          {/* Event Type Badge Overlay */}
+          {event.event_type_id &&
+            (() => {
+              const eventType = eventTypes.find(
+                (et) => et.id === event.event_type_id
+              );
+              return eventType ? (
+                <View style={styles.eventTypePillContainer}>
+                  <View style={styles.eventTypePill}>
+                    <Text style={styles.eventTypePillText}>
+                      {eventType.description}
+                    </Text>
+                  </View>
+                </View>
+              ) : null;
+            })()}
         </View>
         {/* Event Info */}
         <View style={styles.contentCard}>
           <View style={styles.infoContainer}>
             <Text style={styles.eventTitle}>{event.title}</Text>
 
-            {/* Badges: Sponsored Chapter and Event Type */}
+            {/* Badges: Sponsoring Chapter */}
             <View style={styles.badgesContainer}>
-              {/* Affiliated Chapters: Brought to you by */}
-              {event.affiliated_chapters && event.affiliated_chapters.length > 0 && (
+              {/* Affiliated or Sponsoring Chapters: Brought to you by */}
+              {((event.affiliated_chapters && event.affiliated_chapters.length > 0) || 
+                sponsoringChapterName) && (
                 <VerificationBadge
                   type="affiliated-chapter"
-                  chapterName={event.affiliated_chapters.map((c) => c.name).join(", ")}
+                  chapterName={
+                    event.affiliated_chapters && event.affiliated_chapters.length > 0
+                      ? event.affiliated_chapters.map((c) => c.name)
+                      : (sponsoringChapterName || "")
+                  }
                 />
               )}
-              
-              {/* Promoter Sponsoring Chapter: Supports */}
-              {event.promoter_sponsoring_chapter_id && (
-                <VerificationBadge
-                  type="sponsored-chapter"
-                  chapterName={getChapterName(event.promoter_sponsoring_chapter_id)}
-                />
-              )}
-              {event.event_type_id &&
-                (() => {
-                  const eventType = eventTypes.find(
-                    (et) => et.id === event.event_type_id
-                  );
-                  return eventType ? (
-                    <View style={styles.eventTypeBadge}>
-                      <Text style={styles.eventTypeBadgeText}>
-                        {eventType.description}
-                      </Text>
-                    </View>
-                  ) : null;
-                })()}
             </View>
 
             {/* Event Details */}
@@ -346,6 +356,19 @@ export default function EventDetail({
                   {formatTime(event.event_date)}
                 </Text>
               </View>
+              {event.is_recurring && (
+                <View style={styles.detailRow}>
+                  <Ionicons
+                    name="repeat-outline"
+                    size={20}
+                    color={COLORS.crimson}
+                  />
+                  <Text style={[styles.detailText, { color: COLORS.crimson, fontWeight: '600' }]}>
+                    {formatRecurrence(event.recurrence_rule)}
+                    {event.recurrence_end_date && ` until ${formatDate(event.recurrence_end_date)}`}
+                  </Text>
+                </View>
+              )}
               <View style={styles.detailRow}>
                 <Ionicons
                   name="location-outline"
@@ -539,6 +562,23 @@ export default function EventDetail({
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[
+                      styles.secondaryButton,
+                      styles.actionButton,
+                      styles.buttonWithSpacing,
+                    ]}
+                    onPress={() => setShowFlyerModal(true)}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons
+                      name="eye-outline"
+                      size={20}
+                      color={COLORS.crimson}
+                      style={{ marginRight: 8 }}
+                    />
+                    <Text style={styles.secondaryButtonText}>View Flyer</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
                       styles.primaryButton,
                       styles.actionButton,
                       styles.shareButton,
@@ -574,6 +614,23 @@ export default function EventDetail({
                       style={{ marginRight: 8 }}
                     />
                     <Text style={styles.primaryButtonText}>Share</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.secondaryButton,
+                      styles.actionButton,
+                      styles.buttonWithSpacing,
+                    ]}
+                    onPress={() => setShowFlyerModal(true)}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons
+                      name="eye-outline"
+                      size={20}
+                      color={COLORS.crimson}
+                      style={{ marginRight: 8 }}
+                    />
+                    <Text style={styles.secondaryButtonText}>View Flyer</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[
@@ -810,6 +867,43 @@ export default function EventDetail({
                 <Text style={styles.shareOptionText}>Outlook Calendar</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Flyer Modal */}
+      <Modal
+        visible={showFlyerModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowFlyerModal(false)}
+      >
+        <View style={[styles.modalOverlay, { backgroundColor: "rgba(0, 0, 0, 0.9)" }]}>
+          <TouchableOpacity
+            style={{
+              position: "absolute",
+              top: insets.top + 10,
+              right: 20,
+              zIndex: 10,
+              padding: 10,
+              backgroundColor: "rgba(0,0,0,0.5)",
+              borderRadius: 25,
+            }}
+            onPress={() => setShowFlyerModal(false)}
+          >
+            <Ionicons name="close" size={24} color={COLORS.white} />
+          </TouchableOpacity>
+
+          <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+            {event.image_url ? (
+              <Image
+                source={{ uri: getEventFullSizeUrl(event.image_url) || event.image_url }}
+                style={{ width: width, height: "80%" }}
+                resizeMode="contain"
+              />
+            ) : (
+              <Text style={{ color: COLORS.white }}>No flyer available</Text>
+            )}
           </View>
         </View>
       </Modal>
