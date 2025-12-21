@@ -1,5 +1,5 @@
 import * as React from "react";
-import { TextInput, type TextInputProps } from "react-native";
+import { TextInput, type TextInputProps, Platform } from "react-native";
 import { cn } from "~/lib/utils";
 
 export interface InputProps extends TextInputProps {
@@ -8,8 +8,25 @@ export interface InputProps extends TextInputProps {
 }
 
 const Input = React.forwardRef<TextInput, InputProps>(
-  ({ className, error, placeholderTextColor, ...props }, ref) => {
+  ({ className, error, placeholderTextColor, style, ...props }, ref) => {
     const [isFocused, setIsFocused] = React.useState(false);
+
+    // Background color: white with tint by default, pure white when focused
+    const backgroundColor = Platform.select({
+      native: isFocused ? "#FFFFFF" : "#FAFAFA", // pure white when focused, tinted white otherwise
+      default: isFocused ? "#FFFFFF" : "hsl(var(--background))",
+    });
+    
+    const borderColor = error
+      ? "#DC2626" // destructive
+      : isFocused
+      ? "#9B111E" // primary/crimson
+      : "#E8E5DA"; // input border (lighter cream)
+
+    const textColor = Platform.select({
+      native: "#0D0D0F", // midnight navy
+      default: "hsl(var(--foreground))",
+    });
 
     return (
       <TextInput
@@ -25,8 +42,31 @@ const Input = React.forwardRef<TextInput, InputProps>(
           props.editable === false && "opacity-50 web:cursor-not-allowed",
           className
         )}
+        style={[
+          {
+            backgroundColor: backgroundColor,
+            borderWidth: 1,
+            borderColor: borderColor,
+            borderRadius: 8,
+            paddingHorizontal: 16,
+            paddingVertical: 12,
+            fontSize: 16,
+            color: textColor,
+            textAlignVertical: props.multiline ? "top" : "center",
+          },
+          isFocused && !error && {
+            backgroundColor: "#FFFFFF", // pure white when focused
+            borderColor: "#9B111E",
+            borderWidth: 2,
+          },
+          error && {
+            borderColor: "#DC2626",
+            borderWidth: 1,
+          },
+          style,
+        ]}
         placeholderTextColor={
-          placeholderTextColor ?? "hsl(var(--muted-foreground))"
+          placeholderTextColor ?? "#666666"
         }
         {...props}
       />

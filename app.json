@@ -1,3 +1,18 @@
 {
-  "expo": {}
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "a43e21f8-fb86-481c-85de-22b723c8e36d"
+      }
+    },
+    "android": {
+      "package": "com.onekappa.app"
+    },
+    "ios": {
+      "bundleIdentifier": "com.onekappa.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    }
+  }
 }

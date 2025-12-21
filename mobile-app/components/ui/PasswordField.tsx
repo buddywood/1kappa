@@ -38,18 +38,26 @@ export default function PasswordField({
           onChangeText={onChangeText}
           secureTextEntry={!showPassword}
           error={!!error}
-          className="pr-12"
+          style={{ paddingRight: 48 }}
           {...textInputProps}
         />
         <TouchableOpacity
           onPress={onToggleVisibility}
-          className="absolute right-0 top-0 h-14 w-12 items-center justify-center"
+          style={{
+            position: 'absolute',
+            right: 8,
+            top: 0,
+            bottom: 0,
+            width: 40,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
           activeOpacity={0.7}
         >
           <Ionicons
             name={showPassword ? "eye-off-outline" : "eye-outline"}
-            size={24}
-            color="hsl(var(--muted-foreground))"
+            size={22}
+            color="#666666"
           />
         </TouchableOpacity>
       </View>
