@@ -4,10 +4,19 @@
     "strict": true,
     "baseUrl": ".",
     "paths": {
-      "~/*": ["./*"]
+      "~/*": [
+        "./*"
+      ]
     },
-    "types": ["nativewind/types", "node"],
+    "types": [
+      "nativewind/types",
+      "node"
+    ],
     "skipLibCheck": true
   },
-  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "nativewind-env.d.ts"]
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "nativewind-env.d.ts"
+  ]
 }
