@@ -2,7 +2,7 @@
   "expo": {
     "name": "1KAPPA",
     "slug": "onekappa-mobile-app",
-    "version": "25.12.25",
+    "version": "1.1.26",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -32,7 +32,15 @@
         }
       ],
       "@react-native-community/datetimepicker",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "project": "react-native",
+          "organization": "ebillys-websolutions"
+        }
+      ]
     ],
     "ios": {
       "supportsTablet": true,
@@ -58,7 +66,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "05c24793-5e28-4cf6-a513-0bf67e5ac7a3"
+        "projectId": "a43e21f8-fb86-481c-85de-22b723c8e36d"
       }
     }
   }
