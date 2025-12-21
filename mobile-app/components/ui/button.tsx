@@ -1,6 +1,6 @@
 import { cva, type VariantProps } from 'class-variance-authority';
 import React from 'react';
-import { Pressable, Text, ActivityIndicator, Platform, ViewStyle, TextStyle } from 'react-native';
+import { Pressable, Text, ActivityIndicator, Platform, ViewStyle, TextStyle, StyleProp } from 'react-native';
 import { cn } from '~/lib/utils';
 
 const buttonVariants = cva(
@@ -50,10 +50,10 @@ interface ButtonProps
     VariantProps<typeof buttonVariants> {
   label?: string;
   labelClasses?: string;
-  labelStyle?: TextStyle;
+  labelStyle?: StyleProp<TextStyle>;
   loading?: boolean;
   className?: string;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 }
 
 function Button({

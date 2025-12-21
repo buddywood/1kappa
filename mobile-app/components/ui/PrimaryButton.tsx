@@ -1,5 +1,5 @@
 import React from 'react';
-import { ViewStyle } from 'react-native';
+import { ViewStyle, StyleProp } from 'react-native';
 import { Button } from './button';
 import { cn } from '~/lib/utils';
 
@@ -9,7 +9,7 @@ interface PrimaryButtonProps {
   loading?: boolean;
   loadingText?: string;
   disabled?: boolean;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   className?: string;
 }
 
