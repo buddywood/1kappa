@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - development
 
 jobs:
   mobile-quality:
@@ -34,7 +33,7 @@ jobs:
     name: Build Mobile App
     needs: mobile-quality
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development')
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -57,12 +56,6 @@ jobs:
         working-directory: ./mobile-app
         run: npm install
 
-      - name: Build on Development (Preview Profile)
-        if: github.ref == 'refs/heads/development'
-        working-directory: ./mobile-app
-        run: eas build --profile preview --platform all --non-interactive
-
       - name: Build on Main (Production Profile)
-        if: github.ref == 'refs/heads/main'
         working-directory: ./mobile-app
         run: eas build --profile production --platform all --non-interactive
