@@ -236,11 +236,36 @@ export default function SellerDashboardPage() {
                 </Button>
               )}
               <Button asChild variant="outline">
-                <Link href="/profile" className="flex items-center gap-2">
+                <Link href="/seller-dashboard/profile" className="flex items-center gap-2">
                   <Settings className="h-4 w-4" />
-                  Edit Profile
+                  Edit Seller Profile
                 </Link>
               </Button>
+              {(seller?.status === 'APPROVED' || (seller as any)?.status === 'ACTIVE') && (
+                <Button asChild variant="secondary">
+                  {seller?.slug ? (
+                    <a 
+                      href={typeof window !== 'undefined' 
+                        ? `${window.location.protocol}//${seller.slug}.${window.location.host.replace(/^www\./, '')}`
+                        : `/collections/slug/${seller.slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2"
+                    >
+                      <ShoppingCart className="h-4 w-4" />
+                      View Store
+                    </a>
+                  ) : (
+                    <Link 
+                      href={`/collections/${seller?.id}`}
+                      className="flex items-center gap-2"
+                    >
+                      <ShoppingCart className="h-4 w-4" />
+                      View Store
+                    </Link>
+                  )}
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -248,8 +273,17 @@ export default function SellerDashboardPage() {
         {/* Active Listings Table */}
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle>My Active Listings</CardTitle>
-            <CardDescription>Manage your product listings</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>My Active Listings</CardTitle>
+                <CardDescription>Manage your product listings</CardDescription>
+              </div>
+              {products.length > 0 && (
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/seller-dashboard/listings">View All</Link>
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {products.length === 0 ? (

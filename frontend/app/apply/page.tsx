@@ -41,6 +41,7 @@ function ApplyPageContent() {
     kappa_vendor_id: "",
     merchandise_type: [] as ("KAPPA" | "NON_KAPPA")[],
     website: "",
+    slug: "",
     social_links: {
       instagram: "",
       twitter: "",
@@ -54,6 +55,10 @@ function ApplyPageContent() {
   const [storeLogo, setStoreLogo] = useState<File | null>(null);
   const [storeLogoPreview, setStoreLogoPreview] = useState<string | null>(null);
   const [isMember, setIsMember] = useState<string>(""); // 'yes', 'no', or ''
+
+  const [slugChecking, setSlugChecking] = useState(false);
+  const [slugError, setSlugError] = useState("");
+  const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
 
   useEffect(() => {
     fetchActiveCollegiateChapters()
@@ -136,6 +141,43 @@ function ApplyPageContent() {
     loadMemberProfile();
   }, [sessionStatus, session, profileLoaded]);
 
+  // Check slug availability when it changes
+  useEffect(() => {
+    const checkSlug = async () => {
+      const slug = formData.slug.trim().toLowerCase();
+      if (slug.length < 3) {
+        setSlugAvailable(null);
+        setSlugError("");
+        return;
+      }
+
+      // Basic regex check for slug format
+      if (!/^[a-z0-9-]+$/.test(slug)) {
+        setSlugError("Slug can only contain lowercase letters, numbers, and hyphens.");
+        setSlugAvailable(false);
+        return;
+      }
+
+      setSlugChecking(true);
+      setSlugError("");
+      try {
+        const { checkSlugAvailability } = await import("@/lib/api");
+        const { available } = await checkSlugAvailability(slug);
+        setSlugAvailable(available);
+        if (!available) {
+          setSlugError("This store URL is already taken.");
+        }
+      } catch (err) {
+        console.error("Error checking slug availability:", err);
+      } finally {
+        setSlugChecking(false);
+      }
+    };
+
+    const timer = setTimeout(checkSlug, 500);
+    return () => clearTimeout(timer);
+  }, [formData.slug]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -201,6 +243,13 @@ function ApplyPageContent() {
       return;
     }
 
+    // Require slug availability if provided
+    if (formData.slug.trim() && slugAvailable === false) {
+      setError("Please choose a different store URL.");
+      setSubmitting(false);
+      return;
+    }
+
     try {
       const formDataToSend = new FormData();
       formDataToSend.append("name", formData.name);
@@ -226,6 +275,9 @@ function ApplyPageContent() {
       }
       if (formData.website) {
         formDataToSend.append("website", formData.website);
+      }
+      if (formData.slug) {
+        formDataToSend.append("slug", formData.slug.trim().toLowerCase());
       }
       formDataToSend.append(
         "social_links",
@@ -644,6 +696,32 @@ function ApplyPageContent() {
             />
             <p className="text-xs text-midnight-navy/60">
               Your business or store website URL
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-midnight-navy">Custom Store URL (Optional)</Label>
+            <div className="flex items-center gap-1">
+              <span className="text-sm text-midnight-navy/60 font-medium">myshop.one-kappa.com/</span>
+              <Input
+                type="text"
+                value={formData.slug}
+                onChange={(e) =>
+                  setFormData({ ...formData, slug: e.target.value.toLowerCase() })
+                }
+                className={`text-midnight-navy ${
+                  slugAvailable === true ? "border-green-500" : slugAvailable === false ? "border-red-500" : ""
+                }`}
+                placeholder="your-store-name"
+              />
+            </div>
+            {slugChecking && <p className="text-xs text-midnight-navy/60">Checking availability...</p>}
+            {slugError && <p className="text-xs text-red-500">{slugError}</p>}
+            {slugAvailable === true && !slugChecking && (
+              <p className="text-xs text-green-600">✓ This URL is available!</p>
+            )}
+            <p className="text-xs text-midnight-navy/60">
+              This will be your custom store address. For example: <strong>{formData.slug || "your-store"}.one-kappa.com</strong>
             </p>
           </div>
 

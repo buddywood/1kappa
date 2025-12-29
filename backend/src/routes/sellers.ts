@@ -53,6 +53,15 @@ const sellerApplicationSchema = z
         return [val];
       }),
     website: z.string().optional().nullable(),
+    slug: z
+      .string()
+      .min(3)
+      .max(50)
+      .regex(/^[a-z0-9-]+$/, {
+        message: "Slug can only contain lowercase letters, numbers, and hyphens",
+      })
+      .optional()
+      .nullable(),
     social_links: z.record(z.string()).optional(),
   })
   .refine(
@@ -210,6 +219,7 @@ router.post(
         kappa_vendor_id: toNullIfEmpty(req.body.kappa_vendor_id),
         merchandise_type: merchandiseType,
         website: toNullIfEmpty(req.body.website),
+        slug: toNullIfEmpty(req.body.slug),
         social_links: req.body.social_links
           ? JSON.parse(req.body.social_links)
           : {},
@@ -455,6 +465,23 @@ router.post(
     }
   }
 );
+
+// Check slug availability
+router.get("/check-slug/:slug", async (req: Request, res: Response) => {
+  try {
+    const { slug } = req.params;
+    if (!slug || slug.length < 3) {
+      return res.status(400).json({ error: "Slug must be at least 3 characters" });
+    }
+
+    const { checkSlugAvailability } = await import("../db/queries-sequelize");
+    const isAvailable = await checkSlugAvailability(slug);
+    res.json({ available: isAvailable });
+  } catch (error) {
+    console.error("Error checking slug availability:", error);
+    res.status(500).json({ error: "Failed to check slug availability" });
+  }
+});
 
 // Get all approved sellers (public endpoint)
 // Note: This must come after POST /apply to avoid route conflicts
@@ -776,6 +803,49 @@ router.get("/me/metrics", authenticate, async (req: Request, res: Response) => {
   }
 });
 
+// Get seller by slug with their products
+router.get("/slug/:slug/products", async (req: Request, res: Response) => {
+  try {
+    const { slug } = req.params;
+    const { getSellerBySlug, getProductsBySeller } = await import(
+      "../db/queries-sequelize"
+    );
+
+    const seller = await getSellerBySlug(slug);
+    if (!seller) {
+      return res.status(404).json({ error: "Seller not found" });
+    }
+
+    const products = await getProductsBySeller(seller.id);
+
+    // Get fraternity member info if available
+    const memberResult = await pool.query(
+      "SELECT id, initiated_chapter_id, initiated_season, initiated_year FROM fraternity_members WHERE email = $1",
+      [seller.email]
+    );
+
+    let memberData = {};
+    if (memberResult.rows.length > 0) {
+      memberData = {
+        fraternity_member_id: memberResult.rows[0].id,
+        initiated_chapter_id: memberResult.rows[0].initiated_chapter_id,
+        initiated_season: memberResult.rows[0].initiated_season,
+        initiated_year: memberResult.rows[0].initiated_year,
+        is_fraternity_member: true,
+      };
+    }
+
+    res.json({
+      ...seller,
+      ...memberData,
+      products,
+    });
+  } catch (error) {
+    console.error("Error fetching seller by slug:", error);
+    res.status(500).json({ error: "Failed to fetch seller" });
+  }
+});
+
 // Initiate Stripe onboarding
 router.post(
   "/me/stripe/onboard",
@@ -1041,6 +1111,118 @@ router.post(
       res
         .status(500)
         .json({ error: "Failed to sync business details from Stripe" });
+    }
+  }
+);
+
+// Update seller profile
+router.put(
+  "/me",
+  authenticate,
+  upload.fields([
+    { name: "headshot", maxCount: 1 },
+    { name: "store_logo", maxCount: 1 },
+  ]),
+  async (req: Request, res: Response) => {
+    try {
+      if (!req.user || !req.user.sellerId) {
+        return res.status(403).json({ error: "Not a seller" });
+      }
+
+      const { Seller } = await import("../db/models/Seller");
+      const seller = await Seller.findByPk(req.user.sellerId);
+
+      if (!seller) {
+        return res.status(404).json({ error: "Seller not found" });
+      }
+
+      const {
+        business_name,
+        business_email,
+        business_phone,
+        website,
+        slug,
+        social_links,
+        merchandise_type,
+        sponsoring_chapter_id,
+      } = req.body;
+
+      // Handle file uploads
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      const headshotFile = files?.headshot?.[0];
+      const logoFile = files?.store_logo?.[0];
+
+      if (headshotFile) {
+        const uploadResult = await uploadToS3(
+          headshotFile.buffer,
+          headshotFile.originalname,
+          headshotFile.mimetype,
+          "headshots"
+        );
+        seller.headshot_url = uploadResult.url;
+      }
+
+      if (logoFile) {
+        const uploadResult = await uploadToS3(
+          logoFile.buffer,
+          logoFile.originalname,
+          logoFile.mimetype,
+          "store-logos"
+        );
+        seller.store_logo_url = uploadResult.url;
+      }
+
+      // Slug validation and uniqueness check
+      if (slug && slug !== seller.slug) {
+        const slugLower = slug.toLowerCase();
+        if (!/^[a-z0-9-]+$/.test(slugLower)) {
+          return res.status(400).json({ 
+            error: "Store URL can only contain lowercase letters, numbers, and hyphens" 
+          });
+        }
+        if (slugLower.length < 3 || slugLower.length > 50) {
+          return res.status(400).json({ 
+            error: "Store URL must be between 3 and 50 characters" 
+          });
+        }
+
+        const existingSeller = await Seller.findOne({ where: { slug: slugLower } });
+        if (existingSeller) {
+          return res.status(400).json({ error: "Store URL is already taken" });
+        }
+        seller.slug = slugLower;
+      }
+
+      if (business_name !== undefined) seller.business_name = business_name;
+      if (business_email !== undefined) seller.business_email = business_email;
+      if (business_phone !== undefined) seller.business_phone = business_phone;
+      if (website !== undefined) seller.website = website;
+      
+      if (social_links) {
+        try {
+          const parsedLinks = typeof social_links === 'string' ? JSON.parse(social_links) : social_links;
+          seller.social_links = { ...seller.social_links, ...parsedLinks };
+        } catch (e) {
+          console.error("Error parsing social_links:", e);
+        }
+      }
+
+      if (merchandise_type !== undefined) {
+        seller.merchandise_type = merchandise_type;
+      }
+
+      if (sponsoring_chapter_id !== undefined) {
+        seller.sponsoring_chapter_id = parseInt(sponsoring_chapter_id);
+      }
+
+      await seller.save();
+
+      // Fetch fresh data including any associations if needed
+      const updatedSeller = await getSellerById(seller.id);
+      res.json(updatedSeller);
+    } catch (error: any) {
+      console.error("Error updating seller profile:", error);
+      res.status(500).json({ error: "Failed to update seller profile" });
     }
   }
 );

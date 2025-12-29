@@ -40,6 +40,20 @@
         "buildType": "app-bundle",
         "autoIncrement": "versionCode"
       }
+    },
+    "production-apk": {
+      "env": {
+        "SENTRY_AUTH_TOKEN": "SENTRY_AUTH_TOKEN"
+      },
+      "distribution": "internal",
+      "ios": {
+        "simulator": false,
+        "autoIncrement": "buildNumber"
+      },
+      "android": {
+        "buildType": "apk",
+        "autoIncrement": "versionCode"
+      }
     }
   },
   "submit": {

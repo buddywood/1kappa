@@ -51,6 +51,7 @@ export interface Seller extends Brother {
   kappa_vendor_id: string | null; // Kappa Alpha Psi vendor ID/license number. Required for sellers who sell Kappa branded merchandise
   merchandise_type: string | null; // Can be single value ('KAPPA' or 'NON_KAPPA') or comma-separated ('KAPPA,NON_KAPPA')
   website: string | null;
+  slug: string | null;
   stripe_account_id: string | null;
   stripe_account_type: "company" | "individual" | null;
   tax_id: string | null;

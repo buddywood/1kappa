@@ -43,6 +43,13 @@ export class Seller extends BaseModel {
 
   @Column({
     type: DataType.STRING(255),
+    allowNull: true,
+    unique: true,
+  })
+  slug!: string | null;
+
+  @Column({
+    type: DataType.STRING(255),
     allowNull: false,
   })
   name!: string;

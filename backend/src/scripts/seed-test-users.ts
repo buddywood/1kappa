@@ -34,6 +34,7 @@ interface TestUser {
   membership_number?: string;
   business_name?: string;
   kappa_vendor_id?: string;
+  slug?: string;
 }
 
 const testUsers: TestUser[] = [
@@ -42,8 +43,9 @@ const testUsers: TestUser[] = [
     name: 'Buddy Seller',
     type: 'seller',
     membership_number: 'KAP-TEST-SELLER',
-    business_name: 'Buddy\'s Kappa Gear',
+    business_name: 'Kappa Gear Co.',
     kappa_vendor_id: 'VL-TEST-SELLER',
+    slug: 'kappa-gear',
   },
   {
     email: 'buddy+member@ebilly.com',
@@ -358,8 +360,8 @@ async function seedTestUsers(): Promise<void> {
 
           if (existingSeller.rows.length > 0) {
             sellerId = existingSeller.rows[0].id;
-            // Ensure user_id is set
-            await pool.query('UPDATE sellers SET user_id = $1 WHERE id = $2', [userId, sellerId]);
+            // Ensure user_id and slug is set
+            await pool.query('UPDATE sellers SET user_id = $1, slug = COALESCE(slug, $2) WHERE id = $3', [userId, testUser.slug || null, sellerId]);
             console.log(`  ✓ Seller already exists and linked: ${testUser.name}`);
           } else {
             const sponsoringChapter = availableChapters[Math.floor(Math.random() * availableChapters.length)];
@@ -370,6 +372,7 @@ async function seedTestUsers(): Promise<void> {
               sponsoring_chapter_id: sponsoringChapter.id,
               business_name: testUser.business_name || null,
               kappa_vendor_id: testUser.kappa_vendor_id || 'VL-TEST',
+              slug: testUser.slug || null,
             });
             sellerId = seller.id;
 

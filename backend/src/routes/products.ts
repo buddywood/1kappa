@@ -245,5 +245,77 @@ router.post('/', authenticate, upload.array('images', 10), async (req: Request, 
   }
 });
 
+// Update a product
+router.put('/:id', authenticate, upload.array('images', 10), async (req: Request, res: Response) => {
+  try {
+    const productId = parseInt(req.params.id);
+    const { updateProduct, getProductById } = await import('../db/queries-sequelize');
+    
+    const product = await getProductById(productId);
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    
+    if (!req.user || product.seller_id !== req.user.sellerId) {
+      return res.status(403).json({ error: 'Unauthorized to update this product' });
+    }
+
+    const updates: any = {};
+    if (req.body.name) updates.name = req.body.name;
+    if (req.body.description !== undefined) updates.description = req.body.description;
+    if (req.body.price_cents) updates.price_cents = parseInt(req.body.price_cents);
+    if (req.body.category_id !== undefined) updates.category_id = req.body.category_id ? parseInt(req.body.category_id) : null;
+    if (req.body.is_kappa_branded !== undefined) updates.is_kappa_branded = req.body.is_kappa_branded === 'true' || req.body.is_kappa_branded === true;
+    if (req.body.status) updates.status = req.body.status;
+
+    // Handle new images if provided (optional for now, mainly focusing on metadata)
+    const imageFiles = req.files as Express.Multer.File[];
+    if (imageFiles && imageFiles.length > 0) {
+      const { uploadToS3 } = await import('../services/s3');
+      const firstImage = imageFiles[0];
+      const uploadResult = await uploadToS3(
+        firstImage.buffer,
+        firstImage.originalname,
+        firstImage.mimetype,
+        'products'
+      );
+      updates.image_url = uploadResult.url;
+      
+      // Also add to product_images
+      const { addProductImage } = await import('../db/queries-sequelize');
+      await addProductImage(productId, uploadResult.url, 0);
+    }
+
+    const updatedProduct = await updateProduct(productId, updates);
+    res.json(updatedProduct);
+  } catch (error) {
+    console.error('Error updating product:', error);
+    res.status(500).json({ error: 'Failed to update product' });
+  }
+});
+
+// Delete a product (soft delete)
+router.delete('/:id', authenticate, async (req: Request, res: Response) => {
+  try {
+    const productId = parseInt(req.params.id);
+    const { deleteProduct, getProductById } = await import('../db/queries-sequelize');
+    
+    const product = await getProductById(productId);
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    
+    if (!req.user || product.seller_id !== req.user.sellerId) {
+      return res.status(403).json({ error: 'Unauthorized to delete this product' });
+    }
+
+    await deleteProduct(productId);
+    res.json({ success: true, message: 'Product deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting product:', error);
+    res.status(500).json({ error: 'Failed to delete product' });
+  }
+});
+
 export default router;
 

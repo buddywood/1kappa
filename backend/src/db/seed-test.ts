@@ -244,6 +244,7 @@ const testUsers = {
     business_name: "Kappa Gear Co.",
     kappa_vendor_id: "VL-TEST-SELLER",
     is_member: true,
+    slug: "kappa-gear",
   },
   sellerNonMember: {
     name: "Buddy Seller Non-Member",
@@ -252,6 +253,7 @@ const testUsers = {
     business_name: "Crimson Threads",
     kappa_vendor_id: "VL-TEST-SELLER2",
     is_member: false,
+    slug: "crimson-threads",
   },
   promoter: {
     name: "Buddy Promoter",
@@ -1610,6 +1612,13 @@ async function seedTestUsers(): Promise<void> {
 
           if (existingSeller.rows.length > 0) {
             sellerId = existingSeller.rows[0].id;
+            // Ensure slug is set for existing test sellers
+            if ((testUser as any).slug) {
+              await pool.query(
+                "UPDATE sellers SET slug = $1 WHERE id = $2 AND slug IS NULL",
+                [(testUser as any).slug, sellerId]
+              );
+            }
             console.log(`  ✓ Seller already exists: ${testUser.name}`);
           } else {
             const sponsoringChapter =
@@ -1623,6 +1632,7 @@ async function seedTestUsers(): Promise<void> {
               sponsoring_chapter_id: sponsoringChapter.id,
               business_name: (testUser as any).business_name || null,
               kappa_vendor_id: (testUser as any).kappa_vendor_id || "VL-TEST",
+              slug: (testUser as any).slug || null,
             });
             sellerId = seller.id;
 

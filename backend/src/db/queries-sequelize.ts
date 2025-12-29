@@ -362,6 +362,7 @@ export async function createSeller(seller: {
   kappa_vendor_id?: string | null;
   merchandise_type?: "KAPPA" | "NON_KAPPA" | string | null; // Allow string for comma-separated values
   website?: string | null;
+  slug?: string | null;
   headshot_url?: string;
   store_logo_url?: string;
   social_links?: Record<string, string>;
@@ -387,12 +388,31 @@ export async function createSeller(seller: {
     kappa_vendor_id: seller.kappa_vendor_id || null,
     merchandise_type: merchandiseTypeValue as any, // Cast to any since DB might need ENUM but we're storing string
     website: seller.website || null,
+    slug: seller.slug || null,
     headshot_url: seller.headshot_url || null,
     store_logo_url: seller.store_logo_url || null,
     social_links: seller.social_links || {},
     status: "PENDING",
   });
   return newSeller.toJSON() as SellerType;
+}
+
+export async function checkSlugAvailability(
+  slug: string
+): Promise<boolean> {
+  const seller = await Seller.findOne({
+    where: { slug },
+  });
+  return !seller;
+}
+
+export async function getSellerBySlug(
+  slug: string
+): Promise<SellerType | null> {
+  const seller = await Seller.findOne({
+    where: { slug },
+  });
+  return seller ? (seller.toJSON() as SellerType) : null;
 }
 
 export async function getSellerById(id: number): Promise<SellerType | null> {

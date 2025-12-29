@@ -144,6 +144,7 @@ export interface Seller {
   stripe_account_type?: "company" | "individual" | null;
   tax_id?: string | null;
   website?: string | null;
+  slug?: string | null;
   business_address_line1?: string | null;
   business_address_line2?: string | null;
   business_city?: string | null;
@@ -491,6 +492,54 @@ export async function createProduct(formData: FormData): Promise<Product> {
   }
 
   return res.json();
+}
+
+export async function updateProduct(
+  id: number,
+  formData: FormData
+): Promise<Product> {
+  const session = await fetch("/api/auth/session").then((res) => res.json());
+  const idToken = (session as any)?.idToken;
+
+  if (!idToken) {
+    throw new Error("Not authenticated");
+  }
+
+  const res = await fetch(`${API_URL}/api/products/${id}`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+    },
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || error.message || "Failed to update product");
+  }
+
+  return res.json();
+}
+
+export async function deleteProduct(id: number): Promise<void> {
+  const session = await fetch("/api/auth/session").then((res) => res.json());
+  const idToken = (session as any)?.idToken;
+
+  if (!idToken) {
+    throw new Error("Not authenticated");
+  }
+
+  const res = await fetch(`${API_URL}/api/products/${id}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+    },
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || error.message || "Failed to delete product");
+  }
 }
 
 export interface ShippingRate {
@@ -980,6 +1029,14 @@ export async function deleteNotification(
     const errorMessage = errorData.error || "Failed to delete notification";
     throw new Error(errorMessage);
   }
+}
+
+export async function checkSlugAvailability(
+  slug: string
+): Promise<{ available: boolean }> {
+  const res = await fetch(`${API_URL}/api/sellers/check-slug/${slug}`);
+  if (!res.ok) throw new Error("Failed to check slug availability");
+  return res.json();
 }
 
 export async function submitSellerApplication(
@@ -1838,6 +1895,17 @@ export async function getSellerWithProducts(
   return res.json();
 }
 
+export async function getSellerWithProductsBySlug(
+  slug: string
+): Promise<SellerWithProducts | null> {
+  const res = await fetch(`${API_URL}/api/sellers/slug/${slug}/products`);
+  if (!res.ok) {
+    if (res.status === 404) return null;
+    throw new Error("Failed to fetch seller with products by slug");
+  }
+  return res.json();
+}
+
 export async function fetchSellersWithProducts(): Promise<
   SellerWithProducts[]
 > {
@@ -2172,6 +2240,24 @@ export async function getSellerProfile(): Promise<Seller> {
   if (!res.ok) {
     const error = await res.json();
     throw new Error(error.error || "Failed to fetch seller profile");
+  }
+  return res.json();
+}
+
+export async function updateSellerProfile(formData: FormData): Promise<Seller> {
+  const headers = await getAuthHeaders();
+  // Remove Content-Type from headers when sending FormData to let browser set it with boundary
+  const { "Content-Type": _, ...otherHeaders } = headers as any;
+  
+  const res = await fetch(`${API_URL}/api/sellers/me`, {
+    method: "PUT",
+    headers: otherHeaders,
+    body: formData,
+  });
+  
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || "Failed to update seller profile");
   }
   return res.json();
 }
