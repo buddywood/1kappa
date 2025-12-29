@@ -11,7 +11,7 @@ export function middleware(request: NextRequest) {
 
   // Define top-level domains
   // Note: localhost might have subdomains if configured in /etc/hosts
-  const tlds = ['one-kappa.com', 'localhost:3000', 'preview.one-kappa.com'];
+  const tlds = ['preview.one-kappa.com', 'one-kappa.com', 'localhost:3000'];
   
   let currentTld = tlds.find(tld => host.endsWith(tld));
   
