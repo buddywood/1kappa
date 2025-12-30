@@ -4,9 +4,31 @@ let userPoolInstance: CognitoUserPool | null = null;
 
 function getUserPool(): CognitoUserPool {
   if (!userPoolInstance) {
+    const userPoolId = (process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID || '').trim();
+    const clientId = (process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID || '').trim();
+    
+    // Debug logging (only in server-side)
+    if (typeof window === 'undefined') {
+      console.log('[Cognito] Environment check:', {
+        hasUserPoolId: !!userPoolId,
+        hasClientId: !!clientId,
+        userPoolIdLength: userPoolId.length,
+        clientIdLength: clientId.length,
+        userPoolIdPreview: userPoolId ? `${userPoolId.substring(0, 10)}...` : 'empty',
+        clientIdPreview: clientId ? `${clientId.substring(0, 10)}...` : 'empty',
+      });
+    }
+    
+    if (!userPoolId || !clientId) {
+      throw new Error(
+        `Cognito configuration missing: UserPoolId=${!!userPoolId}, ClientId=${!!clientId}. ` +
+        `Check NEXT_PUBLIC_COGNITO_USER_POOL_ID and NEXT_PUBLIC_COGNITO_CLIENT_ID environment variables.`
+      );
+    }
+    
     const poolData = {
-      UserPoolId: (process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID || '').trim(),
-      ClientId: (process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID || '').trim(),
+      UserPoolId: userPoolId,
+      ClientId: clientId,
     };
     userPoolInstance = new CognitoUserPool(poolData);
   }
