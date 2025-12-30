@@ -5,8 +5,8 @@ let userPoolInstance: CognitoUserPool | null = null;
 function getUserPool(): CognitoUserPool {
   if (!userPoolInstance) {
     const poolData = {
-      UserPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID || '',
-      ClientId: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID || '',
+      UserPoolId: (process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID || '').trim(),
+      ClientId: (process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID || '').trim(),
     };
     userPoolInstance = new CognitoUserPool(poolData);
   }
