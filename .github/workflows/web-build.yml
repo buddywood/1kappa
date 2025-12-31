@@ -107,13 +107,17 @@ jobs:
         working-directory: ./backend
 
       - name: Reset preview database
-        run: npm run reset:db -- --preview
+        run: npx tsx src/scripts/reset-db.ts --preview
         working-directory: ./backend
         continue-on-error: true
 
       - name: Run migrations + seeding
-        run: ./scripts/migrate.sh
-        working-directory: ./backend
+        run: |
+          cd backend
+          npx tsx src/db/migrations.ts
+          if [ "$SEED_TEST_DATA" = "true" ]; then
+            npx tsx src/db/seed-test.ts
+          fi
 
   # ============================================================
   # PRODUCTION ENVIRONMENT – DB MIGRATIONS
@@ -151,8 +155,9 @@ jobs:
         working-directory: ./backend
 
       - name: Run database migrations
-        run: ./scripts/migrate.sh
-        working-directory: ./backend
+        run: |
+          cd backend
+          npx tsx src/db/migrations.ts
 
   # ============================================================
   # PREVIEW FRONTEND DEPLOYMENT (Vercel)
