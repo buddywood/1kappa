@@ -27,7 +27,7 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        run: npm install --no-optional
+        run: npm install
 
       - name: Run ESLint
         run: npm run lint
@@ -103,7 +103,10 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install dependencies
+      - name: Install root dependencies
+        run: npm install --no-optional
+
+      - name: Install backend dependencies
         run: npm install --no-optional
 
       - name: Reset preview database
@@ -145,7 +148,10 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install dependencies
+      - name: Install root dependencies
+        run: npm install --no-optional
+
+      - name: Install backend dependencies
         run: npm install --no-optional
 
       - name: Run database migrations
