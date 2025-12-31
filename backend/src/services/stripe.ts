@@ -1,6 +1,9 @@
 import Stripe from 'stripe';
 import dotenv from 'dotenv';
+import path from 'path';
 
+// Load .env.local first, then .env (same as server.ts)
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 dotenv.config();
 
 // Validate that we're using a secret key, not a publishable key
@@ -10,13 +13,12 @@ if (stripeSecretKey && !stripeSecretKey.startsWith('sk_')) {
   console.error('   Please check your .env file and ensure STRIPE_SECRET_KEY is set to your Stripe secret key.');
 }
 
-// Only initialize Stripe if we have a key
-// This prevents errors when Stripe is not configured
+// Initialize Stripe (will throw if key is invalid, but that's okay - we check in functions)
 export const stripe = stripeSecretKey 
   ? new Stripe(stripeSecretKey, {
       apiVersion: '2023-10-16',
     })
-  : null;
+  : (null as any); // Type assertion to allow null checks in functions
 
 /**
  * Create a Stripe Connect Express account
