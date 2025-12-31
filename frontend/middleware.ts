@@ -45,7 +45,7 @@ export function middleware(request: NextRequest) {
   }
   
   // Debug logging for subdomain extraction
-  console.log(`[Middleware] Host: ${host}, TLD: ${currentTld}, Extracted subdomain: "${subdomain}"`);
+  console.log(`[Middleware] Host: ${host}, TLD: ${currentTld}, Prefix: "${host.slice(0, -(currentTld.length + 1))}", Extracted subdomain: "${subdomain}"`);
   
   // Special case: if subdomain is "preview", it's not a seller subdomain
   if (subdomain === 'preview') {
