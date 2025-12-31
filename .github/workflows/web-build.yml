@@ -90,10 +90,6 @@ jobs:
       DATABASE_NAME: ${{ secrets.STAGING_DATABASE_NAME }}
       SEED_TEST_DATA: "true"
 
-    defaults:
-      run:
-        working-directory: ./backend
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -108,13 +104,16 @@ jobs:
 
       - name: Install backend dependencies
         run: npm install --no-optional
+        working-directory: ./backend
 
       - name: Reset preview database
         run: npm run reset:db -- --preview
+        working-directory: ./backend
         continue-on-error: true
 
       - name: Run migrations + seeding
         run: ./scripts/migrate.sh
+        working-directory: ./backend
 
   # ============================================================
   # PRODUCTION ENVIRONMENT – DB MIGRATIONS
@@ -135,10 +134,6 @@ jobs:
       DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
       SEED_TEST_DATA: "false"
 
-    defaults:
-      run:
-        working-directory: ./backend
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -153,9 +148,11 @@ jobs:
 
       - name: Install backend dependencies
         run: npm install --no-optional
+        working-directory: ./backend
 
       - name: Run database migrations
         run: ./scripts/migrate.sh
+        working-directory: ./backend
 
   # ============================================================
   # PREVIEW FRONTEND DEPLOYMENT (Vercel)
