@@ -9,6 +9,7 @@ import { CreditCard, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { initiateStripeOnboarding, getStripeAccountStatus, syncStripeBusinessDetails, StripeAccountStatus } from '@/lib/api';
 
 function StripeSetupPageContent() {
@@ -66,11 +67,25 @@ function StripeSetupPageContent() {
   const handleStartOnboarding = async () => {
     try {
       setRedirecting(true);
+      setError('');
       const { url } = await initiateStripeOnboarding();
       window.location.href = url;
     } catch (err: any) {
       console.error('Error starting onboarding:', err);
-      setError(err.message || 'Failed to start Stripe onboarding');
+      let errorMessage = err.message || 'Failed to start Stripe onboarding';
+      
+      // Provide more specific error messages
+      if (errorMessage.includes('Not authenticated') || errorMessage.includes('401')) {
+        errorMessage = 'Please sign in to continue. You must be logged in as a seller.';
+      } else if (errorMessage.includes('Not a seller') || errorMessage.includes('403')) {
+        errorMessage = 'You must be an approved seller to set up Stripe payments.';
+      } else if (errorMessage.includes('Seller not found') || errorMessage.includes('404')) {
+        errorMessage = 'Seller account not found. Please contact support.';
+      } else if (errorMessage.includes('Stripe') || errorMessage.includes('API')) {
+        errorMessage = 'Stripe service is temporarily unavailable. Please try again later or contact support.';
+      }
+      
+      setError(errorMessage);
       setRedirecting(false);
     }
   };
@@ -78,19 +93,72 @@ function StripeSetupPageContent() {
   const handleContinueOnboarding = async () => {
     try {
       setRedirecting(true);
+      setError('');
       const { url } = await initiateStripeOnboarding();
       window.location.href = url;
     } catch (err: any) {
       console.error('Error continuing onboarding:', err);
-      setError(err.message || 'Failed to continue Stripe onboarding');
+      let errorMessage = err.message || 'Failed to continue Stripe onboarding';
+      
+      // Provide more specific error messages
+      if (errorMessage.includes('Not authenticated') || errorMessage.includes('401')) {
+        errorMessage = 'Please sign in to continue. You must be logged in as a seller.';
+      } else if (errorMessage.includes('Not a seller') || errorMessage.includes('403')) {
+        errorMessage = 'You must be an approved seller to set up Stripe payments.';
+      } else if (errorMessage.includes('Seller not found') || errorMessage.includes('404')) {
+        errorMessage = 'Seller account not found. Please contact support.';
+      } else if (errorMessage.includes('Stripe') || errorMessage.includes('API')) {
+        errorMessage = 'Stripe service is temporarily unavailable. Please try again later or contact support.';
+      }
+      
+      setError(errorMessage);
       setRedirecting(false);
     }
   };
 
   if (status === 'loading' || loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-crimson" />
+      <div className="min-h-screen bg-cream dark:bg-black">
+        <div className="p-8">
+          <div className="max-w-4xl mx-auto">
+            {/* Header Skeleton */}
+            <div className="mb-8">
+              <Skeleton className="h-10 w-64 mb-2" />
+              <Skeleton className="h-6 w-96" />
+            </div>
+
+            {/* Card Skeleton */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-6 w-6 rounded" />
+                  <div className="flex-1">
+                    <Skeleton className="h-6 w-56 mb-2" />
+                    <Skeleton className="h-4 w-80" />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Main Content Skeleton */}
+                <div className="space-y-4">
+                  <Skeleton className="h-5 w-full" />
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="h-10 w-48 mt-4" />
+                </div>
+
+                {/* Why Stripe Section Skeleton */}
+                <div className="pt-6 border-t">
+                  <Skeleton className="h-6 w-32 mb-4" />
+                  <div className="space-y-3">
+                    {[...Array(4)].map((_, i) => (
+                      <Skeleton key={i} className="h-4 w-full" />
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     );
   }
@@ -229,8 +297,47 @@ function StripeSetupPageContent() {
 export default function StripeSetupPage() {
   return (
     <Suspense fallback={
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-crimson" />
+      <div className="min-h-screen bg-cream dark:bg-black">
+        <div className="p-8">
+          <div className="max-w-4xl mx-auto">
+            {/* Header Skeleton */}
+            <div className="mb-8">
+              <Skeleton className="h-10 w-64 mb-2" />
+              <Skeleton className="h-6 w-96" />
+            </div>
+
+            {/* Card Skeleton */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-6 w-6 rounded" />
+                  <div className="flex-1">
+                    <Skeleton className="h-6 w-56 mb-2" />
+                    <Skeleton className="h-4 w-80" />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Main Content Skeleton */}
+                <div className="space-y-4">
+                  <Skeleton className="h-5 w-full" />
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="h-10 w-48 mt-4" />
+                </div>
+
+                {/* Why Stripe Section Skeleton */}
+                <div className="pt-6 border-t">
+                  <Skeleton className="h-6 w-32 mb-4" />
+                  <div className="space-y-3">
+                    {[...Array(4)].map((_, i) => (
+                      <Skeleton key={i} className="h-4 w-full" />
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     }>
       <StripeSetupPageContent />

@@ -891,7 +891,22 @@ router.post(
       res.json({ url: onboardingUrl });
     } catch (error: any) {
       console.error("Error initiating Stripe onboarding:", error);
-      res.status(500).json({ error: "Failed to initiate Stripe onboarding" });
+      
+      // Provide more specific error messages
+      let errorMessage = "Failed to initiate Stripe onboarding";
+      let statusCode = 500;
+      
+      if (error.type === "StripeAuthenticationError" || error.message?.includes("Invalid API Key")) {
+        errorMessage = "Stripe API key is invalid or not configured";
+        statusCode = 500;
+      } else if (error.message?.includes("No such account")) {
+        errorMessage = "Stripe account not found";
+        statusCode = 404;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      res.status(statusCode).json({ error: errorMessage });
     }
   }
 );

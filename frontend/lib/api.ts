@@ -2342,8 +2342,20 @@ export async function initiateStripeOnboarding(): Promise<{ url: string }> {
     headers,
   });
   if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.error || "Failed to initiate Stripe onboarding");
+    let errorMessage = "Failed to initiate Stripe onboarding";
+    try {
+      const error = await res.json();
+      errorMessage = error.error || errorMessage;
+    } catch (e) {
+      // If response is not JSON, use status text
+      errorMessage = res.statusText || errorMessage;
+    }
+    
+    // Include status code in error for better debugging
+    const error = new Error(errorMessage);
+    (error as any).status = res.status;
+    (error as any).statusText = res.statusText;
+    throw error;
   }
   return res.json();
 }
