@@ -27,7 +27,7 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --no-optional
 
       - name: Run ESLint
         run: npm run lint
@@ -58,7 +58,7 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --no-optional
 
       - name: Run ESLint
         run: npm run lint || true # allow warnings
@@ -104,7 +104,7 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --no-optional
 
       - name: Reset preview database
         run: npm run reset:db -- --preview
@@ -146,7 +146,7 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --no-optional
 
       - name: Run database migrations
         run: ./scripts/migrate.sh
