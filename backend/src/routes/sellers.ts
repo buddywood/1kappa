@@ -892,17 +892,16 @@ router.post(
       }
 
       // Create account link for onboarding
-      try {
-        const { createAccountLink } = await import("../services/stripe");
-        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-        const returnUrl = `${frontendUrl}/seller-dashboard/stripe-setup?success=true`;
-        const refreshUrl = `${frontendUrl}/seller-dashboard/stripe-setup?refresh=true`;
+      const { createAccountLink } = await import("../services/stripe");
+      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+      const returnUrl = `${frontendUrl}/seller-dashboard/stripe-setup?success=true`;
+      const refreshUrl = `${frontendUrl}/seller-dashboard/stripe-setup?refresh=true`;
 
-        const onboardingUrl = await createAccountLink(
-          stripeAccountId,
-          returnUrl,
-          refreshUrl
-        );
+      const onboardingUrl = await createAccountLink(
+        stripeAccountId,
+        returnUrl,
+        refreshUrl
+      );
 
       res.json({ url: onboardingUrl });
     } catch (error: any) {
