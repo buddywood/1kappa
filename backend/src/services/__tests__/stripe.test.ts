@@ -1,6 +1,14 @@
 import Stripe from 'stripe';
 import { getPlatformSetting } from '../../db/queries-sequelize';
 
+// Set STRIPE_SECRET_KEY before any imports to ensure stripe service initializes
+process.env.STRIPE_SECRET_KEY = 'sk_test_FAKE_KEY_FOR_TESTING_ONLY_NOT_A_REAL_KEY_1234567890';
+
+// Mock dotenv to prevent loading from .env.local during tests
+jest.mock('dotenv', () => ({
+  config: jest.fn(() => ({})),
+}));
+
 // Mock Stripe before importing
 const mockStripe = {
   accounts: {
