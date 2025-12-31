@@ -106,6 +106,13 @@ jobs:
         run: npm install --no-optional
         working-directory: ./backend
 
+      - name: Construct DATABASE_URL
+        run: |
+          if [ -z "$DATABASE_URL" ] && [ -n "$DATABASE_HOST" ] && [ -n "$DATABASE_USERNAME" ] && [ -n "$DATABASE_PASSWORD" ] && [ -n "$DATABASE_NAME" ]; then
+            echo "DATABASE_URL=postgresql://${DATABASE_USERNAME}:${DATABASE_PASSWORD}@${DATABASE_HOST}/${DATABASE_NAME}?sslmode=require" >> $GITHUB_ENV
+            echo "✅ Constructed DATABASE_URL from individual variables with SSL"
+          fi
+
       - name: Reset preview database
         run: npx tsx src/scripts/reset-db.ts --preview
         working-directory: ./backend
@@ -153,6 +160,13 @@ jobs:
       - name: Install backend dependencies
         run: npm install --no-optional
         working-directory: ./backend
+
+      - name: Construct DATABASE_URL
+        run: |
+          if [ -z "$DATABASE_URL" ] && [ -n "$DATABASE_HOST" ] && [ -n "$DATABASE_USERNAME" ] && [ -n "$DATABASE_PASSWORD" ] && [ -n "$DATABASE_NAME" ]; then
+            echo "DATABASE_URL=postgresql://${DATABASE_USERNAME}:${DATABASE_PASSWORD}@${DATABASE_HOST}/${DATABASE_NAME}?sslmode=require" >> $GITHUB_ENV
+            echo "✅ Constructed DATABASE_URL from individual variables with SSL"
+          fi
 
       - name: Run database migrations
         run: |
