@@ -1,40 +1,47 @@
-'use client';
+"use client";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import Image from 'next/image';
-import { 
-  PlusCircle, 
-  Search, 
-  Filter, 
-  Edit, 
-  Trash2, 
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
+import {
+  PlusCircle,
+  Search,
+  Filter,
+  Edit,
+  Trash2,
   ExternalLink,
   Package,
-  AlertCircle
-} from 'lucide-react';
-import { 
-  getSellerProducts, 
+  AlertCircle,
+} from "lucide-react";
+import {
+  getSellerProducts,
   deleteProduct,
   getSellerProfile,
   type Product,
-  type Seller
-} from '@/lib/api';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
+  type Seller,
+} from "@/lib/api";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -51,8 +58,8 @@ export default function SellerListingsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [seller, setSeller] = useState<Seller | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [error, setError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [deleteProductId, setDeleteProductId] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -66,8 +73,8 @@ export default function SellerListingsPage() {
         setProducts(productsData);
         setSeller(sellerData);
       } catch (err: any) {
-        console.error('Error loading listings:', err);
-        setError(err.message || 'Failed to load listings');
+        console.error("Error loading listings:", err);
+        setError(err.message || "Failed to load listings");
       } finally {
         setLoading(false);
       }
@@ -78,11 +85,11 @@ export default function SellerListingsPage() {
 
   const handleDeleteProduct = async () => {
     if (!deleteProductId) return;
-    
+
     setDeleting(true);
     try {
       await deleteProduct(deleteProductId);
-      setProducts(products.filter(p => p.id !== deleteProductId));
+      setProducts(products.filter((p) => p.id !== deleteProductId));
       toast({
         title: "Success",
         description: "Product deleted successfully",
@@ -99,9 +106,10 @@ export default function SellerListingsPage() {
     }
   };
 
-  const filteredProducts = products.filter(product => 
-    product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredProducts = products.filter(
+    (product) =>
+      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const formatPrice = (cents: number) => {
@@ -110,17 +118,74 @@ export default function SellerListingsPage() {
 
   const getProductStatus = (product: Product) => {
     if (!seller?.stripe_account_id) {
-      return { text: 'Blocked: Stripe', variant: 'destructive' as const };
+      return { text: "Blocked: Stripe", variant: "destructive" as const };
     }
-    if (product.status === 'INACTIVE') {
-      return { text: 'Inactive', variant: 'secondary' as const };
+    if (product.status === "INACTIVE") {
+      return { text: "Inactive", variant: "secondary" as const };
     }
-    return { text: 'Live', variant: 'default' as const };
+    return { text: "Live", variant: "default" as const };
   };
 
   if (loading) {
     return (
-      <div className="p-8 text-center py-12">Loading listings...</div>
+      <div className="min-h-screen bg-cream dark:bg-black">
+        <div className="p-8">
+          {/* Header Skeleton */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+            <div>
+              <Skeleton className="h-10 w-48 mb-2" />
+              <Skeleton className="h-6 w-80" />
+            </div>
+            <Skeleton className="h-10 w-40" />
+          </div>
+
+          {/* Card with Search and Table Skeleton */}
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                <Skeleton className="h-10 w-full md:w-96" />
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-9 w-20 hidden md:block" />
+                  <Skeleton className="h-6 w-24" />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {/* Table Skeleton */}
+              <div className="space-y-4">
+                {/* Table Header */}
+                <div className="grid grid-cols-5 gap-4 pb-2 border-b">
+                  <Skeleton className="h-5 w-16" />
+                  <Skeleton className="h-5 w-32" />
+                  <Skeleton className="h-5 w-16" />
+                  <Skeleton className="h-5 w-16" />
+                  <Skeleton className="h-5 w-20 ml-auto" />
+                </div>
+                {/* Table Rows */}
+                {[...Array(5)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="grid grid-cols-5 gap-4 items-center py-3 border-b last:border-0"
+                  >
+                    <Skeleton className="h-12 w-12 rounded" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-5 w-48" />
+                      <Skeleton className="h-4 w-64" />
+                    </div>
+                    <Skeleton className="h-6 w-20" />
+                    <Skeleton className="h-5 w-16" />
+                    <div className="flex justify-end gap-2">
+                      <Skeleton className="h-9 w-9" />
+                      <Skeleton className="h-9 w-9" />
+                      <Skeleton className="h-9 w-9" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     );
   }
 
@@ -136,7 +201,10 @@ export default function SellerListingsPage() {
           </p>
         </div>
         <Button asChild>
-          <Link href="/seller-dashboard/listings/create" className="flex items-center gap-2">
+          <Link
+            href="/seller-dashboard/listings/create"
+            className="flex items-center gap-2"
+          >
             <PlusCircle className="h-4 w-4" />
             Add New Listing
           </Link>
@@ -165,7 +233,11 @@ export default function SellerListingsPage() {
               />
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" className="hidden md:flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="hidden md:flex gap-2"
+              >
                 <Filter className="h-4 w-4" />
                 Filter
               </Button>
@@ -180,7 +252,9 @@ export default function SellerListingsPage() {
             <div className="text-center py-12 text-muted-foreground">
               <Package className="h-12 w-12 mx-auto mb-4 opacity-20" />
               <p className="text-lg font-medium">No products found</p>
-              <p className="text-sm">Try adjusting your search or add a new listing.</p>
+              <p className="text-sm">
+                Try adjusting your search or add a new listing.
+              </p>
             </div>
           ) : (
             <Table>
@@ -230,19 +304,31 @@ export default function SellerListingsPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button asChild variant="outline" size="icon" title="View Public Store">
+                          <Button
+                            asChild
+                            variant="outline"
+                            size="icon"
+                            title="View Public Store"
+                          >
                             <Link href={`/product/${product.id}`}>
                               <ExternalLink className="h-4 w-4" />
                             </Link>
                           </Button>
-                          <Button asChild variant="outline" size="icon" title="Edit Listing">
-                            <Link href={`/seller-dashboard/listings/edit/${product.id}`}>
+                          <Button
+                            asChild
+                            variant="outline"
+                            size="icon"
+                            title="Edit Listing"
+                          >
+                            <Link
+                              href={`/seller-dashboard/listings/edit/${product.id}`}
+                            >
                               <Edit className="h-4 w-4" />
                             </Link>
                           </Button>
-                          <Button 
-                            variant="outline" 
-                            size="icon" 
+                          <Button
+                            variant="outline"
+                            size="icon"
                             className="text-red-600 hover:text-red-700 hover:bg-red-50"
                             title="Delete Listing"
                             onClick={() => setDeleteProductId(product.id)}
@@ -260,19 +346,29 @@ export default function SellerListingsPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={!!deleteProductId} onOpenChange={(open) => { if (!open) setDeleteProductId(null); }}>
+      <Dialog
+        open={!!deleteProductId}
+        onOpenChange={(open) => {
+          if (!open) setDeleteProductId(null);
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Are you sure?</DialogTitle>
             <DialogDescription>
-              This will remove your product from the store. This action cannot be easily undone.
+              This will remove your product from the store. This action cannot
+              be easily undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteProductId(null)} disabled={deleting}>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteProductId(null)}
+              disabled={deleting}
+            >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleDeleteProduct}
               disabled={deleting}
               className="bg-crimson hover:bg-crimson/90 text-white"
