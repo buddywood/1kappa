@@ -60,6 +60,7 @@
     "db:reset": "docker compose down -v && docker compose up -d"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "uuid": "^8.3.2"
   }
 }
