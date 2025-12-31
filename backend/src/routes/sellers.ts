@@ -861,52 +861,81 @@ router.post(
         return res.status(404).json({ error: "Seller not found" });
       }
 
+      // Check if Stripe is configured
+      const stripeKey = process.env.STRIPE_SECRET_KEY;
+      if (!stripeKey || stripeKey.trim() === "" || stripeKey.includes("here")) {
+        return res.status(500).json({ 
+          error: "Stripe is not configured. Please set STRIPE_SECRET_KEY in your environment variables." 
+        });
+      }
+
       // If seller doesn't have a Stripe account, create one
       let stripeAccountId = seller.stripe_account_id;
 
       if (!stripeAccountId) {
-        const { createConnectAccount } = await import("../services/stripe");
-        const account = await createConnectAccount(seller.email);
-        stripeAccountId = account.id;
+        try {
+          const { createConnectAccount } = await import("../services/stripe");
+          const account = await createConnectAccount(seller.email);
+          stripeAccountId = account.id;
 
-        // Update seller with Stripe account ID
-        await pool.query(
-          "UPDATE sellers SET stripe_account_id = $1 WHERE id = $2",
-          [stripeAccountId, seller.id]
-        );
+          // Update seller with Stripe account ID
+          await pool.query(
+            "UPDATE sellers SET stripe_account_id = $1 WHERE id = $2",
+            [stripeAccountId, seller.id]
+          );
+        } catch (createError: any) {
+          console.error("Error creating Stripe account:", createError);
+          return res.status(500).json({ 
+            error: `Failed to create Stripe account: ${createError.message || "Unknown error"}` 
+          });
+        }
       }
 
       // Create account link for onboarding
-      const { createAccountLink } = await import("../services/stripe");
-      const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-      const returnUrl = `${frontendUrl}/seller-dashboard/stripe-setup?success=true`;
-      const refreshUrl = `${frontendUrl}/seller-dashboard/stripe-setup?refresh=true`;
+      try {
+        const { createAccountLink } = await import("../services/stripe");
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+        const returnUrl = `${frontendUrl}/seller-dashboard/stripe-setup?success=true`;
+        const refreshUrl = `${frontendUrl}/seller-dashboard/stripe-setup?refresh=true`;
 
-      const onboardingUrl = await createAccountLink(
-        stripeAccountId,
-        returnUrl,
-        refreshUrl
-      );
+        const onboardingUrl = await createAccountLink(
+          stripeAccountId,
+          returnUrl,
+          refreshUrl
+        );
 
       res.json({ url: onboardingUrl });
     } catch (error: any) {
       console.error("Error initiating Stripe onboarding:", error);
+      console.error("Error details:", {
+        message: error.message,
+        type: error.type,
+        stack: error.stack,
+        code: error.code,
+        statusCode: error.statusCode,
+      });
       
       // Provide more specific error messages
       let errorMessage = "Failed to initiate Stripe onboarding";
       let statusCode = 500;
       
-      if (error.type === "StripeAuthenticationError" || error.message?.includes("Invalid API Key")) {
-        errorMessage = "Stripe API key is invalid or not configured";
+      if (error.type === "StripeAuthenticationError" || error.message?.includes("Invalid API Key") || error.message?.includes("No API key provided")) {
+        errorMessage = "Stripe API key is invalid or not configured. Please contact support.";
         statusCode = 500;
       } else if (error.message?.includes("No such account")) {
         errorMessage = "Stripe account not found";
         statusCode = 404;
+      } else if (error.message?.includes("FRONTEND_URL")) {
+        errorMessage = "Frontend URL not configured. Please contact support.";
+        statusCode = 500;
       } else if (error.message) {
         errorMessage = error.message;
       }
       
-      res.status(statusCode).json({ error: errorMessage });
+      res.status(statusCode).json({ 
+        error: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   }
 );

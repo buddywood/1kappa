@@ -10,14 +10,22 @@ if (stripeSecretKey && !stripeSecretKey.startsWith('sk_')) {
   console.error('   Please check your .env file and ensure STRIPE_SECRET_KEY is set to your Stripe secret key.');
 }
 
-export const stripe = new Stripe(stripeSecretKey, {
-  apiVersion: '2023-10-16',
-});
+// Only initialize Stripe if we have a key
+// This prevents errors when Stripe is not configured
+export const stripe = stripeSecretKey 
+  ? new Stripe(stripeSecretKey, {
+      apiVersion: '2023-10-16',
+    })
+  : null;
 
 /**
  * Create a Stripe Connect Express account
  */
 export async function createConnectAccount(email: string, country: string = 'US'): Promise<Stripe.Account> {
+  if (!stripe) {
+    throw new Error('Stripe is not configured. Please set STRIPE_SECRET_KEY in your environment variables.');
+  }
+  
   const account = await stripe.accounts.create({
     type: 'express',
     country,
@@ -30,7 +38,7 @@ export async function createConnectAccount(email: string, country: string = 'US'
 
   // For test accounts, enable capabilities immediately (in test mode only)
   // In production, capabilities are enabled through the onboarding flow
-  if (process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_')) {
+  if (stripe && process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_')) {
     try {
       await stripe.accounts.update(account.id, {
         capabilities: {
@@ -54,6 +62,10 @@ export async function createConnectAccount(email: string, country: string = 'US'
  * Useful for test accounts or accounts that need capabilities enabled programmatically
  */
 export async function enableTransfersCapability(accountId: string): Promise<void> {
+  if (!stripe) {
+    throw new Error('Stripe is not configured. Please set STRIPE_SECRET_KEY in your environment variables.');
+  }
+  
   try {
     // Update the account to request transfers capability
     await stripe.accounts.update(accountId, {
@@ -78,6 +90,10 @@ export async function enableTransfersCapability(accountId: string): Promise<void
  * Create an account link for onboarding
  */
 export async function createAccountLink(accountId: string, returnUrl: string, refreshUrl: string): Promise<string> {
+  if (!stripe) {
+    throw new Error('Stripe is not configured. Please set STRIPE_SECRET_KEY in your environment variables.');
+  }
+  
   const accountLink = await stripe.accountLinks.create({
     account: accountId,
     refresh_url: refreshUrl,
@@ -103,6 +119,10 @@ export async function createCheckoutSession(params: {
   chapterId?: number;
   shippingCents?: number;
 }): Promise<Stripe.Checkout.Session> {
+  if (!stripe) {
+    throw new Error('Stripe is not configured. Please set STRIPE_SECRET_KEY in your environment variables.');
+  }
+  
   const totalProductPrice = params.priceCents;
   const shippingCents = params.shippingCents || 0;
   const totalAmountCents = totalProductPrice + shippingCents;
@@ -241,6 +261,10 @@ export async function getStripeAccountBusinessDetails(accountId: string): Promis
     country: string | null;
   };
 }> {
+  if (!stripe) {
+    throw new Error('Stripe is not configured. Please set STRIPE_SECRET_KEY in your environment variables.');
+  }
+  
   const account = await stripe.accounts.retrieve(accountId);
   
   // Extract business information
@@ -333,6 +357,10 @@ export async function createStewardCheckoutSession(params: {
   successUrl: string;
   cancelUrl: string;
 }): Promise<Stripe.Checkout.Session> {
+  if (!stripe) {
+    throw new Error('Stripe is not configured. Please set STRIPE_SECRET_KEY in your environment variables.');
+  }
+  
   const totalAmountCents = params.shippingCents + params.platformFeeCents + params.chapterDonationCents;
 
   // Create line items breakdown
