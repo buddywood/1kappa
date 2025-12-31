@@ -113,8 +113,5 @@
   "engines": {
     "node": ">=20.x",
     "npm": ">=10.x"
-  },
-  "optionalDependencies": {
-    "@esbuild/darwin-arm64": "^0.27.2"
   }
 }
