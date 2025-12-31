@@ -4,6 +4,11 @@
  * and that we're using the right type of keys (secret vs publishable)
  */
 
+// Mock dotenv before any imports
+jest.mock('dotenv', () => ({
+  config: jest.fn(() => ({})),
+}));
+
 describe('Stripe Configuration Validation', () => {
   const originalEnv = process.env;
 
@@ -21,12 +26,17 @@ describe('Stripe Configuration Validation', () => {
 
   describe('STRIPE_SECRET_KEY validation', () => {
     it('should error if STRIPE_SECRET_KEY is not set', () => {
+      // Delete from process.env
       delete process.env.STRIPE_SECRET_KEY;
+      
+      // Reset modules to clear any cached imports (dotenv is already mocked at top level)
+      jest.resetModules();
       
       // Capture console.error
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
       
       // Import the stripe service - it will validate on import
+      // Note: Since dotenv is mocked, it won't load from .env.local
       require('../stripe');
       
       // The service should still initialize (with empty string), but we can check the key
