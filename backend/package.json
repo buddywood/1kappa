@@ -96,6 +96,7 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@babel/generator": "^7.28.5",
     "@types/cheerio": "^0.22.31",
     "@types/express": "^4.17.21",
     "@types/jest": "^29.5.11",
