@@ -281,7 +281,8 @@ export default function SellerDashboardLayout({
 
         {/* Main Content */}
         {/* @ts-ignore - framer-motion v12 type compatibility */}
-        <motion.main
+        {/* @ts-ignore */}
+        <motion.main // @ts-ignore
           initial={{ marginLeft: 64 }}
           animate={{ marginLeft: sidebarOpen ? 256 : 64 }}
           transition={{
