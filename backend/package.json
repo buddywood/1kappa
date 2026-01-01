@@ -106,6 +106,8 @@
     "@babel/generator": "^7.28.5",
     "@noble/hashes": "^2.0.1",
     "@smithy/config-resolver": "^4.4.5",
+    "@smithy/eventstream-serde-config-resolver": "^4.3.7",
+    "@smithy/middleware-content-length": "^4.2.7",
     "@types/cheerio": "^0.22.31",
     "@types/express": "^4.17.21",
     "@types/jest": "^29.5.11",
