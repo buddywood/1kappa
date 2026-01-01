@@ -1,5 +1,4 @@
 module.exports = {
-  preset: 'ts-jest',
   testEnvironment: 'node',
   roots: ['<rootDir>/src'],
   testMatch: ['**/__tests__/**/*.test.ts', '**/?(*.)+(spec|test).ts'],
@@ -8,7 +7,12 @@ module.exports = {
     ? ['/node_modules/', '.*\\.integration\\.test\\.ts$', '.*integration.*\\.test\\.ts$']
     : ['/node_modules/'],
   transform: {
-    '^.+\\.ts$': 'ts-jest',
+    '^.+\\.ts$': ['ts-jest', {
+      tsconfig: {
+        esModuleInterop: true,
+        allowSyntheticDefaultImports: true,
+      },
+    }],
   },
   collectCoverageFrom: [
     'src/**/*.ts',

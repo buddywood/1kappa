@@ -146,8 +146,9 @@ export default function SellerDashboardLayout({
         </div>
 
         {/* Label (animated) */}
+        {/* @ts-ignore - framer-motion type issue */}
         <motion.span
-          initial={false}
+          initial={{ opacity: 0, x: -6 }}
           animate={{
             opacity: sidebarOpen ? 1 : 0,
             x: sidebarOpen ? 0 : -6,
@@ -207,8 +208,9 @@ export default function SellerDashboardLayout({
 
       <div className="flex">
         {/* Desktop Sidebar */}
+        {/* @ts-expect-error - framer-motion v12 type compatibility */}
         <motion.aside
-          initial={false}
+          initial={{ width: 64 }}
           animate={{ width: sidebarOpen ? 256 : 64 }}
           transition={{
             type: "spring",
@@ -275,8 +277,9 @@ export default function SellerDashboardLayout({
         </div>
 
         {/* Main Content */}
+        {/* @ts-expect-error - framer-motion v12 type compatibility */}
         <motion.main
-          initial={false}
+          initial={{ marginLeft: 64 }}
           animate={{ marginLeft: sidebarOpen ? 256 : 64 }}
           transition={{
             type: "spring",
