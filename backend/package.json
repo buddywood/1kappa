@@ -97,6 +97,7 @@
   },
   "devDependencies": {
     "@aws-sdk/credential-provider-node": "^3.958.0",
+    "@aws-sdk/middleware-bucket-endpoint": "^3.957.0",
     "@aws-sdk/middleware-expect-continue": "^3.957.0",
     "@aws-sdk/middleware-flexible-checksums": "^3.957.0",
     "@aws-sdk/middleware-host-header": "^3.957.0",
@@ -110,6 +111,7 @@
     "@smithy/eventstream-serde-config-resolver": "^4.3.7",
     "@smithy/middleware-content-length": "^4.2.7",
     "@smithy/middleware-retry": "^4.4.17",
+    "@smithy/util-waiter": "^4.2.7",
     "@types/cheerio": "^0.22.31",
     "@types/express": "^4.17.21",
     "@types/jest": "^29.5.11",
