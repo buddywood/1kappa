@@ -208,7 +208,7 @@ export default function SellerDashboardLayout({
 
       <div className="flex">
         {/* Desktop Sidebar */}
-        {/* @ts-expect-error - framer-motion v12 type compatibility */}
+        {/* @ts-ignore - framer-motion v12 type compatibility */}
         <motion.aside
           initial={{ width: 64 }}
           animate={{ width: sidebarOpen ? 256 : 64 }}
@@ -277,7 +277,7 @@ export default function SellerDashboardLayout({
         </div>
 
         {/* Main Content */}
-        {/* @ts-expect-error - framer-motion v12 type compatibility */}
+        {/* @ts-ignore - framer-motion v12 type compatibility */}
         <motion.main
           initial={{ marginLeft: 64 }}
           animate={{ marginLeft: sidebarOpen ? 256 : 64 }}
