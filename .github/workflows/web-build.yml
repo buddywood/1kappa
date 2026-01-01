@@ -114,16 +114,16 @@ jobs:
           fi
 
       - name: Reset preview database
-        run: npx tsx src/scripts/reset-db.ts --preview
+        run: npx ts-node --transpile-only src/scripts/reset-db.ts --preview
         working-directory: ./backend
         continue-on-error: true
 
       - name: Run migrations + seeding
         run: |
           cd backend
-          npx tsx src/db/migrations.ts
+          npx ts-node --transpile-only src/db/migrations.ts
           if [ "$SEED_TEST_DATA" = "true" ]; then
-            npx tsx src/db/seed-test.ts
+            npx ts-node --transpile-only src/db/seed-test.ts
           fi
 
   # ============================================================
@@ -171,7 +171,7 @@ jobs:
       - name: Run database migrations
         run: |
           cd backend
-          npx tsx src/db/migrations.ts
+          npx ts-node --transpile-only src/db/migrations.ts
 
   # ============================================================
   # PREVIEW FRONTEND DEPLOYMENT (Vercel)
