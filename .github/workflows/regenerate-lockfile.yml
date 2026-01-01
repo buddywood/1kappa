@@ -1,0 +1,59 @@
+name: Regenerate package-lock.json
+
+on:
+  workflow_dispatch: # Allows manual triggering
+  schedule:
+    # Run weekly on Sundays at 2 AM UTC
+    - cron: '0 2 * * 0'
+
+jobs:
+  regenerate-lockfile:
+    name: Regenerate package-lock.json on Linux
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Remove existing package-lock.json
+        run: rm -f package-lock.json
+
+      - name: Install dependencies with all optional packages
+        run: npm install --include=optional --package-lock-only
+
+      - name: Check for changes
+        id: check-changes
+        run: |
+          if [ -n "$(git status --porcelain package-lock.json)" ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push changes
+        if: steps.check-changes.outputs.has_changes == 'true'
+        run: |
+          git add package-lock.json
+          git commit -m "chore: Regenerate package-lock.json with all platform-specific packages
+
+          Generated on Linux to ensure all esbuild platform packages are included
+          for Heroku deployments."
+          git push origin ${{ github.ref_name }}
+
+      - name: No changes
+        if: steps.check-changes.outputs.has_changes == 'false'
+        run: echo "✅ package-lock.json is up to date, no changes needed"
+
