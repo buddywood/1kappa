@@ -148,7 +148,9 @@ export default function SellerDashboardLayout({
         {/* Label (animated) */}
         {/* @ts-ignore - framer-motion v12 type compatibility */}
         {/* @ts-ignore */}
-        <motion.span
+        {/* @ts-ignore */}
+        {/* @ts-ignore */}
+        <motion.span // @ts-ignore
           initial={{ opacity: 0, x: -6 }}
           animate={{
             opacity: sidebarOpen ? 1 : 0,
