@@ -210,7 +210,7 @@ export default function SellerDashboardLayout({
       <div className="flex">
         {/* Desktop Sidebar */}
         {/* @ts-ignore - framer-motion v12 type compatibility */}
-        <motion.aside
+        <motion.aside // @ts-ignore
           initial={{ width: 64 }}
           animate={{ width: sidebarOpen ? 256 : 64 }}
           transition={{
