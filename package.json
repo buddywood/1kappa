@@ -1,6 +1,6 @@
 {
   "name": "1kappa",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "1Kappa monorepo with React frontend and Express backend",
   "private": true,
   "repository": {
