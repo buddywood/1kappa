@@ -6,7 +6,7 @@ import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
-const Dialog = DialogPrimitive.Root
+const Dialog = DialogPrimitive.Root as React.ComponentType<React.ComponentPropsWithoutRef<typeof DialogPrimitive.Root> & { children?: React.ReactNode }>
 
 const DialogTrigger = DialogPrimitive.Trigger
 
@@ -83,8 +83,8 @@ DialogFooter.displayName = "DialogFooter"
 
 const DialogTitle = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Title>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
->(({ className, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title> & { children?: React.ReactNode }
+>(({ className, children, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
     className={cn(
@@ -92,7 +92,9 @@ const DialogTitle = React.forwardRef<
       className
     )}
     {...props}
-  />
+  >
+    {children}
+  </DialogPrimitive.Title>
 ))
 DialogTitle.displayName = DialogPrimitive.Title.displayName
 
