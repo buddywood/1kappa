@@ -146,7 +146,7 @@ export default function SellerDashboardLayout({
         </div>
 
         {/* Label (animated) */}
-        {/* @ts-ignore - framer-motion type issue */}
+        {/* @ts-expect-error - framer-motion v12 type compatibility */}
         <motion.span
           initial={{ opacity: 0, x: -6 }}
           animate={{
