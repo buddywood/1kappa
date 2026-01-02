@@ -27,15 +27,11 @@ jobs:
           node-version: 20
 
       - name: Install root dependencies
-        run: npm install --legacy-peer-deps --force
-        working-directory: ./
-
-      - name: Force @types/react version at root
-        run: npm install --save-dev --legacy-peer-deps --force @types/react@18.2.48 @types/react-dom@18.2.18
+        run: npm install --legacy-peer-deps
         working-directory: ./
 
       - name: Install dependencies
-        run: npm install --legacy-peer-deps --force
+        run: npm install --legacy-peer-deps
 
       - name: Deduplicate dependencies
         run: npm dedupe || true
