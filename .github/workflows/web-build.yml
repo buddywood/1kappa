@@ -29,11 +29,11 @@ jobs:
       - name: Install root dependencies
         run: npm install --legacy-peer-deps
 
-      - name: Deduplicate dependencies
-        run: npm dedupe
-
       - name: Install dependencies
         run: npm install --legacy-peer-deps
+
+      - name: Deduplicate dependencies
+        run: npm dedupe || true
 
       - name: Run ESLint
         run: npm run lint
