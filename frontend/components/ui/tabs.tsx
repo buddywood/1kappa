@@ -5,7 +5,7 @@ import * as TabsPrimitive from "@radix-ui/react-tabs"
 
 import { cn } from "@/lib/utils"
 
-const Tabs = ({ children, ...props }: React.ComponentPropsWithoutRef<typeof TabsPrimitive.Root> & { children?: React.ReactNode }) => (
+const Tabs = ({ children, ...props }: React.ComponentPropsWithoutRef<typeof TabsPrimitive.Root> & { children?: React.ReactNode; className?: string }) => (
   <TabsPrimitive.Root {...props}>{children}</TabsPrimitive.Root>
 )
 Tabs.displayName = TabsPrimitive.Root.displayName

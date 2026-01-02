@@ -3,8 +3,9 @@
 import { SessionProvider } from 'next-auth/react';
 import { ThemeProvider } from './ThemeProvider';
 import { CartProvider } from '../contexts/CartContext';
+import type { ReactNode } from 'react';
 
-export default function Providers({ children }: { children: React.ReactNode }): React.ReactElement {
+export default function Providers({ children }: { children: ReactNode }) {
   return (
     <SessionProvider>
       <ThemeProvider>
