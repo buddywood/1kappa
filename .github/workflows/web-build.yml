@@ -35,6 +35,13 @@ jobs:
       - name: Deduplicate dependencies
         run: npm dedupe || true
 
+      - name: Verify single @types/react version
+        run: |
+          echo "Checking @types/react versions..."
+          find node_modules -name "@types" -type d | xargs -I {} find {} -name "react" -type d | xargs -I {} sh -c 'if [ -f "{}/package.json" ]; then echo "Found: {}"; cat "{}/package.json" | grep -E "\"version\"" | head -1; fi'
+          echo "Checking frontend node_modules..."
+          find frontend/node_modules -name "@types" -type d 2>/dev/null | xargs -I {} find {} -name "react" -type d 2>/dev/null | xargs -I {} sh -c 'if [ -f "{}/package.json" ]; then echo "Found: {}"; cat "{}/package.json" | grep -E "\"version\"" | head -1; fi' || echo "No frontend/node_modules found (using hoisted)"
+
       - name: Run ESLint
         run: npm run lint
 

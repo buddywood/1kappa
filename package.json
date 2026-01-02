@@ -18,14 +18,10 @@
   },
   "overrides": {
     "@types/react": "18.2.48",
-    "@types/react-dom": {
-      "@types/react": "18.2.48"
-    },
+    "@types/react-dom": "18.2.18",
     "frontend": {
       "@types/react": "18.2.48",
-      "@types/react-dom": {
-        "@types/react": "18.2.48"
-      }
+      "@types/react-dom": "18.2.18"
     },
     "mobile-app": {
       "@types/react": "^19.1.0"
@@ -47,6 +43,8 @@
     "db:reset": "docker compose down -v && docker compose up -d"
   },
   "devDependencies": {
+    "@types/react": "18.2.48",
+    "@types/react-dom": "18.2.18",
     "concurrently": "^8.2.2",
     "jose": "^4.15.9",
     "next": "^14.2.0",
