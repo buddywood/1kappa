@@ -30,9 +30,8 @@ jobs:
         run: npm install --legacy-peer-deps --force
         working-directory: ./
 
-      - name: Force @types/react version
-        run: |
-          npm install --save-dev --legacy-peer-deps --force @types/react@18.2.48 @types/react-dom@18.2.18
+      - name: Force @types/react version at root
+        run: npm install --save-dev --legacy-peer-deps --force @types/react@18.2.48 @types/react-dom@18.2.18
         working-directory: ./
 
       - name: Install dependencies
