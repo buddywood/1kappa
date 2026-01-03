@@ -42,7 +42,7 @@ jobs:
         run: rm -f package-lock.json
 
       - name: Install dependencies with all optional packages
-        run: npm install --include=optional --package-lock-only
+        run: npm install --legacy-peer-deps --include=optional --package-lock-only
 
       - name: Check for changes
         id: check-changes
