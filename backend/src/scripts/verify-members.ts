@@ -11,6 +11,7 @@ import {
   updatePromoterVerification,
 } from '../db/queries-sequelize';
 import { initializeDatabase } from '../db/migrations';
+import { sendVerificationReportEmail } from '../services/email';
 import type { Browser, Page } from 'puppeteer';
 
 // Load environment variables
@@ -85,10 +86,15 @@ async function verifySingleMember(
  * Main verification process
  */
 async function runVerification() {
+  const startTime = new Date();
   console.log('🚀 Starting member verification process...\n');
 
   let browser: Browser | null = null;
   let page: Page | null = null;
+  let verifiedCount = 0;
+  let failedCount = 0;
+  let errorCount = 0;
+  let skippedCount = 0;
 
   try {
     // Initialize database connection
@@ -106,6 +112,20 @@ async function runVerification() {
 
     if (totalPending === 0) {
       console.log('✅ No pending verifications. Exiting.');
+      const endTime = new Date();
+      await sendVerificationReportEmail(
+        "member",
+        "success",
+        startTime,
+        endTime,
+        {
+          totalProcessed: 0,
+          verified: 0,
+          manualReview: 0,
+          errors: 0,
+          skipped: 0,
+        }
+      );
       return;
     }
 
@@ -149,11 +169,6 @@ async function runVerification() {
 
     console.log('✅ Successfully logged in\n');
 
-    // Verify members
-    let verifiedCount = 0;
-    let failedCount = 0;
-    let errorCount = 0;
-
     // Process regular members
     if (pendingMembers.length > 0) {
       console.log(`\n📝 Processing ${pendingMembers.length} members...`);
@@ -161,6 +176,7 @@ async function runVerification() {
         if (!member.name || !member.membership_number) {
           console.log(`   ⚠️  Skipping member ${member.id}: missing name or membership number`);
           await updateMemberVerification(member.id, 'MANUAL_REVIEW', 'Missing name or membership number');
+          skippedCount++;
           continue;
         }
 
@@ -177,6 +193,7 @@ async function runVerification() {
           console.log(`      ✅ Verified`);
         } else {
           // Mark for manual review instead of failing
+          failedCount++;
           await updateMemberVerification(member.id, 'MANUAL_REVIEW', result.notes || 'Verification inconclusive - requires manual review');
           console.log(`      ⚠️  Marked for manual review: ${result.notes}`);
         }
@@ -194,6 +211,7 @@ async function runVerification() {
         if (!promoter.name || !promoter.membership_number) {
           console.log(`   ⚠️  Skipping promoter ${promoter.id}: missing name or membership number`);
           await updatePromoterVerification(promoter.id, 'MANUAL_REVIEW', 'Missing name or membership number', false);
+          skippedCount++;
           continue;
         }
 
@@ -225,12 +243,46 @@ async function runVerification() {
     console.log(`   ✅ Verified: ${verifiedCount}`);
     console.log(`   ⚠️  Manual Review: ${failedCount}`);
     console.log(`   ⚠️  Errors: ${errorCount}`);
+    console.log(`   ⏭️  Skipped: ${skippedCount}`);
     console.log(`   📝 Total processed: ${totalPending}`);
     console.log('='.repeat(50) + '\n');
+
+    // Send email report
+    const endTime = new Date();
+    await sendVerificationReportEmail(
+      "member",
+      "success",
+      startTime,
+      endTime,
+      {
+        verified: verifiedCount,
+        manualReview: failedCount,
+        errors: errorCount,
+        totalProcessed: totalPending,
+        skipped: skippedCount,
+      }
+    );
 
   } catch (error: any) {
     console.error('❌ Fatal error during verification:', error);
     console.error(error.stack);
+    
+    // Send failure email report
+    const endTime = new Date();
+    await sendVerificationReportEmail(
+      "member",
+      "failed",
+      startTime,
+      endTime,
+      {
+        verified: verifiedCount,
+        manualReview: failedCount,
+        errors: errorCount,
+        totalProcessed: verifiedCount + failedCount + errorCount + skippedCount,
+        skipped: skippedCount,
+      },
+      error.message || String(error)
+    );
   } finally {
     // Clean up
     if (page) {
@@ -260,10 +312,15 @@ if (require.main === module) {
  * Searches vendor program page - no login required
  */
 export async function runSellerVerification() {
+  const startTime = new Date();
   console.log('🚀 Starting seller verification process...\n');
 
   let browser: Browser | null = null;
   let page: Page | null = null;
+  let verifiedCount = 0;
+  let manualReviewCount = 0;
+  let errorCount = 0;
+  let skippedCount = 0;
 
   try {
     // Initialize database connection
@@ -277,6 +334,20 @@ export async function runSellerVerification() {
 
     if (pendingSellers.length === 0) {
       console.log('✅ No pending seller verifications. Exiting.');
+      const endTime = new Date();
+      await sendVerificationReportEmail(
+        "seller",
+        "success",
+        startTime,
+        endTime,
+        {
+          totalProcessed: 0,
+          verified: 0,
+          manualReview: 0,
+          errors: 0,
+          skipped: 0,
+        }
+      );
       return;
     }
 
@@ -341,17 +412,13 @@ export async function runSellerVerification() {
       throw contentError;
     }
 
-    let verifiedCount = 0;
-    let manualReviewCount = 0;
-    let errorCount = 0;
-
     // Process sellers using the cached page content
     console.log(`\n📝 Processing ${pendingSellers.length} sellers...`);
     for (const seller of pendingSellers) {
       if (!seller.name || !seller.email) {
         console.log(`   ⚠️  Skipping seller ${seller.id}: missing name or email`);
         await updateSellerVerification(seller.id, 'MANUAL_REVIEW', 'Missing name or email', false);
-        manualReviewCount++;
+        skippedCount++;
         continue;
       }
 
@@ -395,12 +462,46 @@ export async function runSellerVerification() {
     console.log(`   ✅ Verified: ${verifiedCount}`);
     console.log(`   ⚠️  Manual Review: ${manualReviewCount}`);
     console.log(`   ⚠️  Errors: ${errorCount}`);
+    console.log(`   ⏭️  Skipped: ${skippedCount}`);
     console.log(`   📝 Total processed: ${pendingSellers.length}`);
     console.log('='.repeat(50) + '\n');
+
+    // Send email report
+    const endTime = new Date();
+    await sendVerificationReportEmail(
+      "seller",
+      "success",
+      startTime,
+      endTime,
+      {
+        verified: verifiedCount,
+        manualReview: manualReviewCount,
+        errors: errorCount,
+        totalProcessed: pendingSellers.length,
+        skipped: skippedCount,
+      }
+    );
 
   } catch (error: any) {
     console.error('❌ Fatal error during seller verification:', error);
     console.error(error.stack);
+    
+    // Send failure email report
+    const endTime = new Date();
+    await sendVerificationReportEmail(
+      "seller",
+      "failed",
+      startTime,
+      endTime,
+      {
+        verified: verifiedCount,
+        manualReview: manualReviewCount,
+        errors: errorCount,
+        totalProcessed: verifiedCount + manualReviewCount + errorCount + skippedCount,
+        skipped: skippedCount,
+      },
+      error.message || String(error)
+    );
   } finally {
     if (page) await page.close().catch(() => {});
     if (browser) await browser.close().catch(() => {});

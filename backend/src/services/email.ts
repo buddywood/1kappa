@@ -1242,3 +1242,158 @@ The 1Kappa Team
   }
 }
 
+/**
+ * Send verification job report email
+ */
+export async function sendVerificationReportEmail(
+  jobType: "member" | "seller",
+  status: "success" | "failed",
+  startTime: Date,
+  endTime: Date,
+  summary: {
+    verified?: number;
+    manualReview?: number;
+    errors?: number;
+    totalProcessed?: number;
+    skipped?: number;
+  },
+  errorMessage?: string
+): Promise<void> {
+  const recipientEmail = process.env.VERIFICATION_REPORT_EMAIL || "buddy@ebilly.com";
+  const jobName = jobType === "member" ? "Member Verification" : "Seller Verification";
+  const subject = `${jobName} Report - ${status === "success" ? "✅ Completed" : "❌ Failed"}`;
+
+  const duration = Math.round((endTime.getTime() - startTime.getTime()) / 1000); // seconds
+  const durationFormatted = duration < 60 
+    ? `${duration}s` 
+    : `${Math.floor(duration / 60)}m ${duration % 60}s`;
+
+  const statusColor = status === "success" ? "#4caf50" : "#dc3545";
+  const statusIcon = status === "success" ? "✅" : "❌";
+  const statusText = status === "success" ? "Completed Successfully" : "Failed";
+
+  const htmlBody = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${jobName} Report</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background-color: #1a1a2e; padding: 30px; text-align: center;">
+          <img src="${getLogoUrl()}" alt="1Kappa Logo" style="max-width: 300px; height: auto; margin-bottom: 20px;" />
+          <h1 style="color: #dc143c; margin: 0; font-size: 28px;">${jobName} Report</h1>
+        </div>
+        
+        <div style="background-color: #f9f9f9; padding: 30px;">
+          <div style="background-color: ${statusColor}; color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px; text-align: center;">
+            <h2 style="margin: 0; font-size: 20px;">${statusIcon} ${statusText}</h2>
+          </div>
+
+          <div style="background-color: #fff; border: 2px solid #ddd; border-radius: 5px; padding: 20px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #1a1a2e; border-bottom: 2px solid #dc143c; padding-bottom: 10px;">Job Details</h3>
+            <p style="font-size: 14px; margin: 8px 0;"><strong>Job Type:</strong> ${jobName}</p>
+            <p style="font-size: 14px; margin: 8px 0;"><strong>Start Time:</strong> ${startTime.toLocaleString("en-US", { timeZone: "America/New_York", timeZoneName: "short" })}</p>
+            <p style="font-size: 14px; margin: 8px 0;"><strong>End Time:</strong> ${endTime.toLocaleString("en-US", { timeZone: "America/New_York", timeZoneName: "short" })}</p>
+            <p style="font-size: 14px; margin: 8px 0;"><strong>Duration:</strong> ${durationFormatted}</p>
+          </div>
+
+          ${status === "success" ? `
+          <div style="background-color: #fff; border: 2px solid #ddd; border-radius: 5px; padding: 20px; margin: 20px 0;">
+            <h3 style="margin-top: 0; color: #1a1a2e; border-bottom: 2px solid #dc143c; padding-bottom: 10px;">Summary</h3>
+            ${summary.totalProcessed !== undefined ? `<p style="font-size: 16px; margin: 12px 0;"><strong>Total Processed:</strong> ${summary.totalProcessed}</p>` : ""}
+            ${summary.verified !== undefined ? `<p style="font-size: 16px; margin: 12px 0; color: #4caf50;"><strong>✅ Verified:</strong> ${summary.verified}</p>` : ""}
+            ${summary.manualReview !== undefined ? `<p style="font-size: 16px; margin: 12px 0; color: #ff9800;"><strong>⚠️ Manual Review:</strong> ${summary.manualReview}</p>` : ""}
+            ${summary.errors !== undefined ? `<p style="font-size: 16px; margin: 12px 0; color: #dc3545;"><strong>❌ Errors:</strong> ${summary.errors}</p>` : ""}
+            ${summary.skipped !== undefined ? `<p style="font-size: 16px; margin: 12px 0; color: #6c757d;"><strong>⏭️ Skipped:</strong> ${summary.skipped}</p>` : ""}
+          </div>
+          ` : ""}
+
+          ${errorMessage ? `
+          <div style="background-color: #f8d7da; border-left: 4px solid #dc3545; padding: 15px; margin: 20px 0;">
+            <p style="font-size: 14px; margin: 0; color: #721c24;">
+              <strong>Error Details:</strong><br>
+              <pre style="white-space: pre-wrap; font-size: 12px; margin-top: 10px;">${errorMessage}</pre>
+            </p>
+          </div>
+          ` : ""}
+
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #dc143c;">
+            <p style="font-size: 14px; color: #666; margin: 0;">
+              This is an automated report from the 1Kappa verification system.<br>
+              Job runs daily at ${jobType === "member" ? "2:00 AM" : "3:00 AM"} EST.
+            </p>
+          </div>
+        </div>
+        
+        <div style="background-color: #1a1a2e; padding: 20px; text-align: center;">
+          <p style="color: #fff; font-size: 12px; margin: 0;">
+            © ${new Date().getFullYear()} 1Kappa. All rights reserved.
+          </p>
+        </div>
+      </body>
+    </html>
+  `;
+
+  const textBody = `
+${jobName} Report - ${statusText}
+
+Job Details:
+- Job Type: ${jobName}
+- Start Time: ${startTime.toLocaleString("en-US", { timeZone: "America/New_York", timeZoneName: "short" })}
+- End Time: ${endTime.toLocaleString("en-US", { timeZone: "America/New_York", timeZoneName: "short" })}
+- Duration: ${durationFormatted}
+
+${status === "success" ? `
+Summary:
+${summary.totalProcessed !== undefined ? `Total Processed: ${summary.totalProcessed}` : ""}
+${summary.verified !== undefined ? `✅ Verified: ${summary.verified}` : ""}
+${summary.manualReview !== undefined ? `⚠️ Manual Review: ${summary.manualReview}` : ""}
+${summary.errors !== undefined ? `❌ Errors: ${summary.errors}` : ""}
+${summary.skipped !== undefined ? `⏭️ Skipped: ${summary.skipped}` : ""}
+` : ""}
+
+${errorMessage ? `
+Error Details:
+${errorMessage}
+` : ""}
+
+This is an automated report from the 1Kappa verification system.
+Job runs daily at ${jobType === "member" ? "2:00 AM" : "3:00 AM"} EST.
+
+© ${new Date().getFullYear()} 1Kappa. All rights reserved.
+  `;
+
+  try {
+    const command = new SendEmailCommand({
+      Source: FROM_EMAIL,
+      Destination: {
+        ToAddresses: [recipientEmail],
+      },
+      Message: {
+        Subject: {
+          Data: subject,
+          Charset: "UTF-8",
+        },
+        Body: {
+          Html: {
+            Data: htmlBody,
+            Charset: "UTF-8",
+          },
+          Text: {
+            Data: textBody,
+            Charset: "UTF-8",
+          },
+        },
+      },
+    });
+
+    await sesClient.send(command);
+    console.log(`✅ Verification report email sent successfully to ${recipientEmail}`);
+  } catch (error) {
+    console.error(`❌ Error sending verification report email to ${recipientEmail}:`, error);
+    // Don't throw - email failure shouldn't break the verification process
+  }
+}
+
