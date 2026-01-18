@@ -1,7 +1,9 @@
 frontend/
+mobile-app/
 node_modules/
 .git/
 *.md
 temp_photos/
 scripts/
+docs/
 
