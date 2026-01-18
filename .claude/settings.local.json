@@ -6,7 +6,8 @@
       "WebFetch(domain:one-kappa.com)",
       "WebFetch(domain:vercel.com)",
       "Bash(npm install:*)",
-      "Bash(npx playwright:*)"
+      "Bash(npx playwright:*)",
+      "Bash(npm run test:e2e:config:*)"
     ]
   }
 }
