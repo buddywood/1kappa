@@ -760,7 +760,9 @@ export async function loginToKappaPortal(page: Page, debugMode: boolean = false)
     if (!loggedIn) {
       // Take screenshot for debugging
       const screenshotPath = 'login-failure.png';
-      await page.screenshot({ path: screenshotPath, fullPage: true }).catch(() => {});
+      await page.screenshot({ path: screenshotPath, fullPage: true }).catch((err) => {
+        console.warn('Screenshot failed:', err.message);
+      });
       console.log(`📸 Screenshot saved to ${screenshotPath} for debugging`);
       console.log(`Current URL: ${page.url()}`);
       console.log('💡 If browser is visible, you can inspect the page to see what went wrong');
@@ -773,7 +775,9 @@ export async function loginToKappaPortal(page: Page, debugMode: boolean = false)
   } catch (error: any) {
     console.error('Error logging in to Kappa portal:', error.message);
     // Take screenshot for debugging
-    await page.screenshot({ path: 'login-error.png' }).catch(() => {});
+    await page.screenshot({ path: 'login-error.png' }).catch((err) => {
+      console.warn('Screenshot failed:', err.message);
+    });
     return false;
   }
 }

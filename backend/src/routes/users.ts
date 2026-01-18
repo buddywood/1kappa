@@ -450,86 +450,94 @@ router.delete(
   "/me/delete",
   authenticate,
   async (req: Request, res: Response) => {
+    const client = await pool.connect();
+
     try {
       if (!req.user) {
+        client.release();
         return res.status(401).json({ error: "Unauthorized" });
       }
 
       const user = await getUserById(req.user.id);
       if (!user) {
+        client.release();
         return res.status(404).json({ error: "User not found" });
       }
+
+      // Start transaction to ensure atomic deletion
+      await client.query('BEGIN');
 
       // Store IDs before deleting - get memberId from role-specific tables via email matching
       let memberId: number | null = null;
       if (user.role === "SELLER") {
-        const sellerIdResult = await pool.query(
+        const sellerIdResult = await client.query(
           "SELECT id FROM sellers WHERE user_id = $1",
           [user.id]
         );
         const sellerId = sellerIdResult.rows[0]?.id || null;
         if (sellerId) {
-          const sellerResult = await pool.query(
+          const sellerResult = await client.query(
             "SELECT email FROM sellers WHERE id = $1",
             [sellerId]
           );
-        const sellerEmail = sellerResult.rows[0]?.email;
-        if (sellerEmail) {
-          const memberResult = await pool.query(
-            "SELECT id FROM fraternity_members WHERE email = $1",
-            [sellerEmail]
-          );
-          memberId = memberResult.rows[0]?.id || null;
+          const sellerEmail = sellerResult.rows[0]?.email;
+          if (sellerEmail) {
+            const memberResult = await client.query(
+              "SELECT id FROM fraternity_members WHERE email = $1",
+              [sellerEmail]
+            );
+            memberId = memberResult.rows[0]?.id || null;
+          }
         }
-      }
       } else if (user.role === "PROMOTER") {
-        const promoterIdResult = await pool.query(
+        const promoterIdResult = await client.query(
           "SELECT id FROM promoters WHERE user_id = $1",
           [user.id]
         );
         const promoterId = promoterIdResult.rows[0]?.id || null;
         if (promoterId) {
-          const promoterResult = await pool.query(
+          const promoterResult = await client.query(
             "SELECT email FROM promoters WHERE id = $1",
             [promoterId]
           );
-        const promoterEmail = promoterResult.rows[0]?.email;
-        if (promoterEmail) {
-          const memberResult = await pool.query(
-            "SELECT id FROM fraternity_members WHERE email = $1",
-            [promoterEmail]
-          );
-          memberId = memberResult.rows[0]?.id || null;
+          const promoterEmail = promoterResult.rows[0]?.email;
+          if (promoterEmail) {
+            const memberResult = await client.query(
+              "SELECT id FROM fraternity_members WHERE email = $1",
+              [promoterEmail]
+            );
+            memberId = memberResult.rows[0]?.id || null;
+          }
         }
-      }
       } else if (user.role === "STEWARD") {
         // Match user email/cognito_sub with fraternity_members
-        const memberResult = await pool.query(
+        const memberResult = await client.query(
           "SELECT id FROM fraternity_members WHERE email = $1 OR cognito_sub = $2",
           [user.email, user.cognito_sub]
         );
         memberId = memberResult.rows[0]?.id || null;
       } else if (user.role === "GUEST") {
-        const memberResult = await pool.query(
+        const memberResult = await client.query(
           "SELECT id FROM fraternity_members WHERE email = $1 OR cognito_sub = $2",
           [user.email, user.cognito_sub]
         );
         memberId = memberResult.rows[0]?.id || null;
       }
+
       // Look up role IDs from role tables
-      const sellerIdResult = await pool.query(
+      const sellerIdResult = await client.query(
         "SELECT id FROM sellers WHERE user_id = $1",
         [user.id]
       );
       const sellerId = sellerIdResult.rows[0]?.id || null;
-      
-      const promoterIdResult = await pool.query(
+
+      const promoterIdResult = await client.query(
         "SELECT id FROM promoters WHERE user_id = $1",
         [user.id]
       );
       const promoterId = promoterIdResult.rows[0]?.id || null;
-      
-      const stewardIdResult = await pool.query(
+
+      const stewardIdResult = await client.query(
         "SELECT id FROM stewards WHERE user_id = $1",
         [user.id]
       );
@@ -540,7 +548,7 @@ router.delete(
       // Delete seller-related data
       if (sellerId) {
         // Get product IDs first before deleting
-        const productIdsResult = await pool.query(
+        const productIdsResult = await client.query(
           "SELECT id FROM products WHERE seller_id = $1",
           [sellerId]
         );
@@ -548,76 +556,82 @@ router.delete(
 
         // Delete orders for this seller's products (if any products exist)
         if (productIds.length > 0) {
-          await pool.query(
+          await client.query(
             "DELETE FROM orders WHERE product_id = ANY($1::int[])",
             [productIds]
           );
         }
 
         // Delete products (they reference seller)
-        await pool.query("DELETE FROM products WHERE seller_id = $1", [
+        await client.query("DELETE FROM products WHERE seller_id = $1", [
           sellerId,
         ]);
 
         // Delete seller record
-        await pool.query("DELETE FROM sellers WHERE id = $1", [sellerId]);
+        await client.query("DELETE FROM sellers WHERE id = $1", [sellerId]);
       }
 
       // Delete promoter-related data
       if (promoterId) {
         // Delete events first (they reference promoter)
-        await pool.query("DELETE FROM events WHERE promoter_id = $1", [
+        await client.query("DELETE FROM events WHERE promoter_id = $1", [
           promoterId,
         ]);
 
         // Delete promoter record
-        await pool.query("DELETE FROM promoters WHERE id = $1", [promoterId]);
+        await client.query("DELETE FROM promoters WHERE id = $1", [promoterId]);
       }
 
       // Delete steward-related data
       if (stewardId) {
         // Delete steward claims first
-        await pool.query(
+        await client.query(
           "DELETE FROM steward_claims WHERE steward_listing_id IN (SELECT id FROM steward_listings WHERE steward_id = $1)",
           [stewardId]
         );
 
         // Delete steward listings
-        await pool.query("DELETE FROM steward_listings WHERE steward_id = $1", [
+        await client.query("DELETE FROM steward_listings WHERE steward_id = $1", [
           stewardId,
         ]);
 
         // Delete steward record
-        await pool.query("DELETE FROM stewards WHERE id = $1", [stewardId]);
+        await client.query("DELETE FROM stewards WHERE id = $1", [stewardId]);
       }
 
       // Delete notifications
-      await pool.query("DELETE FROM notifications WHERE user_email = $1", [
+      await client.query("DELETE FROM notifications WHERE user_email = $1", [
         user.email,
       ]);
 
       // Delete favorites
-      await pool.query("DELETE FROM favorites WHERE user_email = $1", [
+      await client.query("DELETE FROM favorites WHERE user_email = $1", [
         user.email,
       ]);
 
       // Delete orders where user is buyer
-      await pool.query("DELETE FROM orders WHERE user_id = $1", [
+      await client.query("DELETE FROM orders WHERE user_id = $1", [
         user.id,
       ]);
 
       // Delete member record if exists
       if (memberId) {
-        await pool.query("DELETE FROM fraternity_members WHERE id = $1", [
+        await client.query("DELETE FROM fraternity_members WHERE id = $1", [
           memberId,
         ]);
       }
 
       // Finally, delete the user record
-      await pool.query("DELETE FROM users WHERE id = $1", [user.id]);
+      await client.query("DELETE FROM users WHERE id = $1", [user.id]);
+
+      // Commit the transaction
+      await client.query('COMMIT');
+      client.release();
 
       res.json({ success: true, message: "Account deleted successfully" });
     } catch (error: any) {
+      await client.query('ROLLBACK');
+      client.release();
       console.error("Error deleting account:", error);
       res
         .status(500)
