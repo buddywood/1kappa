@@ -122,8 +122,17 @@ app.use('/api/sellers', sellersRouter);
 app.use('/api/promoters', promotersRouter);
 
 describe('Member Role Integration Tests', () => {
+  // Mock client for pool.connect() used in steward-checkout
+  const mockClient = {
+    query: jest.fn(),
+    release: jest.fn(),
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
+    // Reset mock client
+    mockClient.query.mockReset();
+    mockClient.release.mockReset();
   });
 
   afterAll(async () => {
@@ -464,7 +473,7 @@ describe('Member Role Integration Tests', () => {
   describe('End-to-End: Member Steward Claim Flow', () => {
     it('should allow member to claim steward listing and complete checkout', async () => {
       const { getStewardListingById, getStewardById, getChapterById, getPlatformSetting, createStewardClaim } = require('../db/queries-sequelize');
-      
+
       const mockListing = {
         id: 1,
         steward_id: 1,
@@ -514,6 +523,22 @@ describe('Member Role Integration Tests', () => {
         rows: [{ id: 1 }], // fraternity_member_id
       });
 
+      // Mock pool.connect for steward-checkout transaction handling
+      const claimedListing = { ...mockListing, status: 'CLAIMED' };
+      mockClient.query.mockImplementation((query: string) => {
+        if (query === 'BEGIN' || query === 'COMMIT' || query === 'ROLLBACK') {
+          return Promise.resolve();
+        }
+        if (query.includes('SELECT * FROM steward_listings')) {
+          return Promise.resolve({ rows: [claimedListing] });
+        }
+        if (query.includes('UPDATE steward_listings')) {
+          return Promise.resolve({ rows: [claimedListing] });
+        }
+        return Promise.resolve({ rows: [] });
+      });
+      (jest.spyOn(pool, 'connect') as jest.Mock).mockResolvedValue(mockClient);
+
       // Step 1: Claim listing
       const claimResponse = await request(app)
         .post('/api/stewards/listings/1/claim')
@@ -522,9 +547,8 @@ describe('Member Role Integration Tests', () => {
       expect(claimResponse.body).toHaveProperty('success', true);
 
       // Step 2: Create checkout session (listing should be CLAIMED after step 1)
-      const claimedListing = { ...mockListing, status: 'CLAIMED' };
       getStewardListingById.mockResolvedValue(claimedListing);
-      
+
       const checkoutResponse = await request(app)
         .post('/api/steward-checkout/1')
         .expect(200);
