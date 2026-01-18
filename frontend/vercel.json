@@ -1,5 +1,5 @@
 {
   "regions": ["iad1"],
-  "installCommand": "npm install --legacy-peer-deps",
+  "installCommand": "if [ -f package-lock.json ]; then npm ci --legacy-peer-deps --legacy-bundling; else npm install --legacy-peer-deps --legacy-bundling; fi",
   "buildCommand": "npm run build"
 }
