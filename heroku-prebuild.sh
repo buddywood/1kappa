@@ -13,5 +13,9 @@ node -e "const pkg=require('./package.json'); delete pkg.workspaces; delete pkg.
 # Remove root package-lock.json to prevent workspace dependency resolution
 rm -f package-lock.json
 
+# Create minimal package-lock.json so Heroku doesn't fail with npm ci
+node -e "const lock = {name: '1kappa', version: '1.0.1', lockfileVersion: 3, requires: true, packages: {'': {name: '1kappa', version: '1.0.1'}}}; require('fs').writeFileSync('package-lock.json', JSON.stringify(lock, null, 2))"
+
 echo "✅ Workspace configuration and dependencies removed from root"
+echo "✅ Minimal package-lock.json created for Heroku"
 echo "✅ Backend will install its own dependencies independently"
