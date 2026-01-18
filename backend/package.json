@@ -28,6 +28,7 @@
     "verify:members:watch": "ts-node --transpile-only src/scripts/verify-members.ts --visible",
     "verify:members:debug": "ts-node --transpile-only src/scripts/verify-members.ts --visible --debug",
     "verify:members:record": "ts-node --transpile-only src/scripts/verify-members.ts --visible --record",
+    "verify:sellers": "ts-node --transpile-only src/scripts/verify-sellers.ts",
     "check:event-link": "ts-node --transpile-only src/scripts/check-event-link-column.ts",
     "grant-admin": "ts-node --transpile-only src/scripts/grant-admin-access.ts",
     "approve-member": "ts-node --transpile-only src/scripts/approve-member.ts",
