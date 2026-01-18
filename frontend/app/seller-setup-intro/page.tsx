@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { fetchActiveCollegiateChapters, type Chapter } from '@/lib/api';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -11,10 +12,21 @@ import SearchableSelect from '../components/SearchableSelect';
 
 export default function SellerSetupIntroPage() {
   const router = useRouter();
+  const { data: session, status: sessionStatus } = useSession();
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [selectedChapterId, setSelectedChapterId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Redirect sellers away from application page
+  useEffect(() => {
+    if (sessionStatus === 'authenticated' && session?.user) {
+      const isSeller = (session.user as any)?.is_seller || (session.user as any)?.sellerId;
+      if (isSeller) {
+        router.push('/member-dashboard');
+      }
+    }
+  }, [sessionStatus, session, router]);
 
   useEffect(() => {
     async function loadChapters() {

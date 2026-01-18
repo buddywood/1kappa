@@ -60,6 +60,16 @@ function ApplyPageContent() {
   const [slugError, setSlugError] = useState("");
   const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
 
+  // Redirect sellers away from application page
+  useEffect(() => {
+    if (sessionStatus === "authenticated" && session?.user) {
+      const isSeller = (session.user as any)?.is_seller || (session.user as any)?.sellerId;
+      if (isSeller) {
+        router.push("/member-dashboard");
+      }
+    }
+  }, [sessionStatus, session, router]);
+
   useEffect(() => {
     fetchActiveCollegiateChapters()
       .then(setSponsoringChapters)

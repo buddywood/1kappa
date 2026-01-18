@@ -10,6 +10,7 @@ import {
 import { COLORS } from '../lib/constants';
 import ScreenHeader from './ScreenHeader';
 import { fetchChapters, Chapter } from '../lib/api';
+import { useAuth } from '../lib/auth';
 import PrimaryButton from './ui/PrimaryButton';
 import FormCard from './ui/FormCard';
 import SectionHeader from './ui/SectionHeader';
@@ -23,10 +24,18 @@ export default function SellerSetupScreen({
   onBack,
   onContinue,
 }: SellerSetupScreenProps) {
+  const { user } = useAuth();
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [selectedChapterId, setSelectedChapterId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Redirect sellers away from application screen
+  useEffect(() => {
+    if (user?.is_seller) {
+      onBack();
+    }
+  }, [user, onBack]);
 
   useEffect(() => {
     const loadChapters = async () => {

@@ -100,10 +100,13 @@ export default function Header({
 
   const userRole = user?.role;
   const memberId = user?.memberId;
-  const showBecomeMember = isGuest || (userRole === "SELLER" && !memberId);
-  const showBecomeSeller = isGuest || userRole !== "SELLER";
-  const showBecomePromoter = isGuest || userRole !== "PROMOTER";
-  const showBecomeSteward = isGuest || userRole !== "STEWARD";
+  const isSeller = user?.is_seller || false;
+  const isPromoter = user?.is_promoter || false;
+  const isSteward = user?.is_steward || false;
+  const showBecomeMember = isGuest || (isSeller && !memberId);
+  const showBecomeSeller = isGuest || !isSeller;
+  const showBecomePromoter = isGuest || !isPromoter;
+  const showBecomeSteward = isGuest || !isSteward;
 
   const handleBecomeMember = () => {
     setMenuVisible(false);
