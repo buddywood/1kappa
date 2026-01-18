@@ -200,9 +200,6 @@ jobs:
     if: ${{ github.ref == 'refs/heads/development' }}
     environment:
       name: preview
-    defaults:
-      run:
-        working-directory: ./frontend
 
     steps:
       - uses: actions/checkout@v4
@@ -217,7 +214,8 @@ jobs:
 
       - name: Link to Vercel Project
         run: |
-          # Link to existing project (1kappa) from frontend directory
+          # Link to existing project (1kappa)
+          # Vercel project settings specify "frontend" as root directory
           echo "Linking to existing Vercel project: 1kappa"
           vercel link --yes --project=1kappa --token=${{ secrets.VERCEL_TOKEN }}
 
@@ -281,9 +279,6 @@ jobs:
     if: ${{ github.ref == 'refs/heads/main' }}
     environment:
       name: production
-    defaults:
-      run:
-        working-directory: ./frontend
 
     steps:
       - uses: actions/checkout@v4
@@ -298,7 +293,8 @@ jobs:
 
       - name: Link to Vercel Project
         run: |
-          # Link to existing project (1kappa) from frontend directory
+          # Link to existing project (1kappa)
+          # Vercel project settings specify "frontend" as root directory
           echo "Linking to existing Vercel project: 1kappa"
           vercel link --yes --project=1kappa --token=${{ secrets.VERCEL_TOKEN }}
 
