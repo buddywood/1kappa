@@ -1,5 +1,5 @@
 {
   "regions": ["iad1"],
-  "installCommand": "if [ -f package-lock.json ]; then npm ci --legacy-peer-deps --legacy-bundling; else npm install --legacy-peer-deps --legacy-bundling; fi",
+  "installCommand": "cd .. && node -e \"const pkg=require('./package.json'); delete pkg.workspaces; require('fs').writeFileSync('package.json.tmp', JSON.stringify(pkg, null, 2))\" && mv package.json package.json.workspace && mv package.json.tmp package.json && cd frontend && npm install --legacy-peer-deps && cd .. && mv package.json.workspace package.json",
   "buildCommand": "npm run build"
 }

@@ -1,0 +1,13 @@
+# Ignore other workspaces to prevent dependency conflicts
+../mobile-app
+../backend
+../.git
+../node_modules
+
+# Ignore test and development files
+**/__tests__
+**/*.test.ts
+**/*.test.tsx
+**/*.test.js
+**/*.spec.ts
+**/*.spec.tsx
