@@ -1,5 +1,5 @@
 {
   "regions": ["iad1"],
-  "installCommand": "cd .. && node -e \"const pkg=require('./package.json'); delete pkg.workspaces; require('fs').writeFileSync('package.json.tmp', JSON.stringify(pkg, null, 2))\" && mv package.json package.json.workspace && mv package.json.tmp package.json && cd frontend && npm install --legacy-peer-deps && cd .. && mv package.json.workspace package.json",
+  "installCommand": "bash vercel-install.sh",
   "buildCommand": "npm run build"
 }
