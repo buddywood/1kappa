@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "WebFetch(domain:1kappa-9hbg3rm1m-ebilly.vercel.app)",
+      "WebFetch(domain:one-kappa.com)",
+      "WebFetch(domain:vercel.com)",
+      "Bash(npm install:*)",
+      "Bash(npx playwright:*)"
     ]
   }
 }
