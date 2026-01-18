@@ -2260,3 +2260,451 @@ export async function updatePromoterVerification(
   await promoter.save();
   return promoter.toJSON() as PromoterType;
 }
+
+// Additional Sequelize query functions for route migration
+
+/**
+ * Update seller's Stripe account ID
+ */
+export async function updateSellerStripeAccountId(
+  sellerId: number,
+  stripeAccountId: string | null
+): Promise<void> {
+  await Seller.update(
+    { stripe_account_id: stripeAccountId },
+    { where: { id: sellerId } }
+  );
+}
+
+/**
+ * Update promoter's sponsoring chapter
+ */
+export async function updatePromoterSponsoringChapter(
+  promoterId: number,
+  sponsoringChapterId: number
+): Promise<PromoterType> {
+  const promoter = await Promoter.findByPk(promoterId);
+  if (!promoter) throw new Error("Promoter not found");
+  promoter.sponsoring_chapter_id = sponsoringChapterId;
+  await promoter.save();
+  return promoter.toJSON() as PromoterType;
+}
+
+/**
+ * Get fraternity member by email or cognito_sub
+ */
+export async function getMemberByEmailOrCognitoSub(
+  email: string | null,
+  cognitoSub: string | null
+): Promise<any | null> {
+  if (!email && !cognitoSub) return null;
+
+  const whereClause: any = {};
+  if (email && cognitoSub) {
+    whereClause[Op.or] = [{ email }, { cognito_sub: cognitoSub }];
+  } else if (email) {
+    whereClause.email = email;
+  } else {
+    whereClause.cognito_sub = cognitoSub;
+  }
+
+  const member = await FraternityMember.findOne({ where: whereClause });
+  return member ? member.toJSON() : null;
+}
+
+/**
+ * Get member by email
+ */
+export async function getMemberByEmail(email: string): Promise<any | null> {
+  const member = await FraternityMember.findOne({ where: { email } });
+  return member ? member.toJSON() : null;
+}
+
+/**
+ * Get approved sellers with product count
+ */
+export async function getApprovedSellersWithProductCount(): Promise<
+  Array<SellerType & { product_count: number }>
+> {
+  const result = await sequelize.query(
+    `SELECT s.*, COUNT(p.id) as product_count
+     FROM sellers s
+     LEFT JOIN products p ON s.id = p.seller_id AND p.status = 'ACTIVE'
+     WHERE s.status = 'APPROVED'
+     GROUP BY s.id
+     ORDER BY s.created_at DESC`,
+    { type: QueryTypes.SELECT }
+  );
+  return result as Array<SellerType & { product_count: number }>;
+}
+
+/**
+ * Get featured sellers
+ */
+export async function getFeaturedSellers(limit: number = 6): Promise<SellerType[]> {
+  const result = await sequelize.query(
+    `SELECT s.*
+     FROM sellers s
+     WHERE s.status = 'APPROVED' AND s.is_featured = true
+     ORDER BY s.created_at DESC
+     LIMIT :limit`,
+    {
+      replacements: { limit },
+      type: QueryTypes.SELECT,
+    }
+  );
+  return result as SellerType[];
+}
+
+/**
+ * Get seller orders
+ */
+export async function getSellerOrders(
+  sellerId: number
+): Promise<
+  Array<
+    OrderType & {
+      product_name: string;
+      buyer_email: string | null;
+    }
+  >
+> {
+  const result = await sequelize.query(
+    `SELECT o.*, p.name as product_name, u.email as buyer_email
+     FROM orders o
+     JOIN products p ON o.product_id = p.id
+     LEFT JOIN users u ON o.user_id = u.id
+     WHERE p.seller_id = :sellerId
+     ORDER BY o.created_at DESC`,
+    {
+      replacements: { sellerId },
+      type: QueryTypes.SELECT,
+    }
+  );
+  return result as Array<
+    OrderType & { product_name: string; buyer_email: string | null }
+  >;
+}
+
+/**
+ * Get seller metrics (total sales, order count)
+ */
+export async function getSellerMetrics(
+  sellerId: number
+): Promise<{
+  total_sales_cents: number;
+  total_orders: number;
+  active_products: number;
+}> {
+  const salesResult = await sequelize.query(
+    `SELECT COALESCE(SUM(o.amount_cents), 0) as total_sales_cents, COUNT(o.id) as total_orders
+     FROM orders o
+     JOIN products p ON o.product_id = p.id
+     WHERE p.seller_id = :sellerId AND o.status = 'PAID'`,
+    {
+      replacements: { sellerId },
+      type: QueryTypes.SELECT,
+    }
+  );
+
+  const productsResult = await sequelize.query(
+    `SELECT COUNT(*) as active_products
+     FROM products
+     WHERE seller_id = :sellerId AND status = 'ACTIVE'`,
+    {
+      replacements: { sellerId },
+      type: QueryTypes.SELECT,
+    }
+  );
+
+  const sales = salesResult[0] as any;
+  const products = productsResult[0] as any;
+
+  return {
+    total_sales_cents: parseInt(sales?.total_sales_cents || "0", 10),
+    total_orders: parseInt(sales?.total_orders || "0", 10),
+    active_products: parseInt(products?.active_products || "0", 10),
+  };
+}
+
+/**
+ * Get user orders
+ */
+export async function getUserOrders(
+  userId: number
+): Promise<
+  Array<
+    OrderType & {
+      product_name: string;
+      seller_name: string;
+    }
+  >
+> {
+  const result = await sequelize.query(
+    `SELECT o.*, p.name as product_name, s.name as seller_name
+     FROM orders o
+     JOIN products p ON o.product_id = p.id
+     JOIN sellers s ON p.seller_id = s.id
+     WHERE o.user_id = :userId
+     ORDER BY o.created_at DESC`,
+    {
+      replacements: { userId },
+      type: QueryTypes.SELECT,
+    }
+  );
+  return result as Array<
+    OrderType & { product_name: string; seller_name: string }
+  >;
+}
+
+/**
+ * Update seller profile
+ */
+export async function updateSeller(
+  id: number,
+  updates: {
+    name?: string;
+    business_name?: string | null;
+    business_email?: string | null;
+    website?: string | null;
+    social_links?: Record<string, string>;
+    headshot_url?: string | null;
+    store_logo_url?: string | null;
+    slug?: string | null;
+    status?: "PENDING" | "APPROVED" | "REJECTED";
+    stripe_account_id?: string | null;
+  }
+): Promise<SellerType | null> {
+  const seller = await Seller.findByPk(id);
+  if (!seller) return null;
+
+  if (updates.name !== undefined) seller.name = updates.name;
+  if (updates.business_name !== undefined) seller.business_name = updates.business_name;
+  if (updates.business_email !== undefined) seller.business_email = updates.business_email;
+  if (updates.website !== undefined) seller.website = updates.website;
+  if (updates.social_links !== undefined) seller.social_links = updates.social_links;
+  if (updates.headshot_url !== undefined) seller.headshot_url = updates.headshot_url;
+  if (updates.store_logo_url !== undefined) seller.store_logo_url = updates.store_logo_url;
+  if (updates.slug !== undefined) seller.slug = updates.slug;
+  if (updates.status !== undefined) seller.status = updates.status;
+  if (updates.stripe_account_id !== undefined) seller.stripe_account_id = updates.stripe_account_id;
+
+  await seller.save();
+  return seller.toJSON() as SellerType;
+}
+
+/**
+ * Update promoter profile
+ */
+export async function updatePromoter(
+  id: number,
+  updates: {
+    name?: string;
+    sponsoring_chapter_id?: number | null;
+    headshot_url?: string | null;
+    social_links?: Record<string, string>;
+    status?: "PENDING" | "APPROVED" | "REJECTED";
+    stripe_account_id?: string | null;
+  }
+): Promise<PromoterType | null> {
+  const promoter = await Promoter.findByPk(id);
+  if (!promoter) return null;
+
+  if (updates.name !== undefined) promoter.name = updates.name;
+  if (updates.sponsoring_chapter_id !== undefined) promoter.sponsoring_chapter_id = updates.sponsoring_chapter_id;
+  if (updates.headshot_url !== undefined) promoter.headshot_url = updates.headshot_url;
+  if (updates.social_links !== undefined) promoter.social_links = updates.social_links;
+  if (updates.status !== undefined) promoter.status = updates.status;
+  if (updates.stripe_account_id !== undefined) promoter.stripe_account_id = updates.stripe_account_id;
+
+  await promoter.save();
+  return promoter.toJSON() as PromoterType;
+}
+
+/**
+ * Update steward profile
+ */
+export async function updateSteward(
+  id: number,
+  updates: {
+    sponsoring_chapter_id?: number;
+    status?: "PENDING" | "APPROVED" | "REJECTED";
+  }
+): Promise<StewardType | null> {
+  const steward = await Steward.findByPk(id);
+  if (!steward) return null;
+
+  if (updates.sponsoring_chapter_id !== undefined) steward.sponsoring_chapter_id = updates.sponsoring_chapter_id;
+  if (updates.status !== undefined) steward.status = updates.status;
+
+  await steward.save();
+  return steward.toJSON() as StewardType;
+}
+
+/**
+ * Get steward by user_id
+ */
+export async function getStewardByUserId(userId: number): Promise<StewardType | null> {
+  const steward = await Steward.findOne({ where: { user_id: userId } });
+  return steward ? (steward.toJSON() as StewardType) : null;
+}
+
+/**
+ * Get all sellers (for admin)
+ */
+export async function getAllSellers(): Promise<SellerType[]> {
+  const sellers = await Seller.findAll({
+    order: [["created_at", "DESC"]],
+  });
+  return sellers.map((s) => s.toJSON() as SellerType);
+}
+
+/**
+ * Get all promoters (for admin)
+ */
+export async function getAllPromoters(): Promise<PromoterType[]> {
+  const promoters = await Promoter.findAll({
+    order: [["created_at", "DESC"]],
+  });
+  return promoters.map((p) => p.toJSON() as PromoterType);
+}
+
+/**
+ * Get all stewards (for admin)
+ */
+export async function getAllStewards(): Promise<StewardType[]> {
+  const stewards = await Steward.findAll({
+    order: [["created_at", "DESC"]],
+  });
+  return stewards.map((s) => s.toJSON() as StewardType);
+}
+
+/**
+ * Get all fraternity members (for admin)
+ */
+export async function getAllMembers(): Promise<any[]> {
+  const members = await FraternityMember.findAll({
+    order: [["created_at", "DESC"]],
+  });
+  return members.map((m) => m.toJSON());
+}
+
+/**
+ * Update fraternity member
+ */
+export async function updateMember(
+  id: number,
+  updates: {
+    name?: string;
+    email?: string;
+    phone?: string | null;
+    membership_number?: string | null;
+    initiated_chapter_id?: number | null;
+    initiated_season?: string | null;
+    initiated_year?: number | null;
+    line_name?: string | null;
+    line_number?: number | null;
+    registration_status?: "DRAFT" | "COMPLETE" | "APPROVED";
+    verification_status?: "PENDING" | "VERIFIED" | "FAILED" | "MANUAL_REVIEW" | null;
+    cognito_sub?: string | null;
+    headshot_url?: string | null;
+    social_links?: Record<string, string>;
+  }
+): Promise<any | null> {
+  const member = await FraternityMember.findByPk(id);
+  if (!member) return null;
+
+  if (updates.name !== undefined) member.name = updates.name;
+  if (updates.email !== undefined) member.email = updates.email;
+  if (updates.phone !== undefined) member.phone = updates.phone;
+  if (updates.membership_number !== undefined) member.membership_number = updates.membership_number;
+  if (updates.initiated_chapter_id !== undefined) member.initiated_chapter_id = updates.initiated_chapter_id;
+  if (updates.initiated_season !== undefined) member.initiated_season = updates.initiated_season;
+  if (updates.initiated_year !== undefined) member.initiated_year = updates.initiated_year;
+  if (updates.line_name !== undefined) member.line_name = updates.line_name;
+  if (updates.line_number !== undefined) member.line_number = updates.line_number;
+  if (updates.registration_status !== undefined) member.registration_status = updates.registration_status;
+  if (updates.verification_status !== undefined) member.verification_status = updates.verification_status;
+  if (updates.cognito_sub !== undefined) member.cognito_sub = updates.cognito_sub;
+  if (updates.headshot_url !== undefined) member.headshot_url = updates.headshot_url;
+  if (updates.social_links !== undefined) member.social_links = updates.social_links;
+
+  await member.save();
+  return member.toJSON();
+}
+
+/**
+ * Delete fraternity member
+ */
+export async function deleteMember(id: number): Promise<boolean> {
+  const member = await FraternityMember.findByPk(id);
+  if (!member) return false;
+  await member.destroy();
+  return true;
+}
+
+/**
+ * Create fraternity member
+ */
+export async function createMember(data: {
+  name: string;
+  email: string;
+  phone?: string | null;
+  membership_number?: string | null;
+  initiated_chapter_id?: number | null;
+  initiated_season?: string | null;
+  initiated_year?: number | null;
+  line_name?: string | null;
+  line_number?: number | null;
+  registration_status?: "DRAFT" | "COMPLETE" | "APPROVED";
+  cognito_sub?: string | null;
+  headshot_url?: string | null;
+  social_links?: Record<string, string>;
+}): Promise<any> {
+  const member = await FraternityMember.create({
+    name: data.name,
+    email: data.email,
+    phone: data.phone || null,
+    membership_number: data.membership_number || null,
+    initiated_chapter_id: data.initiated_chapter_id || null,
+    initiated_season: data.initiated_season || null,
+    initiated_year: data.initiated_year || null,
+    line_name: data.line_name || null,
+    line_number: data.line_number || null,
+    registration_status: data.registration_status || "DRAFT",
+    cognito_sub: data.cognito_sub || null,
+    headshot_url: data.headshot_url || null,
+    social_links: data.social_links || {},
+  });
+  return member.toJSON();
+}
+
+/**
+ * Get member by membership number
+ */
+export async function getMemberByMembershipNumber(membershipNumber: string): Promise<any | null> {
+  const member = await FraternityMember.findOne({
+    where: { membership_number: membershipNumber }
+  });
+  return member ? member.toJSON() : null;
+}
+
+/**
+ * Get all users (for admin)
+ */
+export async function getAllUsers(): Promise<UserType[]> {
+  const users = await User.findAll({
+    order: [["created_at", "DESC"]],
+  });
+  return users.map((u) => u.toJSON() as UserType);
+}
+
+/**
+ * Delete user and cleanup (soft delete - just updates)
+ */
+export async function deleteUserById(userId: number): Promise<void> {
+  const user = await User.findByPk(userId);
+  if (user) {
+    await user.destroy();
+  }
+}

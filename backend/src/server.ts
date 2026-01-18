@@ -3,7 +3,6 @@ import express, { Express, Request, Response } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
-import cron from "node-cron";
 import chaptersRouter from "./routes/chapters";
 import sellersRouter from "./routes/sellers";
 import promotersRouter from "./routes/promoters";
@@ -27,10 +26,6 @@ import notificationsRouter from "./routes/notifications";
 import shippingRouter from "./routes/shipping";
 import addressesRouter from "./routes/addresses";
 import { initializeDatabase } from "./db/migrations";
-import {
-  runVerification,
-  runSellerVerification,
-} from "./scripts/verify-members";
 
 // Load .env.local first, then .env
 dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
@@ -205,52 +200,6 @@ app.use("/api/addresses", addressesRouter);
 
 // Initialize database on startup
 initializeDatabase().catch(console.error);
-
-// Schedule daily member verification at 2 AM
-// Cron format: minute hour day month day-of-week
-// '0 2 * * *' means: at 2:00 AM every day
-cron.schedule(
-  "0 2 * * *",
-  async () => {
-    console.log(
-      "⏰ Scheduled member verification started at",
-      new Date().toISOString()
-    );
-    try {
-      await runVerification();
-    } catch (error) {
-      console.error("❌ Error in scheduled member verification:", error);
-    }
-  },
-  {
-    scheduled: true,
-    timezone: "America/New_York", // Adjust timezone as needed
-  }
-);
-
-// Schedule daily seller verification at 3 AM (separate from member verification)
-// Seller verification searches vendor program page - no login required
-cron.schedule(
-  "0 3 * * *",
-  async () => {
-    console.log(
-      "⏰ Scheduled seller verification started at",
-      new Date().toISOString()
-    );
-    try {
-      await runSellerVerification();
-    } catch (error) {
-      console.error("❌ Error in scheduled seller verification:", error);
-    }
-  },
-  {
-    scheduled: true,
-    timezone: "America/New_York", // Adjust timezone as needed
-  }
-);
-
-console.log("📅 Member verification scheduled to run daily at 2:00 AM");
-console.log("📅 Seller verification scheduled to run daily at 3:00 AM");
 
 // Start server
 app.listen(PORT, () => {
