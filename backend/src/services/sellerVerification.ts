@@ -323,8 +323,14 @@ export async function createBrowser(headless: boolean = true): Promise<Browser> 
     args.push('--disable-accelerated-2d-canvas', '--disable-gpu');
   }
 
+  // On Heroku, use the Chrome binary provided by the buildpack
+  const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH ||
+                        process.env.CHROME_BIN ||
+                        undefined;
+
   return await puppeteer.launch({
     headless: headless ? true : false,
+    executablePath,
     args,
     defaultViewport: headless ? undefined : { width: 1280, height: 720 },
   });
