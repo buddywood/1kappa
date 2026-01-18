@@ -88,7 +88,9 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - apply (seller application route)
+     * - seller-setup-intro (seller setup route)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|apply|seller-setup-intro).*)',
   ],
 };
