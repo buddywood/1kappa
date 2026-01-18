@@ -72,7 +72,7 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        run: npm install --no-optional
+        run: npm install --legacy-peer-deps --no-optional
 
       - name: Run ESLint
         run: npm run lint || true # allow warnings
@@ -114,10 +114,10 @@ jobs:
           node-version: 20
 
       - name: Install root dependencies
-        run: npm install --no-optional
+        run: npm install --legacy-peer-deps --no-optional
 
       - name: Install backend dependencies
-        run: npm install --no-optional
+        run: npm install --legacy-peer-deps --no-optional
         working-directory: ./backend
 
       - name: Construct DATABASE_URL
@@ -169,10 +169,10 @@ jobs:
           node-version: 20
 
       - name: Install root dependencies
-        run: npm install --no-optional
+        run: npm install --legacy-peer-deps --no-optional
 
       - name: Install backend dependencies
-        run: npm install --no-optional
+        run: npm install --legacy-peer-deps --no-optional
         working-directory: ./backend
 
       - name: Construct DATABASE_URL
