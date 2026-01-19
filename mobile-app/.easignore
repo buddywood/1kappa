@@ -1,0 +1,19 @@
+# Ignore parent monorepo files
+../package.json
+../package-lock.json
+../node_modules
+../.git
+../frontend
+../backend
+
+# Ignore local development files
+.env.local
+.env.development
+
+# Ignore test files
+e2e/
+__tests__/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
