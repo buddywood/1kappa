@@ -22,11 +22,11 @@ jobs:
           cache-dependency-path: './package-lock.json'
 
       - name: Install root dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Install mobile-app dependencies
         working-directory: ./mobile-app
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: TypeScript type check
         working-directory: ./mobile-app
@@ -56,11 +56,11 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Install root dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Install mobile-app dependencies
         working-directory: ./mobile-app
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Build on Main (Production Profile)
         working-directory: ./mobile-app
