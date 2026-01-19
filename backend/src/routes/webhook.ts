@@ -24,6 +24,12 @@ router.post('/stripe', async (req: Request, res: Response) => {
     return res.status(400).send('Missing stripe-signature header');
   }
 
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    console.error('STRIPE_WEBHOOK_SECRET is not configured');
+    return res.status(500).send('Webhook not configured');
+  }
+
   let event;
 
   try {
@@ -32,7 +38,7 @@ router.post('/stripe', async (req: Request, res: Response) => {
     event = verifyWebhookSignature(
       rawBody,
       sig,
-      process.env.STRIPE_WEBHOOK_SECRET || ''
+      webhookSecret
     );
   } catch (err: any) {
     console.error('Webhook signature verification failed:', err.message);

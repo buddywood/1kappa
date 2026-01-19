@@ -83,12 +83,37 @@ export default function MemberSetupPage() {
     }
   }, [isNavigating]);
 
+  // Check if user is authenticated but doesn't have member access
+  const isAuthenticated = sessionStatus === 'authenticated';
+  const userRole = (session?.user as any)?.role;
+  const isSteward = (session?.user as any)?.is_steward || (session?.user as any)?.stewardId;
+  const needsMemberSetup = isAuthenticated && userRole !== 'ADMIN' && userRole !== 'MEMBER' && userRole !== 'STEWARD' && !isSteward;
+
   return (
     <div className="min-h-screen bg-cream text-midnight-navy">
       <Header />
-      
+
       <main className="max-w-4xl mx-auto px-4 py-12">
         <div className="bg-white rounded-xl shadow-lg p-8">
+          {/* Alert for authenticated users without member access */}
+          {needsMemberSetup && (
+            <div className="mb-6 p-4 bg-blue-50 border-l-4 border-blue-500 rounded">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-blue-800">Member Registration Required</h3>
+                  <p className="mt-1 text-sm text-blue-700">
+                    To access the member dashboard and member-only features, you need to complete your member registration and verification. Complete the steps below to get started.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <h1 className="text-3xl font-display font-bold text-midnight-navy mb-2">
             Become a Member
           </h1>

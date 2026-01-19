@@ -387,17 +387,21 @@ router.post(
 
       // Upload additional images to steward_listing_images table
       if (imageFiles && imageFiles.length > 0) {
-        await Promise.all(
-          imageFiles.map(async (file, index) => {
-            const uploadResult = await uploadToS3(
-              file.buffer,
-              file.originalname,
-              file.mimetype,
-              "steward-listings"
-            );
-            await addStewardListingImage(listing.id, uploadResult.url, index);
-          })
-        );
+        // First image was already uploaded above for primary image_url, reuse it
+        if (imageUrl) {
+          await addStewardListingImage(listing.id, imageUrl, 0);
+        }
+        // Upload remaining images starting from index 1
+        for (let i = 1; i < imageFiles.length; i++) {
+          const file = imageFiles[i];
+          const uploadResult = await uploadToS3(
+            file.buffer,
+            file.originalname,
+            file.mimetype,
+            "steward-listings"
+          );
+          await addStewardListingImage(listing.id, uploadResult.url, i);
+        }
       }
 
       // Fetch the listing with images
@@ -594,6 +598,10 @@ router.get(
   async (req: Request, res: Response) => {
     try {
       const listingId = parseInt(req.params.id);
+      if (isNaN(listingId)) {
+        return res.status(400).json({ error: "Invalid listing ID" });
+      }
+
       const listing = await getStewardListingById(listingId);
 
       if (!listing) {
@@ -652,6 +660,10 @@ router.put(
       }
 
       const listingId = parseInt(req.params.id);
+      if (isNaN(listingId)) {
+        return res.status(400).json({ error: "Invalid listing ID" });
+      }
+
       const listing = await getStewardListingById(listingId);
 
       if (!listing) {
@@ -707,6 +719,10 @@ router.delete(
       }
 
       const listingId = parseInt(req.params.id);
+      if (isNaN(listingId)) {
+        return res.status(400).json({ error: "Invalid listing ID" });
+      }
+
       const listing = await getStewardListingById(listingId);
 
       if (!listing) {
@@ -869,6 +885,10 @@ router.post(
       }
 
       const listingId = parseInt(req.params.id);
+      if (isNaN(listingId)) {
+        return res.status(400).json({ error: "Invalid listing ID" });
+      }
+
       const listing = await getStewardListingById(listingId);
 
       if (!listing) {

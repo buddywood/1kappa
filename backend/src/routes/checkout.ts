@@ -449,13 +449,10 @@ router.post('/:productId', authenticateOptional, async (req: Request, res: Respo
       // If account doesn't exist, clear it from database and return error
       if (error?.code === 'resource_missing' || error?.statusCode === 404 || error?.type === 'StripeInvalidRequestError') {
         console.warn(`Invalid Stripe account ID for seller ${seller.id}: ${seller.stripe_account_id}. Clearing from database.`);
-        
+
         // Clear invalid account ID from database
-        const pool = (await import('../db/connection')).default;
-        await pool.query(
-          'UPDATE sellers SET stripe_account_id = NULL WHERE id = $1',
-          [seller.id]
-        );
+        const { updateSellerStripeAccountId } = await import('../db/queries-sequelize');
+        await updateSellerStripeAccountId(seller.id, null);
 
         // Notify seller about invalid account
         const { createNotification } = await import('../db/queries-notifications-sequelize');

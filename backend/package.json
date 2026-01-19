@@ -5,7 +5,9 @@
   "main": "dist/server.js",
   "scripts": {
     "start": "npm run build && node dist/server.js",
+    "worker": "npm run build && node dist/worker.js",
     "dev": "nodemon --exec ts-node --transpile-only src/server.ts",
+    "dev:worker": "nodemon --exec ts-node --transpile-only src/worker.ts",
     "build": "tsc",
     "lint": "echo 'Linting skipped - ESLint not configured'",
     "type-check": "tsc --noEmit",

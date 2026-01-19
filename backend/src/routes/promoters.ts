@@ -115,14 +115,13 @@ router.put(
       }
 
       // Update the promoter's sponsoring chapter
-      const pool = (await import("../db/connection")).default;
-      await pool.query(
-        "UPDATE promoters SET sponsoring_chapter_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2",
-        [sponsoring_chapter_id, req.user.promoterId]
+      const { updatePromoterSponsoringChapter } = await import(
+        "../db/queries-sequelize"
       );
-
-      // Fetch updated promoter
-      const updatedPromoter = await getPromoterById(req.user.promoterId);
+      const updatedPromoter = await updatePromoterSponsoringChapter(
+        req.user.promoterId,
+        sponsoring_chapter_id
+      );
       res.json(updatedPromoter);
     } catch (error: any) {
       console.error("Error updating promoter sponsoring chapter:", error);

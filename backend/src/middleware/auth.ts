@@ -1,11 +1,8 @@
-// @ts-nocheck
-
 import { Request, Response, NextFunction } from 'express';
 import { verifyCognitoToken, extractUserInfoFromToken } from '../services/cognito';
-import { getUserByCognitoSub, createUser, getMemberById } from '../db/queries-sequelize';
+import { getUserByCognitoSub, getMemberById } from '../db/queries-sequelize';
 import { getFraternityMemberId } from '../utils/getFraternityMemberId';
-import pool from '../db/connection';
-import { Seller, Promoter, Steward } from '../db/models';
+import { getRoleSpecificIds, UserForRoleLookup } from '../services/userRole';
 
 // Extend Express Request to include user
 declare global {
@@ -56,39 +53,32 @@ export async function authenticate(
     // Get user in database - user must exist (created during registration)
     const user = await getUserByCognitoSub(cognitoSub);
     if (!user) {
-      res.status(403).json({ 
+      res.status(403).json({
         error: 'User not found. Please complete registration first.',
         code: 'USER_NOT_REGISTERED'
       });
       return;
     }
 
-    // Look up role-specific IDs from role tables (they now reference users via user_id)
-    let sellerId: number | null = null;
-    let promoterId: number | null = null;
-    let stewardId: number | null = null;
-
-    if (user.role === 'SELLER') {
-      const seller = await Seller.findOne({ where: { user_id: user.id } });
-      sellerId = seller?.id || null;
-    } else if (user.role === 'PROMOTER') {
-      const promoter = await Promoter.findOne({ where: { user_id: user.id } });
-      promoterId = promoter?.id || null;
-    } else if (user.role === 'STEWARD') {
-      const steward = await Steward.findOne({ where: { user_id: user.id } });
-      stewardId = steward?.id || null;
-    }
+    // Look up role-specific IDs from role tables
+    const userForLookup: UserForRoleLookup = {
+      id: user.id,
+      email: user.email,
+      cognito_sub: user.cognito_sub,
+      role: user.role as UserForRoleLookup['role'],
+    };
+    const { sellerId, promoterId, stewardId } = await getRoleSpecificIds(userForLookup);
 
     // Attach user to request (fraternity_member_id is looked up from role-specific tables when needed)
     req.user = {
       id: user.id,
       cognitoSub: user.cognito_sub,
       email: user.email,
-      role: user.role,
+      role: user.role as 'ADMIN' | 'SELLER' | 'PROMOTER' | 'GUEST' | 'STEWARD' | 'MEMBER',
       sellerId,
       promoterId,
       stewardId,
-      features: user.features,
+      features: user.features || {},
     };
 
     next();
@@ -194,32 +184,25 @@ export async function authenticateOptional(
       return;
     }
 
-    // Look up role-specific IDs from role tables (they now reference users via user_id)
-    let sellerId: number | null = null;
-    let promoterId: number | null = null;
-    let stewardId: number | null = null;
-
-    if (user.role === 'SELLER') {
-      const seller = await Seller.findOne({ where: { user_id: user.id } });
-      sellerId = seller?.id || null;
-    } else if (user.role === 'PROMOTER') {
-      const promoter = await Promoter.findOne({ where: { user_id: user.id } });
-      promoterId = promoter?.id || null;
-    } else if (user.role === 'STEWARD') {
-      const steward = await Steward.findOne({ where: { user_id: user.id } });
-      stewardId = steward?.id || null;
-    }
+    // Look up role-specific IDs from role tables
+    const userForLookup: UserForRoleLookup = {
+      id: user.id,
+      email: user.email,
+      cognito_sub: user.cognito_sub,
+      role: user.role as UserForRoleLookup['role'],
+    };
+    const { sellerId, promoterId, stewardId } = await getRoleSpecificIds(userForLookup);
 
     // Attach user to request (fraternity_member_id is looked up from role-specific tables when needed)
     req.user = {
       id: user.id,
       cognitoSub: user.cognito_sub,
       email: user.email,
-      role: user.role,
+      role: user.role as 'ADMIN' | 'SELLER' | 'PROMOTER' | 'GUEST' | 'STEWARD' | 'MEMBER',
       sellerId,
       promoterId,
       stewardId,
-      features: user.features,
+      features: user.features || {},
     };
 
     next();

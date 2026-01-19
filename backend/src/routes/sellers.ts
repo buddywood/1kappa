@@ -220,9 +220,14 @@ router.post(
         merchandise_type: merchandiseType,
         website: toNullIfEmpty(req.body.website),
         slug: toNullIfEmpty(req.body.slug),
-        social_links: req.body.social_links
-          ? JSON.parse(req.body.social_links)
-          : {},
+        social_links: (() => {
+          if (!req.body.social_links) return {};
+          try {
+            return JSON.parse(req.body.social_links);
+          } catch (e) {
+            return {};
+          }
+        })(),
       });
 
       // Get member_id from authenticated user if available

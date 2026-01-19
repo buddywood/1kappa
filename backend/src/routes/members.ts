@@ -2038,7 +2038,11 @@ router.get("/profile", authenticate, async (req: Request, res: Response) => {
     const member = result.rows[0];
     // Parse social_links if it's a string
     if (typeof member.social_links === "string") {
-      member.social_links = JSON.parse(member.social_links);
+      try {
+        member.social_links = JSON.parse(member.social_links);
+      } catch (e) {
+        member.social_links = {};
+      }
     }
 
     res.json(member);

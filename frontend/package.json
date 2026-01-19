@@ -18,8 +18,8 @@
     "test:e2e:chromium": "playwright test --project=chromium",
     "test:e2e:firefox": "playwright test --project=firefox",
     "test:e2e:webkit": "playwright test --project=webkit",
-    "test:e2e:config": "node tests/e2e/check-config.js",
-    "test:e2e:roles": "playwright test login-roles.spec.ts"
+    "test:e2e:roles": "playwright test login-roles.spec.ts",
+    "test:e2e:config": "node tests/e2e/check-config.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.490.0",

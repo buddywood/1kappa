@@ -72,6 +72,7 @@ export default function BottomTabBar({
         return (
           <TouchableOpacity
             key={tab.id}
+            testID={`bottom-tab-${tab.id}`}
             style={[styles.tab, isCenter && styles.centerTab]}
             onPress={() => onScreenChange(tab.id as TabScreen)}
             activeOpacity={0.7}

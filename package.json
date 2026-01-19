@@ -55,5 +55,8 @@
     "puppeteer-core": "^24.34.0",
     "tailwindcss": "^3.4.19",
     "uuid": "^8.3.2"
+  },
+  "dependencies": {
+    "react-native-worklets": "^0.7.2"
   }
 }

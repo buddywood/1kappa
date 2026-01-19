@@ -196,7 +196,12 @@ router.post('/', authenticate, upload.array('images', 10), async (req: Request, 
 
     // Upload additional images to product_images table
     if (imageFiles && imageFiles.length > 0) {
-      for (let i = 0; i < imageFiles.length; i++) {
+      // First image was already uploaded above for primary image_url, reuse it
+      if (imageUrl) {
+        await addProductImage(product.id, imageUrl, 0);
+      }
+      // Upload remaining images starting from index 1
+      for (let i = 1; i < imageFiles.length; i++) {
         const file = imageFiles[i];
         const uploadResult = await uploadToS3(
           file.buffer,
