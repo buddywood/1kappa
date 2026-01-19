@@ -9,8 +9,7 @@
   },
   "workspaces": [
     "frontend",
-    "backend",
-    "mobile-app"
+    "backend"
   ],
   "engines": {
     "node": ">=20.x",
