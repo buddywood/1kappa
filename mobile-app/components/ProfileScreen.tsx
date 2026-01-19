@@ -478,6 +478,7 @@ export default function ProfileScreen({
                     {sellerProfile?.status === "APPROVED" && (
                       <TouchableOpacity
                         style={styles.dashboardButton}
+                        testID="seller-dashboard-button"
                         onPress={() => {
                           if (onSellerDashboardPress) {
                             onSellerDashboardPress();
@@ -603,7 +604,7 @@ export default function ProfileScreen({
                 <MenuItem label="Saved Items" onPress={() => {}} />
               )}
               {onSettingsPress && (
-                <MenuItem label="Settings" onPress={onSettingsPress} />
+                <MenuItem label="Settings" onPress={onSettingsPress} testID="settings-button" />
               )}
             </View>
           </View>
@@ -611,7 +612,7 @@ export default function ProfileScreen({
           {/* Log Out */}
           <View style={styles.section}>
             <View style={styles.menuSection}>
-              <MenuItem label="Log Out" onPress={logout} variant="logout" />
+              <MenuItem label="Log Out" onPress={logout} variant="logout" testID="logout-button" />
             </View>
           </View>
         </ScrollView>
@@ -620,7 +621,7 @@ export default function ProfileScreen({
   }
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="profile-screen">
       <ScreenHeader title={isLogin ? "Login" : "Sign Up"} onBack={onBack} />
       <SectionHeader
         title={isLogin ? "Welcome Back" : "Create Account"}
@@ -658,6 +659,7 @@ export default function ProfileScreen({
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
+              testID="login-email-input"
             />
 
             <PasswordField
@@ -668,6 +670,7 @@ export default function ProfileScreen({
               showPassword={showPassword}
               onToggleVisibility={() => setShowPassword(!showPassword)}
               autoCapitalize="none"
+              testID="login-password-input"
             />
 
             {isLogin && (
@@ -755,6 +758,7 @@ export default function ProfileScreen({
                 loading={loading}
                 loadingText={isLogin ? "Signing In..." : "Creating Account..."}
                 style={styles.buttonSpacing}
+                testID="login-button"
               />
             )}
 

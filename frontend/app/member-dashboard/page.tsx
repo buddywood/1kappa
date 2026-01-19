@@ -41,6 +41,7 @@ export default function MemberDashboardPage() {
   const [activity, setActivity] = useState<MemberActivity | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [redirecting, setRedirecting] = useState(false);
 
   useEffect(() => {
     if (sessionStatus === 'loading') return;
@@ -56,6 +57,32 @@ export default function MemberDashboardPage() {
   }, [sessionStatus, router]);
 
   const loadDashboard = async () => {
+    // Check if user has member, admin, or steward role FIRST
+    // This must happen before any try-catch that might redirect
+    const user = session?.user as any;
+    const userRole = user?.role;
+    const isSteward = user?.is_steward || user?.stewardId;
+
+    // Allow access if:
+    // - Role is ADMIN
+    // - Role is MEMBER
+    // - Role is STEWARD
+    // - User is a steward (is_steward flag or has stewardId)
+    const hasAccess =
+      userRole === 'ADMIN' ||
+      userRole === 'MEMBER' ||
+      userRole === 'STEWARD' ||
+      isSteward;
+
+    if (!hasAccess) {
+      setRedirecting(true);
+      router.push('/');
+      return;
+    }
+
+    // Double-check we're not in a redirecting state
+    if (redirecting) return;
+
     try {
       setLoading(true);
       setError('');

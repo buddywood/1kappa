@@ -64,10 +64,50 @@ export default function SellerDashboardScreen({
   );
 
   useEffect(() => {
-    if (token) {
-      loadDashboard();
+    // Check access control before loading dashboard
+    if (!token || !user) {
+      Alert.alert(
+        "Authentication Required",
+        "Please log in to access the seller dashboard.",
+        [{ text: "OK", onPress: onBack }]
+      );
+      return;
     }
-  }, [token]);
+
+    // Check if user has seller or admin role
+    const userRole = (user as any)?.role;
+    const isSeller = (user as any)?.is_seller || (user as any)?.sellerId;
+    const onboardingStatus = (user as any)?.onboarding_status;
+
+    // Allow access if: ADMIN, SELLER, or has is_seller flag/sellerId
+    const hasAccess = userRole === 'ADMIN' || userRole === 'SELLER' || isSeller;
+
+    if (!hasAccess) {
+      // Redirect based on role/status
+      let message = "You don't have access to the seller dashboard.";
+      let redirectAction = onBack;
+
+      if (onboardingStatus && onboardingStatus !== 'ONBOARDING_FINISHED') {
+        message = "Please complete your account registration first.";
+      } else if (userRole === 'GUEST') {
+        message = "To become a seller, please apply using the 'Become a Seller' option.";
+      } else if (userRole === 'MEMBER' || userRole === 'STEWARD') {
+        message = "You don't have seller access. Would you like to apply to become a seller?";
+      } else if (userRole === 'PROMOTER') {
+        message = "Sellers and Promoters have separate dashboards. This is the seller dashboard.";
+      }
+
+      Alert.alert(
+        "Access Denied",
+        message,
+        [{ text: "OK", onPress: redirectAction }]
+      );
+      return;
+    }
+
+    // User has access - load dashboard
+    loadDashboard();
+  }, [token, user]);
 
   const loadDashboard = async () => {
     try {
@@ -106,6 +146,20 @@ export default function SellerDashboardScreen({
         );
         (error as any).code = "SESSION_EXPIRED";
         throw error;
+      }
+
+      // Check for forbidden (403) - user authenticated but not a seller
+      if (
+        productsRes.status === 403 ||
+        metricsRes.status === 403 ||
+        profileRes.status === 403
+      ) {
+        Alert.alert(
+          "Access Denied",
+          "You don't have seller privileges. Please apply to become a seller.",
+          [{ text: "OK", onPress: onBack }]
+        );
+        return;
       }
 
       // Check which specific call failed and get error details
@@ -185,7 +239,7 @@ export default function SellerDashboardScreen({
   const stripeConnected = sellerProfile?.stripe_account_id ? true : false;
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="seller-dashboard-screen">
       <ScreenHeader title="Seller Dashboard" onBack={onBack} />
       <ScrollView
         style={styles.scrollView}

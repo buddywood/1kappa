@@ -9,7 +9,15 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:report": "playwright show-report",
+    "test:e2e:chromium": "playwright test --project=chromium",
+    "test:e2e:roles": "playwright test login-roles.spec.ts",
+    "test:e2e:config": "node tests/e2e/check-config.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.490.0",

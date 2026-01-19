@@ -11,6 +11,7 @@ interface PrimaryButtonProps {
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
   className?: string;
+  testID?: string;
 }
 
 export default function PrimaryButton({
@@ -21,6 +22,7 @@ export default function PrimaryButton({
   disabled = false,
   style,
   className,
+  testID,
 }: PrimaryButtonProps) {
   return (
     <Button
@@ -30,6 +32,7 @@ export default function PrimaryButton({
       loading={loading}
       label={loading && loadingText ? loadingText : title}
       className={cn("h-auto", className)}
+      testID={testID}
       // Overriding base button styles to match the original PrimaryButton's look
       style={[{
         borderRadius: 14,

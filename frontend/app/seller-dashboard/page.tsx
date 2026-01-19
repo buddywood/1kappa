@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { 
@@ -36,6 +37,7 @@ import ProductStatusBadge from '../components/ProductStatusBadge';
 
 export default function SellerDashboardPage() {
   const router = useRouter();
+  const { data: session, status: sessionStatus } = useSession();
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<SellerOrder[]>([]);
   const [metrics, setMetrics] = useState<SellerMetrics | null>(null);
@@ -44,32 +46,76 @@ export default function SellerDashboardPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    async function loadDashboard() {
-      try {
-        const [productsData, ordersData, metricsData, sellerData] = await Promise.all([
-          getSellerProducts(),
-          getSellerOrders(),
-          getSellerMetrics(),
-          getSellerProfile(),
-        ]);
+    if (sessionStatus === 'loading') return;
+
+    if (sessionStatus === 'unauthenticated') {
+      router.push('/login');
+      return;
+    }
+
+    if (sessionStatus === 'authenticated') {
+      loadDashboard();
+    }
+  }, [sessionStatus, router]);
+
+  const loadDashboard = async () => {
+    // Check if user has seller or admin role FIRST
+    // This must happen before any try-catch that might redirect
+    const user = session?.user as any;
+    const userRole = user?.role;
+    const isSeller = user?.is_seller || user?.sellerId;
+    const onboardingStatus = user?.onboarding_status;
+
+    // Allow access if:
+    // - Role is ADMIN
+    // - Role is SELLER
+    // - User has is_seller flag or sellerId
+    const hasAccess = userRole === 'ADMIN' || userRole === 'SELLER' || isSeller;
+
+    if (!hasAccess) {
+      // Redirect authenticated users to appropriate pages based on role/status
+      if (onboardingStatus && onboardingStatus !== 'ONBOARDING_FINISHED') {
+        // User hasn't completed onboarding
+        router.push('/register');
+      } else if (userRole === 'MEMBER' || userRole === 'STEWARD') {
+        // Members/Stewards should go to member dashboard
+        router.push('/member-dashboard');
+      } else if (userRole === 'PROMOTER') {
+        // Promoters should go to promoter dashboard
+        router.push('/promote');
+      } else if (userRole === 'GUEST') {
+        // Guests who want to become sellers should apply
+        router.push('/apply');
+      } else {
+        // Fallback to homepage
+        router.push('/');
+      }
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError('');
+
+      const [productsData, ordersData, metricsData, sellerData] = await Promise.all([
+        getSellerProducts(),
+        getSellerOrders(),
+        getSellerMetrics(),
+        getSellerProfile(),
+      ]);
         setProducts(productsData);
         setOrders(ordersData.slice(0, 5)); // Show recent 5 orders
         setMetrics(metricsData);
         setSeller(sellerData);
       } catch (err: any) {
         console.error('Error loading dashboard:', err);
-        if (err.message === 'Not authenticated' || err.message === 'Not a seller') {
-          router.push('/login');
-          return;
-        }
+        // Don't redirect here - access control is handled above
+        // Just show the error message on the page
         setError(err.message || 'Failed to load dashboard');
       } finally {
         setLoading(false);
       }
-    }
-
-    loadDashboard();
-  }, [router]);
+  };
 
   const formatPrice = (cents: number) => {
     return `$${(cents / 100).toFixed(2)}`;

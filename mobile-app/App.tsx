@@ -468,7 +468,7 @@ function AppContent() {
       case "home":
       default:
         return (
-          <>
+          <View testID="home-screen" style={{ flex: 1 }}>
             <Header
               onMenuPress={handleMenuPress}
               onUserPress={handleUserPress}
@@ -498,7 +498,7 @@ function AppContent() {
                 onRSVPPress={handleRSVPPress}
               />
             </ScrollView>
-          </>
+          </View>
         );
     }
   };

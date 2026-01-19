@@ -7,6 +7,7 @@ interface MenuItemProps {
   onPress: () => void;
   showArrow?: boolean;
   variant?: 'default' | 'logout';
+  testID?: string;
 }
 
 export default function MenuItem({
@@ -14,6 +15,7 @@ export default function MenuItem({
   onPress,
   showArrow = true,
   variant = 'default',
+  testID,
 }: MenuItemProps) {
   return (
     <TouchableOpacity
@@ -23,6 +25,7 @@ export default function MenuItem({
       ]}
       onPress={onPress}
       activeOpacity={0.7}
+      testID={testID}
     >
       <Text
         style={[
