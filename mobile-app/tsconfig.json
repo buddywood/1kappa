@@ -8,9 +8,9 @@
         "./*"
       ]
     },
-    "typeRoots": [
-      "./node_modules/@types",
-      "./node_modules/nativewind/types"
+    "types": [
+      "nativewind/types",
+      "node"
     ],
     "skipLibCheck": true
   },

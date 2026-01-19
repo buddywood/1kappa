@@ -19,18 +19,15 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
-          cache-dependency-path: './package-lock.json'
+          cache-dependency-path: './mobile-app/package-lock.json'
 
       - name: Install mobile-app dependencies
         working-directory: ./mobile-app
         run: npm install --legacy-peer-deps
 
-      # TypeScript type check temporarily disabled due to React 19 type conflicts
-      # The app builds and runs correctly, but React 19's bigint support in ReactNode
-      # conflicts with older type definitions in some dependencies
-      # - name: TypeScript type check
-      #   working-directory: ./mobile-app
-      #   run: npm run typecheck
+      - name: TypeScript type check
+        working-directory: ./mobile-app
+        run: npm run typecheck
 
   mobile-build:
     name: Build Mobile App
@@ -46,7 +43,7 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
-          cache-dependency-path: './package-lock.json'
+          cache-dependency-path: './mobile-app/package-lock.json'
 
       - name: Setup Expo
         uses: expo/expo-github-action@v8
